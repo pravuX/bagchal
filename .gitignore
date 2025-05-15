@@ -1,0 +1,5 @@
+.direnv
+.envrc
+.env/
+__pycache__/
+pyrightconfig.json
