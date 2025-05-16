@@ -32,6 +32,7 @@ class Game:
         self.mouse_pos = (-1, -1)
         # left, middle, right buttons
         self.mouse_pressed = (False, False, False)
+        self.selected_cell = None
 
         # Adjacency List
         self.graph = {0: [], 1: [], 2: [], 3: [], 4: [],
@@ -54,10 +55,12 @@ class Game:
 
         self.colors = ["gray", "black"]
 
-    def should_quit(self):
+    def handle_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT or self.keys[pygame.K_q]:
                 self.running = False
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                self.place_piece(event.pos)
 
     def draw_board(self):
         pygame.draw.line(self.screen, 0, (0+self.offset, 0+self.offset),
@@ -109,35 +112,54 @@ class Game:
                     x, y = self.grid_pos(col, row)
                     # draw a point
                     pygame.draw.circle(
-                        self.screen, color, (x+self.offset, y+self.offset), self.offset//4)
+                        self.screen, color, (x + self.offset, y + self.offset), self.offset//4)
 
-    def place_piece(self):
-        m_left, _, _ = self.mouse_pressed
-        mouse_x, mouse_y = self.mouse_pos
-        if m_left:
-            col = mouse_x // self.grid_dim
-            row = mouse_y // self.grid_dim
-            cell_pos = col+row*self.grid_cols  # 2d to 1d index
+                # visualize selected_cell
+                if self.selected_cell == col + row * self.grid_cols:
+                    pygame.draw.circle(
+                        self.screen, "darksalmon", (x + self.offset, y + self.offset), self.offset // 4 + 5, 5)
 
-            state = self.state[cell_pos]
+    def place_piece(self, pos):
+        mouse_x, mouse_y = pos
+        col = mouse_x // self.grid_dim
+        row = mouse_y // self.grid_dim
+        cell_pos = col+row*self.grid_cols  # 2d to 1d index
+
+        state = self.state[cell_pos]
+
+        # If no piece is selected:
+        #     Click on an empty cell → place a new piece (1).
+        #     Click on an existing piece (1) → mark it as selected.
+        # If a piece is selected:
+        #     Click on an empty cell → move it there.
+        #     Click on any cell (even invalid move) → cancel selection.
+
+        if self.selected_cell is None:
             if state == -1:
-                print(mouse_x, mouse_y)
                 self.state[cell_pos] = 1
+            elif state == 1:
+                self.selected_cell = cell_pos
+        else:
+            # @UTSAV: this is where you need to add validation based on the Adjacency list
+            # currently it will move any piece to any location
+            if state == -1:
+                self.state[self.selected_cell] = -1
+                self.state[cell_pos] = 1
+            self.selected_cell = None
 
     def game(self):
         self.draw_grid_lines()  # for testing only
         self.draw_board()
         self.draw_pieces()
-        self.place_piece()  # on mouse press
 
     def reset_screen(self):
-        self.screen.fill((255, 255, 255))
+        self.screen.fill("antiquewhite")
 
     def update(self):
         self.keys = pygame.key.get_pressed()
         self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_pressed = pygame.mouse.get_pressed()
-        self.should_quit()
+        self.handle_events()
         self.reset_screen()
         self.game()
         for surf in self.surfs:
