@@ -1,9 +1,15 @@
 import pygame
+from enum import IntEnum
 
 
 # REMEMBER:
 # x -> cols : width
 # y -> rows : height
+
+class Piece(IntEnum):
+    EMTPY = -1
+    GOAT = 0
+    TIGER = 1
 
 
 class Game:
@@ -29,20 +35,21 @@ class Game:
         self.board_width = self.grid_width - self.grid_dim
         self.board_height = self.grid_height - self.grid_dim
 
-        self.mouse_pos = (-1, -1)
+        # self.mouse_pos = (-1, -1)
         # left, middle, right buttons
         self.mouse_pressed = (False, False, False)
         self.selected_cell = None
 
         # Adjacency List
-        self.graph = {0: [], 1: [], 2: [], 3: [], 4: [],
-                      5: [], 6: [], 7: [], 8: [], 9: [],
+        self.graph = {0:  [], 1:  [], 2:  [], 3:  [], 4:  [],
+                      5:  [], 6:  [], 7:  [], 8:  [], 9:  [],
                       10: [], 11: [], 12: [], 13: [], 14: [],
                       15: [], 16: [], 17: [], 18: [], 19: [],
                       20: [], 21: [], 22: [], 23: [], 24: []}
         # display different images depending on the state
-        # 0 = goat, 1 = tiger, -1 = emtpy
-        self.state = [-1] * 25
+        self.state = [Piece.EMTPY] * 25
+
+        self.turn = Piece.GOAT
 
         # Pygame State
         self.screen = pygame.display.set_mode(self.screen_size)
@@ -53,7 +60,10 @@ class Game:
         self.surfs = []  # for loading images and stuff
         self.keys = []
 
-        self.colors = ["gray", "black"]
+        self.colors = ["gray", "black"]  # Piece.GOAT, Piece.TIGER
+
+        # initialize board
+        # by placing 4 tigers
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -135,16 +145,17 @@ class Game:
         #     Click on any cell (even invalid move) → cancel selection.
 
         if self.selected_cell is None:
-            if state == -1:
-                self.state[cell_pos] = 1
-            elif state == 1:
+            # change this by turn
+            if state == Piece.EMTPY:
+                self.state[cell_pos] = Piece.TIGER
+            elif state == Piece.TIGER:
                 self.selected_cell = cell_pos
         else:
             # @UTSAV: this is where you need to add validation based on the Adjacency list
             # currently it will move any piece to any location
-            if state == -1:
-                self.state[self.selected_cell] = -1
-                self.state[cell_pos] = 1
+            if state == Piece.EMTPY:
+                self.state[self.selected_cell] = Piece.EMTPY
+                self.state[cell_pos] = Piece.TIGER
             self.selected_cell = None
 
     def game(self):
@@ -157,7 +168,7 @@ class Game:
 
     def update(self):
         self.keys = pygame.key.get_pressed()
-        self.mouse_pos = pygame.mouse.get_pos()
+        # self.mouse_pos = pygame.mouse.get_pos()
         self.mouse_pressed = pygame.mouse.get_pressed()
         self.handle_events()
         self.reset_screen()
