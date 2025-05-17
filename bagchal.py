@@ -41,20 +41,21 @@ class Game:
         self.selected_cell = None
 
         # Adjacency List
-        self.graph = {0:  [], 1:  [], 2:  [], 3:  [], 4:  [],
-                      5:  [], 6:  [], 7:  [], 8:  [], 9:  [],
-                      10: [], 11: [], 12: [], 13: [], 14: [],
-                      15: [], 16: [], 17: [], 18: [], 19: [],
-                      20: [], 21: [], 22: [], 23: [], 24: []}
+        self.graph = {0:  [1, 5, 6], 1:  [0, 2, 6], 2:  [1, 3, 6, 7, 8], 3:  [2, 4, 8], 4:  [3, 8, 9],
+                      5:  [0, 6, 10], 6:  [0, 1, 2, 5, 7, 10, 11, 12], 7:  [2, 6, 8, 12], 8:  [2, 3, 4, 7, 9, 12, 13, 14], 9:  [4, 8, 14],
+                      10: [5, 6, 11, 15, 16], 11: [6, 10, 12, 16], 12: [6, 7, 8, 11, 13, 16, 17, 18], 13: [8, 12, 14, 18], 14: [8, 9, 13, 18, 19],
+                      15: [10, 16, 20], 16: [10, 11, 12, 15, 17, 20, 21, 22], 17: [12, 16, 18, 22], 18: [12, 13, 14, 17, 19, 22, 23, 24], 19: [14, 18, 24],
+                      20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
         # display different images depending on the state
         self.state = [Piece.EMTPY] * 25
 
-        self.turn = Piece.GOAT
+        self.turn = Piece.TIGER
 
         # Pygame State
         self.screen = pygame.display.set_mode(self.screen_size)
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
+        self.count = 4
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -64,6 +65,19 @@ class Game:
 
         # initialize board
         # by placing 4 tigers
+
+    def change_turn(self):
+        # We do not need this when we initialize the board with TIGER
+        if(self.count > 0):
+            self.turn = Piece.TIGER
+            self.count -= 1
+            if self.count == 0:
+                self.turn = Piece.GOAT
+        else:
+            if self.turn == Piece.TIGER:
+                self.turn = Piece.GOAT
+            else:
+                self.turn = Piece.TIGER
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -147,15 +161,23 @@ class Game:
         if self.selected_cell is None:
             # change this by turn
             if state == Piece.EMTPY:
-                self.state[cell_pos] = Piece.TIGER
-            elif state == Piece.TIGER:
+                if(self.count > 0):
+                    self.state[cell_pos] = self.turn
+                    self.change_turn()
+                else:
+                    if self.turn == Piece.GOAT:
+                        self.state[cell_pos] = Piece.GOAT
+                        self.change_turn()
+            elif state == self.turn:
                 self.selected_cell = cell_pos
         else:
             # @UTSAV: this is where you need to add validation based on the Adjacency list
             # currently it will move any piece to any location
             if state == Piece.EMTPY:
-                self.state[self.selected_cell] = Piece.EMTPY
-                self.state[cell_pos] = Piece.TIGER
+                if cell_pos in self.graph.get(self.selected_cell, []):
+                    self.state[self.selected_cell] = Piece.EMTPY
+                    self.state[cell_pos] = self.turn
+                    self.change_turn()
             self.selected_cell = None
 
     def game(self):
