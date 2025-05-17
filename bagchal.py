@@ -15,7 +15,7 @@ class Piece(IntEnum):
 class Game:
     def __init__(self,
                  screen_size=(854, 480),
-                 caption="pygame-starter",
+                 caption="bagchal",
                  grid_dim=150,
                  tick_speed=30):  # fps
         pygame.init()
@@ -37,7 +37,7 @@ class Game:
 
         # self.mouse_pos = (-1, -1)
         # left, middle, right buttons
-        self.mouse_pressed = (False, False, False)
+        # self.mouse_pressed = (False, False, False)
         self.selected_cell = None
 
         # Adjacency List
@@ -63,21 +63,44 @@ class Game:
 
         self.colors = ["gray", "black"]  # Piece.GOAT, Piece.TIGER
 
+        # @UTSAV
         # initialize board
         # by placing 4 tigers
+        # call initialize_board
+
+    def initialize_board(self):
+        # 4 corners, self.state = Piece.TIGER
+        # 0, 0,
+        # grid_cols, 0,
+        # 0, grid_row,
+        # grid_cols, grid_rows
+        ...
 
     def change_turn(self):
         # We do not need this when we initialize the board with TIGER
-        if(self.count > 0):
+        if (self.count > 0):
             self.turn = Piece.TIGER
             self.count -= 1
             if self.count == 0:
                 self.turn = Piece.GOAT
         else:
+            # @UTSAV
+            # Turns can be altered when goat = -1 and tiger = 1
+            # by simply multiplying the current turn by -1
+            # i.e. -1 * -1 = 1, -1 * 1 = -1
             if self.turn == Piece.TIGER:
                 self.turn = Piece.GOAT
             else:
                 self.turn = Piece.TIGER
+
+    def reset_game(self):
+        # @UTSAV
+        # empty all the cells,
+        # i.e. self.state = [Piece.EMTPY] * 25
+        # call initialize_board
+        # reset turn
+        # we call this when the game reaches a terminal state
+        ...
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -85,6 +108,10 @@ class Game:
                 self.running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.place_piece(event.pos)
+                # @UTSAV
+                # implement a check_end_game() method and call it here
+                # or maybe from withing game() after handle_events
+                # which is better?
 
     def draw_board(self):
         pygame.draw.line(self.screen, 0, (0+self.offset, 0+self.offset),
@@ -161,7 +188,7 @@ class Game:
         if self.selected_cell is None:
             # change this by turn
             if state == Piece.EMTPY:
-                if(self.count > 0):
+                if (self.count > 0):
                     self.state[cell_pos] = self.turn
                     self.change_turn()
                 else:
@@ -171,19 +198,21 @@ class Game:
             elif state == self.turn:
                 self.selected_cell = cell_pos
         else:
-            # @UTSAV: this is where you need to add validation based on the Adjacency list
-            # currently it will move any piece to any location
             if state == Piece.EMTPY:
+                # move to adjacent empty
                 if cell_pos in self.graph.get(self.selected_cell, []):
                     self.state[self.selected_cell] = Piece.EMTPY
                     self.state[cell_pos] = self.turn
                     self.change_turn()
+                # @UTSAV
+                # this is where we implement logic for "eating" goats
             self.selected_cell = None
 
     def game(self):
         self.draw_grid_lines()  # for testing only
         self.draw_board()
         self.draw_pieces()
+        self.handle_events()
 
     def reset_screen(self):
         self.screen.fill("antiquewhite")
@@ -191,8 +220,7 @@ class Game:
     def update(self):
         self.keys = pygame.key.get_pressed()
         # self.mouse_pos = pygame.mouse.get_pos()
-        self.mouse_pressed = pygame.mouse.get_pressed()
-        self.handle_events()
+        # self.mouse_pressed = pygame.mouse.get_pressed()
         self.reset_screen()
         self.game()
         for surf in self.surfs:
