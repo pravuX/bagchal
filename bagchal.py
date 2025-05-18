@@ -56,7 +56,7 @@ class Game:
         self.screen = pygame.display.set_mode(self.screen_size)
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
-        # self.count = 4
+        self.count = 20
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -88,6 +88,13 @@ class Game:
         # reset turn
         # we call this when the game reaches a terminal state
         ...
+        self.state = [Piece.EMTPY] * 25
+        self.initialize_board()
+        self.turn = Piece.GOAT
+
+    # def check_end_game(self):
+        # implement the method here
+
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -175,11 +182,15 @@ class Game:
         if self.selected_cell is None:
             # change this by turn
             if state == Piece.EMTPY:
-                if self.turn == Piece.GOAT:
+                if self.turn == Piece.GOAT and self.count > 0:
                     self.state[cell_pos] = Piece.GOAT
                     self.change_turn()
+                    self.count -= 1
             elif state == self.turn:
-                self.selected_cell = cell_pos
+                if self.count > 0 and self.turn == Piece.GOAT:
+                    self.selected_cell = None
+                elif self.turn == Piece.TIGER or self.count == 0:
+                    self.selected_cell = cell_pos
         else:
             if state == Piece.EMTPY:
                 # move to adjacent empty
