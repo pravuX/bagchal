@@ -1,4 +1,5 @@
 import pygame
+import math
 from enum import IntEnum
 
 
@@ -49,13 +50,13 @@ class Game:
         # display different images depending on the state
         self.state = [Piece.EMTPY] * 25
 
-        self.turn = Piece.TIGER
+        self.turn = Piece.GOAT
 
         # Pygame State
         self.screen = pygame.display.set_mode(self.screen_size)
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
-        self.count = 4
+        # self.count = 4
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -67,31 +68,17 @@ class Game:
         # initialize board
         # by placing 4 tigers
         # call initialize_board
+        self.initialize_board()
 
     def initialize_board(self):
-        # 4 corners, self.state = Piece.TIGER
-        # 0, 0,
-        # grid_cols, 0,
-        # 0, grid_row,
-        # grid_cols, grid_rows
-        ...
+        self.state[0] = Piece.TIGER
+        self.state[self.grid_cols - 1] = Piece.TIGER
+        self.state[self.grid_rows * (self.grid_cols - 1)] = Piece.TIGER
+        self.state[self.grid_cols * self.grid_rows - 1] = Piece.TIGER
 
     def change_turn(self):
-        # We do not need this when we initialize the board with TIGER
-        if (self.count > 0):
-            self.turn = Piece.TIGER
-            self.count -= 1
-            if self.count == 0:
-                self.turn = Piece.GOAT
-        else:
-            # @UTSAV
-            # Turns can be altered when goat = -1 and tiger = 1
-            # by simply multiplying the current turn by -1
-            # i.e. -1 * -1 = 1, -1 * 1 = -1
-            if self.turn == Piece.TIGER:
-                self.turn = Piece.GOAT
-            else:
-                self.turn = Piece.TIGER
+        # self.turn *= -1
+        self.turn = 1 if self.turn == 0 else 0
 
     def reset_game(self):
         # @UTSAV
@@ -188,29 +175,35 @@ class Game:
         if self.selected_cell is None:
             # change this by turn
             if state == Piece.EMTPY:
-                if (self.count > 0):
-                    self.state[cell_pos] = self.turn
+                if self.turn == Piece.GOAT:
+                    self.state[cell_pos] = Piece.GOAT
                     self.change_turn()
-                else:
-                    if self.turn == Piece.GOAT:
-                        self.state[cell_pos] = Piece.GOAT
-                        self.change_turn()
             elif state == self.turn:
                 self.selected_cell = cell_pos
         else:
             if state == Piece.EMTPY:
                 # move to adjacent empty
                 if cell_pos in self.graph.get(self.selected_cell, []):
-                    self.state[self.selected_cell] = Piece.EMTPY
-                    self.state[cell_pos] = self.turn
-                    self.change_turn()
+                    if self.state[cell_pos] != Piece.TIGER or self.state != Piece.GOAT:
+                        self.state[self.selected_cell] = Piece.EMTPY
+                        self.state[cell_pos] = self.turn
+                        self.change_turn()
                 # @UTSAV
                 # this is where we implement logic for "eating" goats
+                bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
+                if (self.state[self.selected_cell] == Piece.TIGER) and (Piece.GOAT in self.graph.get(self.selected_cell, [])):
+                    if (self.state[bali_goat] == Piece.GOAT):
+                        self.state[bali_goat] = Piece.EMTPY
+                        self.state[self.selected_cell] = Piece.EMTPY
+                        self.state[cell_pos] = self.turn
+                        self.change_turn()
+
             self.selected_cell = None
 
     def game(self):
         self.draw_grid_lines()  # for testing only
         self.draw_board()
+        # self.initialize_board()
         self.draw_pieces()
         self.handle_events()
 
