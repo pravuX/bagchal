@@ -191,7 +191,7 @@ class Game:
                 # @UTSAV
                 # this is where we implement logic for "eating" goats
                 bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
-                if (self.state[self.selected_cell] == Piece.TIGER) and (Piece.GOAT in self.graph.get(self.selected_cell, [])):
+                if (self.state[self.selected_cell] == Piece.TIGER) and (bali_goat in self.graph.get(self.selected_cell, [])):
                     if (self.state[bali_goat] == Piece.GOAT):
                         self.state[bali_goat] = Piece.EMTPY
                         self.state[self.selected_cell] = Piece.EMTPY
