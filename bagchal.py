@@ -56,7 +56,7 @@ class Game:
         self.screen = pygame.display.set_mode(self.screen_size)
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
-        self.count = 20
+        self.goat_count = 20
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -182,14 +182,14 @@ class Game:
         if self.selected_cell is None:
             # change this by turn
             if state == Piece.EMTPY:
-                if self.turn == Piece.GOAT and self.count > 0:
+                if self.turn == Piece.GOAT and self.goat_count > 0:
                     self.state[cell_pos] = Piece.GOAT
                     self.change_turn()
-                    self.count -= 1
+                    self.goat_count -= 1
             elif state == self.turn:
-                if self.count > 0 and self.turn == Piece.GOAT:
+                if self.goat_count > 0 and self.turn == Piece.GOAT:
                     self.selected_cell = None
-                elif self.turn == Piece.TIGER or self.count == 0:
+                elif self.turn == Piece.TIGER or self.goat_count == 0:
                     self.selected_cell = cell_pos
         else:
             if state == Piece.EMTPY:
@@ -201,7 +201,8 @@ class Game:
                         self.change_turn()
                 # @UTSAV
                 # this is where we implement logic for "eating" goats
-                bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
+                bali_goat = (self.selected_cell + cell_pos)/2
+                bali_goat = math.ceil(bali_goat) if bali_goat.is_integer() else 99
                 if (self.state[self.selected_cell] == Piece.TIGER) and (bali_goat in self.graph.get(self.selected_cell, [])):
                     if (self.state[bali_goat] == Piece.GOAT):
                         self.state[bali_goat] = Piece.EMTPY
