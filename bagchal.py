@@ -1,5 +1,6 @@
 import pygame
 import math
+import time
 from enum import IntEnum
 
 
@@ -57,6 +58,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
         self.goat_count = 20
+        self.eat_goat = 0
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -64,10 +66,12 @@ class Game:
 
         self.colors = ["gray", "black"]  # Piece.GOAT, Piece.TIGER
 
-        # @UTSAV
-        # initialize board
-        # by placing 4 tigers
-        # call initialize_board
+        #maintain tiger states
+        self.trapped_count = 0
+        self.trapped = []
+        self.flag = False
+
+        #initialize the board with TIGER
         self.initialize_board()
 
     def initialize_board(self):
@@ -76,25 +80,67 @@ class Game:
         self.state[self.grid_rows * (self.grid_cols - 1)] = Piece.TIGER
         self.state[self.grid_cols * self.grid_rows - 1] = Piece.TIGER
 
+        self.pos_tiger = [0,4,20,24]
+
     def change_turn(self):
+        #For this to work, we need to represent the colors of TIGER and GOAT in different way.
         # self.turn *= -1
+
         self.turn = 1 if self.turn == 0 else 0
 
+    def cond_true(self):
+        print("self flag = true")
+        self.flag = True
+
+    def cond_false(self,tiger):
+        print("self flag = false")
+        if tiger in self.trapped:
+            self.trapped.pop(self.trapped.index(tiger))
+            self.trapped_count -= 1
+        self.flag = False
+
     def reset_game(self):
-        # @UTSAV
-        # empty all the cells,
-        # i.e. self.state = [Piece.EMTPY] * 25
-        # call initialize_board
-        # reset turn
-        # we call this when the game reaches a terminal state
-        ...
         self.state = [Piece.EMTPY] * 25
         self.initialize_board()
         self.turn = Piece.GOAT
 
-    # def check_end_game(self):
-        # implement the method here
+    def check_end_game(self):
+        print("----" * 10)
+        for tiger in self.pos_tiger:
+            print("---"*5)
+            print("tiger: ", tiger)
+            print("trapped tiger: ", self.trapped)
+            for goat in self.graph.get(tiger):
+                print("goat: ", goat)
+                trap_tiger = goat - (tiger-goat)
+                if self.state[goat] != Piece.EMTPY:
+                    if trap_tiger in self.graph.get(goat, []):
+                        if self.state[trap_tiger] != Piece.EMTPY:
+                            self.cond_true()
+                            continue
+                        else:
+                            self.cond_false(tiger)
+                            break
+                    else:
+                        self.cond_true()
+                        continue
+                else:
+                    self.cond_false(tiger)
+                    break
+            if self.flag and tiger not in self.trapped:
+                self.trapped_count += 1
+                self.trapped.append(tiger)
+                print("Trapped Count: ", self.trapped_count)
+                self.flag = False
 
+            if self.trapped_count == 4:
+                print("Goat Wins!!!")
+                time.sleep(2)
+                self.reset_game()
+            elif self.eat_goat > 12:
+                print("Tiger Wins")
+                time.sleep(2)
+                self.reset_game()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -106,6 +152,7 @@ class Game:
                 # implement a check_end_game() method and call it here
                 # or maybe from withing game() after handle_events
                 # which is better?
+                self.check_end_game()
 
     def draw_board(self):
         pygame.draw.line(self.screen, 0, (0+self.offset, 0+self.offset),
@@ -114,7 +161,7 @@ class Game:
                          (self.board_height+self.offset, 0+self.offset), 3)
 
         # /
-        # \
+        #
         pygame.draw.line(self.screen, 0, (0+self.offset, self.board_height//2+self.offset),
                          (self.board_width//2+self.offset, 0+self.offset), 3)
         pygame.draw.line(self.screen, 0, (0+self.offset, self.board_height//2+self.offset),
@@ -196,8 +243,15 @@ class Game:
                 # move to adjacent empty
                 if cell_pos in self.graph.get(self.selected_cell, []):
                     if self.state[cell_pos] != Piece.TIGER or self.state != Piece.GOAT:
+                        if self.state[self.selected_cell] == Piece.TIGER:
+                            index = self.pos_tiger.index(self.selected_cell)
+                            self.pos_tiger[index] = cell_pos
                         self.state[self.selected_cell] = Piece.EMTPY
                         self.state[cell_pos] = self.turn
+                        # for tiger in range(len(self.pos_tiger)):
+                        #     if self.turn == Piece.TIGER:
+                        #         self.pos_tiger[tiger] = cell_pos
+                        #         print("new_tiger: ", self.pos_tiger[tiger])
                         self.change_turn()
                 # @UTSAV
                 # this is where we implement logic for "eating" goats
@@ -206,8 +260,12 @@ class Game:
                 if (self.state[self.selected_cell] == Piece.TIGER) and (bali_goat in self.graph.get(self.selected_cell, [])):
                     if (self.state[bali_goat] == Piece.GOAT):
                         self.state[bali_goat] = Piece.EMTPY
+                        if self.state[self.selected_cell] == Piece.TIGER:
+                            index = self.pos_tiger.index(self.selected_cell)
+                            self.pos_tiger[index] = cell_pos
                         self.state[self.selected_cell] = Piece.EMTPY
                         self.state[cell_pos] = self.turn
+                        self.eat_goat += 1
                         self.change_turn()
 
             self.selected_cell = None
@@ -218,6 +276,7 @@ class Game:
         # self.initialize_board()
         self.draw_pieces()
         self.handle_events()
+        # self.check_end_game()
 
     def reset_screen(self):
         self.screen.fill("antiquewhite")
