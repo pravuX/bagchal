@@ -9,8 +9,8 @@ from enum import IntEnum
 # y -> rows : height
 
 class Piece(IntEnum):
-    EMTPY = -1
-    GOAT = 0
+    GOAT = -1
+    EMTPY = 0
     TIGER = 1
 
 
@@ -64,35 +64,35 @@ class Game:
         self.surfs = []  # for loading images and stuff
         self.keys = []
 
-        self.colors = ["gray", "black"]  # Piece.GOAT, Piece.TIGER
+        self.colors = {
+            Piece.GOAT: "gray",
+            Piece.TIGER: "black"
+        }
 
-        #maintain tiger states
+        # maintain tiger states
         self.trapped_count = 0
         self.trapped = []
         self.flag = False
 
-        #initialize the board with TIGER
+        # initialize the board with TIGER
         self.initialize_board()
 
     def initialize_board(self):
-        self.state[0] = Piece.TIGER
-        self.state[self.grid_cols - 1] = Piece.TIGER
-        self.state[self.grid_rows * (self.grid_cols - 1)] = Piece.TIGER
-        self.state[self.grid_cols * self.grid_rows - 1] = Piece.TIGER
+        self.pos_tiger = [0, 4, 20, 24]
 
-        self.pos_tiger = [0,4,20,24]
+        self.state[self.pos_tiger[0]] = Piece.TIGER
+        self.state[self.pos_tiger[1]] = Piece.TIGER
+        self.state[self.pos_tiger[2]] = Piece.TIGER
+        self.state[self.pos_tiger[3]] = Piece.TIGER
 
     def change_turn(self):
-        #For this to work, we need to represent the colors of TIGER and GOAT in different way.
-        # self.turn *= -1
-
-        self.turn = 1 if self.turn == 0 else 0
+        self.turn *= -1
 
     def cond_true(self):
         print("self flag = true")
         self.flag = True
 
-    def cond_false(self,tiger):
+    def cond_false(self, tiger):
         print("self flag = false")
         if tiger in self.trapped:
             self.trapped.pop(self.trapped.index(tiger))
@@ -110,7 +110,7 @@ class Game:
             print("---"*5)
             print("tiger: ", tiger)
             print("trapped tiger: ", self.trapped)
-            for goat in self.graph.get(tiger):
+            for goat in self.graph[tiger]:
                 print("goat: ", goat)
                 trap_tiger = goat - (tiger-goat)
                 if self.state[goat] != Piece.EMTPY:
@@ -148,10 +148,9 @@ class Game:
                 self.running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.place_piece(event.pos)
-                # @UTSAV
-                # implement a check_end_game() method and call it here
-                # or maybe from withing game() after handle_events
-                # which is better?
+                if self.turn == Piece.TIGER:
+                    self.pos_tiger = [idx for idx, state in enumerate(
+                        self.state) if state == 1]
                 self.check_end_game()
 
     def draw_board(self):
@@ -198,9 +197,9 @@ class Game:
         for row in range(self.grid_rows):
             for col in range(self.grid_cols):
                 state = self.state[col+row*self.grid_cols]
-                color = self.colors[state]  # image here instead of color
 
-                if state >= 0:  # we don't draw empty cells!
+                if state != 0:  # we don't draw empty cells!
+                    color = self.colors[state]  # image here instead of color
                     x, y = self.grid_pos(col, row)
                     # draw a point
                     pygame.draw.circle(
@@ -233,36 +232,29 @@ class Game:
                     self.state[cell_pos] = Piece.GOAT
                     self.change_turn()
                     self.goat_count -= 1
-            elif state == self.turn:
+            elif state == self.turn:  # select only those cells whose turn it is
                 if self.goat_count > 0 and self.turn == Piece.GOAT:
                     self.selected_cell = None
                 elif self.turn == Piece.TIGER or self.goat_count == 0:
                     self.selected_cell = cell_pos
         else:
+            # if another cell is selected for moving the piece to
             if state == Piece.EMTPY:
                 # move to adjacent empty
-                if cell_pos in self.graph.get(self.selected_cell, []):
-                    if self.state[cell_pos] != Piece.TIGER or self.state != Piece.GOAT:
-                        if self.state[self.selected_cell] == Piece.TIGER:
-                            index = self.pos_tiger.index(self.selected_cell)
-                            self.pos_tiger[index] = cell_pos
-                        self.state[self.selected_cell] = Piece.EMTPY
-                        self.state[cell_pos] = self.turn
-                        # for tiger in range(len(self.pos_tiger)):
-                        #     if self.turn == Piece.TIGER:
-                        #         self.pos_tiger[tiger] = cell_pos
-                        #         print("new_tiger: ", self.pos_tiger[tiger])
-                        self.change_turn()
-                # @UTSAV
-                # this is where we implement logic for "eating" goats
-                bali_goat = (self.selected_cell + cell_pos)/2
-                bali_goat = math.ceil(bali_goat) if bali_goat.is_integer() else 99
-                if (self.state[self.selected_cell] == Piece.TIGER) and (bali_goat in self.graph.get(self.selected_cell, [])):
-                    if (self.state[bali_goat] == Piece.GOAT):
+                if cell_pos in self.graph[self.selected_cell]:
+                    self.state[self.selected_cell] = Piece.EMTPY
+                    self.state[cell_pos] = self.turn
+                    self.change_turn()
+
+                # avg the position of two cells gives us the middle cell (in all directions)
+                if (self.state[self.selected_cell] == Piece.TIGER):
+
+                    bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
+
+                    # goat ho ra khana milxa
+                    print(bali_goat)
+                    if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell]):
                         self.state[bali_goat] = Piece.EMTPY
-                        if self.state[self.selected_cell] == Piece.TIGER:
-                            index = self.pos_tiger.index(self.selected_cell)
-                            self.pos_tiger[index] = cell_pos
                         self.state[self.selected_cell] = Piece.EMTPY
                         self.state[cell_pos] = self.turn
                         self.eat_goat += 1
