@@ -1,6 +1,5 @@
 import pygame
 import math
-import time
 from enum import IntEnum
 
 
@@ -92,6 +91,7 @@ class Game:
         self.turn = Piece.GOAT
         self.trapped_tiger_count = 0
         self.eaten_goat_count = 0
+        self.goat_count = 20
 
     def is_trapped(self, tiger):
         # check adjacent nodes of tiger
@@ -115,7 +115,6 @@ class Game:
             if (self.is_trapped(tiger)):
                 count += 1
         self.trapped_tiger_count = count
-        print(self.trapped_tiger_count)
 
     def check_end_game(self):
         if self.trapped_tiger_count == 4:
@@ -245,10 +244,24 @@ class Game:
 
             self.selected_cell = None
 
+    def draw_status(self):
+        font = pygame.font.SysFont(None, 24)
+        goat_text = font.render(
+            f"Goats Left: {self.goat_count}", True, "black")
+        eaten_text = font.render(
+            f"Goats Eaten: {self.eaten_goat_count}", True, "black")
+        trapped_text = font.render(
+            f"Tigers Trapped: {self.trapped_tiger_count}", True, "black")
+
+        self.screen.blit(goat_text, (0, self.grid_height-50))
+        self.screen.blit(eaten_text, (self.grid_dim*2, self.grid_height-50))
+        self.screen.blit(trapped_text, (self.grid_dim*4, self.grid_height-50))
+
     def game(self):
         self.draw_grid_lines()  # for testing only
         self.draw_board()
         self.draw_pieces()
+        self.draw_status()
         self.handle_events()
 
     def reset_screen(self):
