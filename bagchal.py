@@ -10,7 +10,7 @@ from enum import IntEnum
 
 class Piece(IntEnum):
     GOAT = -1
-    EMTPY = 0
+    EMPTY = 0
     TIGER = 1
 
 
@@ -49,7 +49,7 @@ class Game:
                       15: [10, 16, 20], 16: [10, 11, 12, 15, 17, 20, 21, 22], 17: [12, 16, 18, 22], 18: [12, 13, 14, 17, 19, 22, 23, 24], 19: [14, 18, 24],
                       20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
         # display different images depending on the state
-        self.state = [Piece.EMTPY] * 25
+        self.state = [Piece.EMPTY] * 25
 
         self.turn = Piece.GOAT
 
@@ -71,8 +71,6 @@ class Game:
 
         # maintain tiger states
         self.trapped_tiger_count = 0
-        self.trapped = []
-        self.flag = False
 
         # initialize the board with TIGER
         self.initialize_board()
@@ -89,7 +87,7 @@ class Game:
         self.turn *= -1
 
     def reset_game(self):
-        self.state = [Piece.EMTPY] * 25
+        self.state = [Piece.EMPTY] * 25
         self.initialize_board()
         self.turn = Piece.GOAT
         self.trapped_tiger_count = 0
@@ -103,11 +101,11 @@ class Game:
         # return false
         # otherwise return true
         for adj in self.graph[tiger]:
-            if self.state[adj] == Piece.EMTPY:
+            if self.state[adj] == Piece.EMPTY:
                 return False
             elif self.state[adj] == Piece.GOAT:
                 capture_pos = adj - (tiger - adj)
-                if capture_pos in self.graph[adj] and self.state[capture_pos] == Piece.EMTPY:
+                if capture_pos in self.graph[adj] and self.state[capture_pos] == Piece.EMPTY:
                     return False
         return True
 
@@ -213,7 +211,7 @@ class Game:
 
         if self.selected_cell is None:
             # change this by turn
-            if state == Piece.EMTPY:
+            if state == Piece.EMPTY:
                 if self.turn == Piece.GOAT and self.goat_count > 0:
                     self.state[cell_pos] = Piece.GOAT
                     self.change_turn()
@@ -225,10 +223,10 @@ class Game:
                     self.selected_cell = cell_pos
         else:
             # if another cell is selected for moving the piece to
-            if state == Piece.EMTPY:
+            if state == Piece.EMPTY:
                 # move to adjacent empty
                 if cell_pos in self.graph[self.selected_cell]:
-                    self.state[self.selected_cell] = Piece.EMTPY
+                    self.state[self.selected_cell] = Piece.EMPTY
                     self.state[cell_pos] = self.turn
                     self.change_turn()
 
@@ -239,8 +237,8 @@ class Game:
 
                     # goat ho ra khana milxa
                     if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell]) and bali_goat in self.graph[cell_pos]:
-                        self.state[bali_goat] = Piece.EMTPY
-                        self.state[self.selected_cell] = Piece.EMTPY
+                        self.state[bali_goat] = Piece.EMPTY
+                        self.state[self.selected_cell] = Piece.EMPTY
                         self.state[cell_pos] = self.turn
                         self.eaten_goat_count += 1
                         self.change_turn()
