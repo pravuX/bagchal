@@ -58,7 +58,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
         self.goat_count = 20
-        self.eat_goat = 0
+        self.eaten_goat_count = 0
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -70,7 +70,7 @@ class Game:
         }
 
         # maintain tiger states
-        self.trapped_count = 0
+        self.trapped_tiger_count = 0
         self.trapped = []
         self.flag = False
 
@@ -88,59 +88,44 @@ class Game:
     def change_turn(self):
         self.turn *= -1
 
-    def cond_true(self):
-        print("self flag = true")
-        self.flag = True
-
-    def cond_false(self, tiger):
-        print("self flag = false")
-        if tiger in self.trapped:
-            self.trapped.pop(self.trapped.index(tiger))
-            self.trapped_count -= 1
-        self.flag = False
-
     def reset_game(self):
         self.state = [Piece.EMTPY] * 25
         self.initialize_board()
         self.turn = Piece.GOAT
+        self.trapped_tiger_count = 0
+        self.eaten_goat_count = 0
+
+    def is_trapped(self, tiger):
+        # check adjacent nodes of tiger
+        # return false if at least one node is empty
+        # if the adjacent node has a goat
+        # check if that can be "eaten"
+        # return false
+        # otherwise return true
+        for adj in self.graph[tiger]:
+            if self.state[adj] == Piece.EMTPY:
+                return False
+            elif self.state[adj] == Piece.GOAT:
+                capture_pos = adj - (tiger - adj)
+                if capture_pos in self.graph[adj] and self.state[capture_pos] == Piece.EMTPY:
+                    return False
+        return True
+
+    def update_trapped_tiger(self):
+        count = 0
+        for tiger in self.pos_tiger:
+            if (self.is_trapped(tiger)):
+                count += 1
+        self.trapped_tiger_count = count
+        print(self.trapped_tiger_count)
 
     def check_end_game(self):
-        print("----" * 10)
-        for tiger in self.pos_tiger:
-            print("---"*5)
-            print("tiger: ", tiger)
-            print("trapped tiger: ", self.trapped)
-            for goat in self.graph[tiger]:
-                print("goat: ", goat)
-                trap_tiger = goat - (tiger-goat)
-                if self.state[goat] != Piece.EMTPY:
-                    if trap_tiger in self.graph.get(goat, []):
-                        if self.state[trap_tiger] != Piece.EMTPY:
-                            self.cond_true()
-                            continue
-                        else:
-                            self.cond_false(tiger)
-                            break
-                    else:
-                        self.cond_true()
-                        continue
-                else:
-                    self.cond_false(tiger)
-                    break
-            if self.flag and tiger not in self.trapped:
-                self.trapped_count += 1
-                self.trapped.append(tiger)
-                print("Trapped Count: ", self.trapped_count)
-                self.flag = False
-
-            if self.trapped_count == 4:
-                print("Goat Wins!!!")
-                time.sleep(2)
-                self.reset_game()
-            elif self.eat_goat > 12:
-                print("Tiger Wins")
-                time.sleep(2)
-                self.reset_game()
+        if self.trapped_tiger_count == 4:
+            print("Goat Wins")
+            self.reset_game()
+        elif self.eaten_goat_count > 12:
+            print("Tiger Wins")
+            self.reset_game()
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -151,6 +136,7 @@ class Game:
                 if self.turn == Piece.TIGER:
                     self.pos_tiger = [idx for idx, state in enumerate(
                         self.state) if state == 1]
+                self.update_trapped_tiger()
                 self.check_end_game()
 
     def draw_board(self):
@@ -252,12 +238,11 @@ class Game:
                     bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
 
                     # goat ho ra khana milxa
-                    print(bali_goat)
                     if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell]):
                         self.state[bali_goat] = Piece.EMTPY
                         self.state[self.selected_cell] = Piece.EMTPY
                         self.state[cell_pos] = self.turn
-                        self.eat_goat += 1
+                        self.eaten_goat_count += 1
                         self.change_turn()
 
             self.selected_cell = None
@@ -265,18 +250,14 @@ class Game:
     def game(self):
         self.draw_grid_lines()  # for testing only
         self.draw_board()
-        # self.initialize_board()
         self.draw_pieces()
         self.handle_events()
-        # self.check_end_game()
 
     def reset_screen(self):
         self.screen.fill("antiquewhite")
 
     def update(self):
         self.keys = pygame.key.get_pressed()
-        # self.mouse_pos = pygame.mouse.get_pos()
-        # self.mouse_pressed = pygame.mouse.get_pressed()
         self.reset_screen()
         self.game()
         for surf in self.surfs:
