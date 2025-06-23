@@ -93,6 +93,9 @@ class Game:
         self.eaten_goat_count = 0
         self.goat_count = 20
 
+    def update_tiger_pos(self):
+        self.pos_tiger = [idx for idx, state in enumerate(self.state) if state == 1]
+
     def is_trapped(self, tiger):
         # check adjacent nodes of tiger
         # return false if at least one node is empty
@@ -130,9 +133,7 @@ class Game:
                 self.running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.place_piece(event.pos)
-                if self.turn == Piece.TIGER:
-                    self.pos_tiger = [idx for idx, state in enumerate(
-                        self.state) if state == 1]
+                self.update_tiger_pos()
                 self.update_trapped_tiger()
                 self.check_end_game()
 
