@@ -14,6 +14,9 @@ class Piece(IntEnum):
 
 
 class Game:
+    def play(): #play screen
+        pygame.display.set_caption("Play")
+        
     def __init__(self,
                  screen_size=(854, 480),
                  caption="bagchal",
@@ -21,7 +24,6 @@ class Game:
                  tick_speed=30):  # fps
         pygame.init()
         pygame.display.set_caption(caption)
-
         # Board Game State
         self.grid_dim = grid_dim
 
@@ -58,6 +60,14 @@ class Game:
         self.tick_speed = tick_speed
         self.goat_count = 20
         self.eaten_goat_count = 0
+
+        # loading the images
+        self.bagh_img = pygame.image.load("assets/bagh.png").convert_alpha()
+        self.goat_img = pygame.image.load("assets/goat.png").convert_alpha()
+
+        #resizing to make smol
+        self.bagh_img = pygame.transform.smoothscale(self.bagh_img, (self.grid_dim, self.grid_dim))
+        self.goat_img = pygame.transform.smoothscale(self.goat_img, (self.grid_dim, self.grid_dim))
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -182,12 +192,20 @@ class Game:
             for col in range(self.grid_cols):
                 state = self.state[col+row*self.grid_cols]
 
-                if state != 0:  # we don't draw empty cells!
-                    color = self.colors[state]  # image here instead of color
+                # if state != 0:  # we don't draw empty cells!
+                #     color = self.colors[state]  # image here instead of color
+                #     x, y = self.grid_pos(col, row)
+                #     # draw a point
+                #     pygame.draw.circle(
+                #         self.screen, color, (x + self.offset, y + self.offset), self.offset//4)
+
+                if state == Piece.TIGER:
                     x, y = self.grid_pos(col, row)
-                    # draw a point
-                    pygame.draw.circle(
-                        self.screen, color, (x + self.offset, y + self.offset), self.offset//4)
+                    self.screen.blit(self.bagh_img, (x, y))
+                elif state == Piece.GOAT:
+                    x, y = self.grid_pos(col, row)
+                    self.screen.blit(self.goat_img, (x, y))
+
 
                 # visualize selected_cell
                 if self.selected_cell == col + row * self.grid_cols:
@@ -279,9 +297,76 @@ class Game:
 
     def run(self):
         while self.running:
-            self.update()
+            self.show_main_menu()
+            self.play_game()
+            # self.update()
         pygame.quit()
 
+    def play_game(self):
+        while self.running:
+            self.update()
+
+    def show_main_menu(self):
+        while True:
+            self.screen.fill("lightblue")
+            self.draw_text("Baghchal", 64, self.screen_size[0] // 2, 100)
+            play_btn = self.draw_button("Play", 277, 350, 200, 60)
+            exit_btn = self.draw_button("Exit", 277, 450, 200, 60)
+
+            pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    return
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if play_btn.collidepoint(event.pos):
+                        mode = self.play_mode()
+                    if exit_btn.collidepoint(event.pos):
+                        self.running = False
+                        return None
+    
+    def play_mode(self):
+        while True:
+            self.screen.fill("purple")
+            self.draw_text("Select mode", 64, self.screen_size[0]//2, 100)
+            pvp = self.draw_button("Player vs Player", 127, 350, 550, 60)
+            pvc = self.draw_button("Player vs Computer", 107, 450, 600, 60)
+            cvc = self.draw_button("Computer vs Computer", 87, 550, 650, 60)
+
+            pygame.display.update()
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    # self.running = False
+                    return None
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button ==1:
+                    if pvp.collidepoint(event.pos):
+                        mode = self.play_game() #start game player vs player
+                    elif pvc.collidepoint(event.pos):
+                        mode = self.play_pvc() #add pvc
+                    elif cvc.collidepoint(event.pos):
+                        mode = self.play_cvc() #add cvc
+
+    def play_pvc():
+        return
+    def play_cvc():
+        return
+
+    def draw_text(self, text, size, x, y):
+        font = pygame.font.Font("assets/font.ttf", size)
+        text_surface = font.render(text, True, "black")
+        text_rect = text_surface.get_rect(center=(x, y))
+        self.screen.blit(text_surface, text_rect)
+
+    def draw_button(self, text, x, y, w, h):
+        rect = pygame.Rect(x, y, w, h)
+        mouse_pos = pygame.mouse.get_pos()
+        if rect.collidepoint(mouse_pos):
+            pygame.draw.rect(self.screen, "gray", rect, 2)
+
+        self.draw_text(text, 32, x + w // 2, y + h // 2)
+        return pygame.Rect(x, y, w, h)
 
 if __name__ == "__main__":
     game = Game()
