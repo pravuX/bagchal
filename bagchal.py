@@ -56,7 +56,7 @@ class Game:
     def __init__(self,
                  screen_size=(854, 480),
                  caption="bagchal",
-                 grid_dim=150,
+                 grid_dim=200,
                  tick_speed=30):  # fps
         pygame.init()
         pygame.display.set_caption(caption)
@@ -103,9 +103,9 @@ class Game:
 
         # resizing to make smol
         self.bagh_img = pygame.transform.smoothscale(
-            self.bagh_img, (self.grid_dim, self.grid_dim))
+            self.bagh_img, (self.grid_dim//2, self.grid_dim//2))
         self.goat_img = pygame.transform.smoothscale(
-            self.goat_img, (self.grid_dim, self.grid_dim))
+            self.goat_img, (self.grid_dim//2, self.grid_dim//2))
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -172,7 +172,7 @@ class Game:
         if self.trapped_tiger_count == 4:
             print("Goat Wins")
             self.reset_game()
-        elif self.eaten_goat_count > 5:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
+        elif self.eaten_goat_count > 4:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
             print("Tiger Wins")
             self.reset_game()
 
@@ -240,15 +240,18 @@ class Game:
 
                 if state == Piece.TIGER:
                     x, y = self.grid_pos(col, row)
-                    self.screen.blit(self.bagh_img, (x, y))
+                    self.screen.blit(
+                        self.bagh_img, (x+self.offset//2, y+self.offset//2))
                 elif state == Piece.GOAT:
                     x, y = self.grid_pos(col, row)
-                    self.screen.blit(self.goat_img, (x, y))
+                    self.screen.blit(
+                        self.goat_img, (x+self.offset//2, y+self.offset//2))
 
                 # visualize selected_cell
                 if self.selected_cell == col + row * self.grid_cols:
+                    selection_width = 5
                     pygame.draw.circle(
-                        self.screen, "darksalmon", (x + self.offset, y + self.offset), self.offset // 4 + 5, 5)
+                        self.screen, "gray17", (x + self.offset, y + self.offset), self.grid_dim//4 + selection_width-1, selection_width)
 
     def place_piece(self, pos):
         mouse_x, mouse_y = pos
@@ -302,7 +305,7 @@ class Game:
             self.selected_cell = None
 
     def draw_status(self):
-        font = pygame.font.SysFont(None, 24)
+        font = pygame.font.SysFont(None, 48)
         goat_text = font.render(
             f"Goats Left: {self.goat_count}", True, "black")
         eaten_text = font.render(
@@ -312,10 +315,8 @@ class Game:
 
         self.screen.blit(goat_text, (0, self.grid_height-50))
         self.screen.blit(eaten_text, (self.grid_dim*2, self.grid_height-50))
-        self.screen.blit(trapped_text, (self.grid_dim*4, self.grid_height-50))
-        ai_text = font.render(
-            f"AI Thinking..." if self.turn != Piece.EMPTY else "", True, "red")
-        self.screen.blit(ai_text, (self.grid_dim * 3, self.grid_height - 25))
+        self.screen.blit(
+            trapped_text, (self.grid_dim*4-80, self.grid_height-50))
 
     def game(self):
         # self.draw_grid_lines()  # for testing only
@@ -426,7 +427,7 @@ class Game:
 
         while self.running:
 
-            pygame.time.delay(800)
+            # pygame.time.delay(800)
             move = agent.get_best_move(self)
             if move:
                 self.make_move(*move)
