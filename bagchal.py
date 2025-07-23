@@ -1,3 +1,4 @@
+from queue import Empty
 import pygame
 import math
 from enum import IntEnum
@@ -14,9 +15,9 @@ class Piece(IntEnum):
 
 
 class Game:
-    def play(): #play screen
+    def play():  # play screen
         pygame.display.set_caption("Play")
-        
+
     def __init__(self,
                  screen_size=(854, 480),
                  caption="bagchal",
@@ -65,9 +66,11 @@ class Game:
         self.bagh_img = pygame.image.load("assets/bagh.png").convert_alpha()
         self.goat_img = pygame.image.load("assets/goat.png").convert_alpha()
 
-        #resizing to make smol
-        self.bagh_img = pygame.transform.smoothscale(self.bagh_img, (self.grid_dim, self.grid_dim))
-        self.goat_img = pygame.transform.smoothscale(self.goat_img, (self.grid_dim, self.grid_dim))
+        # resizing to make smol
+        self.bagh_img = pygame.transform.smoothscale(
+            self.bagh_img, (self.grid_dim, self.grid_dim))
+        self.goat_img = pygame.transform.smoothscale(
+            self.goat_img, (self.grid_dim, self.grid_dim))
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -104,7 +107,8 @@ class Game:
         self.goat_count = 20
 
     def update_tiger_pos(self):
-        self.pos_tiger = [idx for idx, state in enumerate(self.state) if state == 1]
+        self.pos_tiger = [idx for idx,
+                          state in enumerate(self.state) if state == 1]
 
     def is_trapped(self, tiger):
         # check adjacent nodes of tiger
@@ -133,7 +137,7 @@ class Game:
         if self.trapped_tiger_count == 4:
             print("Goat Wins")
             self.reset_game()
-        elif self.eaten_goat_count > 12:
+        elif self.eaten_goat_count > 12:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
             print("Tiger Wins")
             self.reset_game()
 
@@ -206,7 +210,6 @@ class Game:
                     x, y = self.grid_pos(col, row)
                     self.screen.blit(self.goat_img, (x, y))
 
-
                 # visualize selected_cell
                 if self.selected_cell == col + row * self.grid_cols:
                     pygame.draw.circle(
@@ -277,7 +280,7 @@ class Game:
         self.screen.blit(trapped_text, (self.grid_dim*4, self.grid_height-50))
 
     def game(self):
-        self.draw_grid_lines()  # for testing only
+        # self.draw_grid_lines()  # for testing only
         self.draw_board()
         self.draw_pieces()
         self.draw_status()
@@ -298,8 +301,8 @@ class Game:
     def run(self):
         while self.running:
             self.show_main_menu()
-            self.play_game()
-            # self.update()
+            # self.play_game()
+            self.update()
         pygame.quit()
 
     def play_game(self):
@@ -325,7 +328,7 @@ class Game:
                     if exit_btn.collidepoint(event.pos):
                         self.running = False
                         return None
-    
+
     def play_mode(self):
         while True:
             self.screen.fill("purple")
@@ -340,16 +343,17 @@ class Game:
                 if event.type == pygame.QUIT:
                     # self.running = False
                     return None
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button ==1:
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     if pvp.collidepoint(event.pos):
-                        mode = self.play_game() #start game player vs player
+                        mode = self.play_game()  # start game player vs player
                     elif pvc.collidepoint(event.pos):
-                        mode = self.play_pvc() #add pvc
+                        mode = self.play_pvc()  # add pvc
                     elif cvc.collidepoint(event.pos):
-                        mode = self.play_cvc() #add cvc
+                        mode = self.play_cvc()  # add cvc
 
     def play_pvc():
         return
+
     def play_cvc():
         return
 
@@ -368,6 +372,165 @@ class Game:
         self.draw_text(text, 32, x + w // 2, y + h // 2)
         return pygame.Rect(x, y, w, h)
 
+    def make_move(self, src, dst):
+        # Goat placement
+        if src == dst:
+            if self.turn == Piece.GOAT and self.goat_count > 0 and self.state[src] == Piece.EMPTY:
+                self.state[src] = Piece.GOAT
+                self.goat_count -= 1
+                self.change_turn()
+            return
+
+        # Moving pieces
+        if self.state[src] != self.turn or self.state[dst] != Piece.EMPTY:
+            return  # invalid move
+
+        # Normal adjacent move
+        if dst in self.graph[src]:
+            self.state[src] = Piece.EMPTY
+            self.state[dst] = self.turn
+            self.change_turn()
+            return
+
+        # Tiger capture
+        if self.state[src] == Piece.TIGER:
+            mid = (src + dst) // 2
+            if (self.state[mid] == Piece.GOAT and
+                    mid in self.graph[src] and dst in self.graph[mid]):
+                self.state[mid] = Piece.EMPTY
+                self.state[src] = Piece.EMPTY
+                self.state[dst] = Piece.TIGER
+                self.eaten_goat_count += 1
+                self.change_turn()
+
+
+def generate_legal_moves(state, turn, graph, goat_count):
+    moves = []
+
+    if turn == Piece.GOAT:
+        if goat_count > 0:
+            # Goat placement phase: place on any empty cell
+            for i in range(25):
+                if state[i] == Piece.EMPTY:
+                    moves.append((i, i))  # placement represented as (i, i)
+        else:
+            # Move goats to adjacent empty positions
+            for i in range(25):
+                if state[i] == Piece.GOAT:
+                    for adj in graph[i]:
+                        if state[adj] == Piece.EMPTY:
+                            moves.append((i, adj))
+
+    elif turn == Piece.TIGER:
+        for i in range(25):
+            if state[i] == Piece.TIGER:
+                for adj in graph[i]:
+                    if state[adj] == Piece.EMPTY:
+                        moves.append((i, adj))
+                    elif state[adj] == Piece.GOAT:
+                        capture_pos = adj - (i - adj)
+                        if (capture_pos in graph[adj] and
+                                state[capture_pos] == Piece.EMPTY):
+                            moves.append((i, capture_pos))
+
+    return moves
+
+
+def evaluate_state(state, turn, graph, goat_count, eaten_goat_count):
+    goats_on_board = sum(1 for s in state if s == Piece.GOAT)
+    tigers = [i for i, s in enumerate(state) if s == Piece.TIGER]
+
+    # Count trapped tigers
+    trapped_tiger_count = 0
+    for tiger in tigers:
+        is_trapped = True
+        for adj in graph[tiger]:
+            if state[adj] == Piece.EMPTY:
+                is_trapped = False
+                break
+            elif state[adj] == Piece.GOAT:
+                cap_pos = adj - (tiger - adj)
+                if cap_pos in graph[adj] and state[cap_pos] == Piece.EMPTY:
+                    is_trapped = False
+                    break
+        if is_trapped:
+            trapped_tiger_count += 1
+
+    score = (
+        + 4 * eaten_goat_count
+        - 1 * goats_on_board
+        - 0.5 * goat_count
+        - 10 * trapped_tiger_count
+    )
+
+    return score if turn == Piece.TIGER else -score
+
+
+class MinimaxAgent:
+    def __init__(self, depth=3):
+        self.depth = depth
+
+    def get_best_move(self, game):
+        best_val = float('-inf') if game.turn == Piece.TIGER else float('inf')
+        best_move = None
+
+        moves = generate_legal_moves(
+            game.state, game.turn, game.graph, game.goat_count)
+        for move in moves:
+            new_game = self.simulate_move(game, move)
+            val = self.minimax(new_game, self.depth - 1, float('-inf'),
+                               float('inf'), maximizing=(game.turn == Piece.GOAT))
+
+            if game.turn == Piece.TIGER and val > best_val:
+                best_val = val
+                best_move = move
+            elif game.turn == Piece.GOAT and val < best_val:
+                best_val = val
+                best_move = move
+
+        return best_move
+
+    def minimax(self, game, depth, alpha, beta, maximizing):
+        if depth == 0:
+            return evaluate_state(game.state, game.turn, game.graph, game.goat_count, game.eaten_goat_count)
+
+        moves = generate_legal_moves(
+            game.state, game.turn, game.graph, game.goat_count)
+
+        if maximizing:
+            max_eval = float('-inf')
+            for move in moves:
+                new_game = self.simulate_move(game, move)
+                eval = self.minimax(new_game, depth - 1, alpha, beta, False)
+                max_eval = max(max_eval, eval)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break
+            return max_eval
+
+        else:
+            min_eval = float('inf')
+            for move in moves:
+                new_game = self.simulate_move(game, move)
+                eval = self.minimax(new_game, depth - 1, alpha, beta, True)
+                min_eval = min(min_eval, eval)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break
+            return min_eval
+
+    def simulate_move(self, game, move):
+        from copy import deepcopy
+        new_game = deepcopy(game)
+        new_game.make_move(*move)
+        new_game.update_tiger_pos()
+        new_game.update_trapped_tiger()
+        return new_game
+
+
 if __name__ == "__main__":
     game = Game()
+    moves = game.generate_legal_moves()
+    for move in moves:
+        print("Valid moves: ", move)
     game.run()
