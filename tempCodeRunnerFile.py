@@ -1,1 +1,1 @@
-lightblue
+self.running = False

@@ -101,11 +101,20 @@ class Game:
         self.bagh_img = pygame.image.load("assets/bagh.png").convert_alpha()
         self.goat_img = pygame.image.load("assets/goat.png").convert_alpha()
 
+        #loading images for select
+        self.bagh_selected = pygame.image.load("assets/bagh_selected.png").convert_alpha()
+        self.goat_selected = pygame.image.load("assets/goat_selected.png").convert_alpha()
+
         # resizing to make smol
         self.bagh_img = pygame.transform.smoothscale(
             self.bagh_img, (self.grid_dim//2, self.grid_dim//2))
         self.goat_img = pygame.transform.smoothscale(
             self.goat_img, (self.grid_dim//2, self.grid_dim//2))
+        
+        self.bagh_selected = pygame.transform.smoothscale(
+            self.bagh_selected, (int(self.grid_dim * 0.5), int(self.grid_dim * 0.5)))
+        self.goat_selected = pygame.transform.smoothscale(
+            self.goat_selected, (int(self.grid_dim * 0.5), int(self.grid_dim * 0.5)))
 
         self.running = True
         self.surfs = []  # for loading images and stuff
@@ -249,9 +258,12 @@ class Game:
 
                 # visualize selected_cell
                 if self.selected_cell == col + row * self.grid_cols:
-                    selection_width = 5
-                    pygame.draw.circle(
-                        self.screen, "gray17", (x + self.offset, y + self.offset), self.grid_dim//4 + selection_width-1, selection_width)
+                    if state == Piece.TIGER:
+                        x, y = self.grid_pos(col, row)
+                        self.screen.blit(self.bagh_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
+                    elif state == Piece.GOAT:
+                        x, y = self.grid_pos(col, row)
+                        self.screen.blit(self.goat_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
 
     def place_piece(self, pos):
         mouse_x, mouse_y = pos
