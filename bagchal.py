@@ -407,7 +407,7 @@ class Game:
                         mode = self.play_cvc()  # add cvc
 
     def play_pvc_goat(self):
-        agent = MinimaxAgent(depth=3)  # depth can be adjusted
+        agent = MinimaxAgent(depth=5)  # depth can be adjusted
         while self.running:
             if self.turn == Piece.GOAT:
                 move = agent.get_best_move(self)
