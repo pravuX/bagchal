@@ -295,7 +295,7 @@ class Game:
                     bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
 
                     # goat ho ra khana milxa
-                    if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell]) and bali_goat in self.graph[cell_pos]:
+                    if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell] and self.graph[cell_pos]) and bali_goat in self.graph[cell_pos]:
                         self.state[bali_goat] = Piece.EMPTY
                         self.state[self.selected_cell] = Piece.EMPTY
                         self.state[cell_pos] = self.turn
