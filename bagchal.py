@@ -2,6 +2,7 @@ from copy import deepcopy
 import pygame
 import math
 from enum import IntEnum
+from random import randint, choice
 
 
 # REMEMBER:
@@ -101,16 +102,18 @@ class Game:
         self.bagh_img = pygame.image.load("assets/bagh.png").convert_alpha()
         self.goat_img = pygame.image.load("assets/goat.png").convert_alpha()
 
-        #loading images for select
-        self.bagh_selected = pygame.image.load("assets/bagh_selected.png").convert_alpha()
-        self.goat_selected = pygame.image.load("assets/goat_selected.png").convert_alpha()
+        # loading images for select
+        self.bagh_selected = pygame.image.load(
+            "assets/bagh_selected.png").convert_alpha()
+        self.goat_selected = pygame.image.load(
+            "assets/goat_selected.png").convert_alpha()
 
         # resizing to make smol
         self.bagh_img = pygame.transform.smoothscale(
             self.bagh_img, (self.grid_dim//2, self.grid_dim//2))
         self.goat_img = pygame.transform.smoothscale(
             self.goat_img, (self.grid_dim//2, self.grid_dim//2))
-        
+
         self.bagh_selected = pygame.transform.smoothscale(
             self.bagh_selected, (int(self.grid_dim * 0.5), int(self.grid_dim * 0.5)))
         self.goat_selected = pygame.transform.smoothscale(
@@ -260,10 +263,12 @@ class Game:
                 if self.selected_cell == col + row * self.grid_cols:
                     if state == Piece.TIGER:
                         x, y = self.grid_pos(col, row)
-                        self.screen.blit(self.bagh_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
+                        self.screen.blit(
+                            self.bagh_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
                     elif state == Piece.GOAT:
                         x, y = self.grid_pos(col, row)
-                        self.screen.blit(self.goat_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
+                        self.screen.blit(
+                            self.goat_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
 
     def place_piece(self, pos):
         mouse_x, mouse_y = pos
@@ -307,7 +312,7 @@ class Game:
                     bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
 
                     # goat ho ra khana milxa
-                    if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell] and self.graph[cell_pos]) and bali_goat in self.graph[cell_pos]:
+                    if (self.state[bali_goat] == Piece.GOAT and bali_goat in self.graph[self.selected_cell] and bali_goat in self.graph[cell_pos]):
                         self.state[bali_goat] = Piece.EMPTY
                         self.state[self.selected_cell] = Piece.EMPTY
                         self.state[cell_pos] = self.turn
@@ -584,6 +589,10 @@ class MinimaxAgent:
 
         moves = generate_legal_moves(
             game.state, game.turn, game.graph, game.goat_count)
+        if randint(1, 10) > 8 and game.turn == Piece.TIGER:
+            return choice(moves)
+        if randint(1, 10) > 9 and game.turn == Piece.GOAT:
+            return choice(moves)
         for move in moves:
             simulated = self.simulate_move(game, move)
             val = self.minimax(simulated, self.depth - 1, float('-inf'),
