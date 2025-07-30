@@ -1,95 +1,224 @@
+from enum import Enum
 import pygame
-import math
 from bagchal import Piece
 from alphabeta import MinimaxAgent
 
-class Game:
-    def play(self):  # play screen
-        pygame.display.set_caption("Play")
+COLORS = {
+    "bg": "antiquewhite",
+    "board": "gray",
+    "text": "black",
+    "menu_bg": "lightblue",
+    "mode_bg": "purple",
+}
 
+ASSETS = {
+    "font": "assets/font.ttf",
+    "bagh": "assets/bagh.png",
+    "goat": "assets/goat.png",
+    "bagh_sel": "assets/bagh_selected.png",
+    "goat_sel": "assets/goat_selected.png",
+}
+
+
+class UIState(Enum):
+    MAIN_MENU = "main_menu"
+    MODE_SELECT = "mode_select"
+    PLAYING_PVP = "playing_pvp"
+    PLAYING_PVC_GOAT = "playing_pvc_goat"
+    PLAYING_PVC_TIGER = "playing_pvc_tiger"
+    PLAYING_CVC = "playing_cvc"
+    GAME_OVER = "game_over"
+    EXITING = "exiting"
+
+
+# cell_size -> cell_size
+# reset_game -> reset_game
+class Game:
     def __init__(self, game_state,
-                 screen_size=(854, 480),
                  caption="bagchal",
-                 grid_dim=150,
-                 tick_speed=30):  # fps
+                 cell_size=200,
+                 tick_speed=30):
         pygame.init()
         pygame.display.set_caption(caption)
 
         self.game_state = game_state
-        # Board Game State
-        self.grid_dim = grid_dim
+        self.cell_size = cell_size
 
-        self.grid_width = self.grid_dim * 5
-        self.grid_height = self.grid_dim * 5
-        self.screen_size = (self.grid_width, self.grid_height)
+        self.current_state = UIState.MAIN_MENU
+        self.running = True
 
-        self.grid_cols = self.grid_width // self.grid_dim
-        self.grid_rows = self.grid_height // self.grid_dim
+        # AI agent (initialized when needed)
+        self.ai_agent = None
+        self.ai_move_timer = 0
+        self.ai_move_delay = 500  # milliseconds
 
-        self.offset = self.grid_dim // 2  # for drawing the lines
-        self.board_width = self.grid_width - self.grid_dim
-        self.board_height = self.grid_height - self.grid_dim
+        # Game over state
+        self.game_over_timer = 0
+        self.game_over_delay = 1000  # milliseconds
 
-        # self.mouse_pos = (-1, -1)
-        # left, middle, right buttons
-        # self.mouse_pressed = (False, False, False)
+        self.initialize_board_data()
         self.selected_cell = None
 
+        self.initialize_pygame_state(tick_speed)
+        self.load_assets()
+
+    def initialize_board_data(self):
+
+        self.grid_width = self.cell_size * 5
+        self.grid_height = self.cell_size * 5
+        self.screen_size = (self.grid_width, self.grid_height)
+
+        self.grid_cols = self.grid_width // self.cell_size
+        self.grid_rows = self.grid_height // self.cell_size
+
+        self.offset = self.cell_size // 2  # for drawing the lines
+        self.board_width = self.grid_width - self.cell_size
+        self.board_height = self.grid_height - self.cell_size
+
+    def initialize_pygame_state(self, tick_speed):
         # Pygame State
         self.screen = pygame.display.set_mode(self.screen_size)
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
 
+    def load_assets(self):
         # loading the images
-        self.bagh_img = pygame.image.load("assets/bagh.png").convert_alpha()
-        self.goat_img = pygame.image.load("assets/goat.png").convert_alpha()
+        self.bagh_img = pygame.image.load(ASSETS["bagh"]).convert_alpha()
+        self.goat_img = pygame.image.load(ASSETS["goat"]).convert_alpha()
 
         # loading images for select
         self.bagh_selected = pygame.image.load(
-            "assets/bagh_selected.png").convert_alpha()
+            ASSETS["bagh_sel"]).convert_alpha()
         self.goat_selected = pygame.image.load(
-            "assets/goat_selected.png").convert_alpha()
+            ASSETS["goat_sel"]).convert_alpha()
 
         # resizing to make smol
         self.bagh_img = pygame.transform.smoothscale(
-            self.bagh_img, (self.grid_dim//2, self.grid_dim//2))
+            self.bagh_img, (self.cell_size//2, self.cell_size//2))
         self.goat_img = pygame.transform.smoothscale(
-            self.goat_img, (self.grid_dim//2, self.grid_dim//2))
+            self.goat_img, (self.cell_size//2, self.cell_size//2))
 
         self.bagh_selected = pygame.transform.smoothscale(
-            self.bagh_selected, (int(self.grid_dim * 0.5), int(self.grid_dim * 0.5)))
+            self.bagh_selected, (int(self.cell_size * 0.5), int(self.cell_size * 0.5)))
         self.goat_selected = pygame.transform.smoothscale(
-            self.goat_selected, (int(self.grid_dim * 0.5), int(self.grid_dim * 0.5)))
+            self.goat_selected, (int(self.cell_size * 0.5), int(self.cell_size * 0.5)))
 
-        self.running = True
-        self.surfs = []  # for loading images and stuff
-        self.keys = []
+    def reset_game(self):
+        self.game_state.reset()
+        self.selected_cell = None
 
-        self.colors = {
-            Piece.GOAT: "gray",
-            Piece.TIGER: "black"
-        }
-        #remove it later
-        self.initialize_board()
-
-    def initialize_board(self):
-        #This should be called before instantiating the game object
-        self.pos_tiger = [0, 4, 20, 24]
-
-        self.game_state.board[self.pos_tiger[0]] = Piece.TIGER
-        self.game_state.board[self.pos_tiger[1]] = Piece.TIGER
-        self.game_state.board[self.pos_tiger[2]] = Piece.TIGER
-        self.game_state.board[self.pos_tiger[3]] = Piece.TIGER
-
-    def handle_events(self):
+    def handle_main_menu_events(self):
+        """Handle events specific to main menu"""
         for event in pygame.event.get():
-            if event.type == pygame.QUIT or self.keys[pygame.K_q]:
-                self.running = False
+            if event.type == pygame.QUIT:
+                self.current_state = UIState.EXITING
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                self.place_piece(event.pos)
-                self.game_state.update_tiger_pos()
-                self.game_state.update_trapped_tiger()
-                self.game_state.check_end_game()
+                # Check button clicks
+                play_btn_rect = pygame.Rect(277, 350, 200, 60)
+                exit_btn_rect = pygame.Rect(277, 450, 200, 60)
+
+                if play_btn_rect.collidepoint(event.pos):
+                    self.current_state = UIState.MODE_SELECT
+                elif exit_btn_rect.collidepoint(event.pos):
+                    self.current_state = UIState.EXITING
+
+    def handle_mode_select_events(self):
+        """Handle events for mode selection"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.current_state = UIState.EXITING
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                pvp_rect = pygame.Rect(127, 350, 550, 60)
+                pvc_goat_rect = pygame.Rect(107, 450, 600, 60)
+                pvc_tiger_rect = pygame.Rect(107, 550, 600, 60)
+                cvc_rect = pygame.Rect(87, 650, 650, 60)
+
+                if pvp_rect.collidepoint(event.pos):
+                    self.reset_game()
+                    self.current_state = UIState.PLAYING_PVP
+                elif pvc_goat_rect.collidepoint(event.pos):
+                    self.reset_game()
+                    self.ai_agent = MinimaxAgent(depth=5)
+                    self.current_state = UIState.PLAYING_PVC_GOAT
+                    # Initialize AI timer to current time so it waits before first move
+                    self.ai_move_timer = pygame.time.get_ticks()
+                elif pvc_tiger_rect.collidepoint(event.pos):
+                    self.reset_game()
+                    self.ai_agent = MinimaxAgent(depth=4)
+                    self.current_state = UIState.PLAYING_PVC_TIGER
+                    # Initialize AI timer to current time so it waits before first move
+                    self.ai_move_timer = pygame.time.get_ticks()
+                elif cvc_rect.collidepoint(event.pos):
+                    self.reset_game()
+                    self.ai_agent = MinimaxAgent(depth=4)
+                    self.current_state = UIState.PLAYING_CVC
+                    # Initialize AI timer to current time so it waits before first move
+                    self.ai_move_timer = pygame.time.get_ticks()
+
+        # ESC to go back to main menu
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.current_state = UIState.MAIN_MENU
+
+    def handle_game_events(self):
+        """Handle events during gameplay"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.current_state = UIState.EXITING
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                if self.current_state == UIState.PLAYING_PVP or \
+                   (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.TIGER) or \
+                   (self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.GOAT):
+                    self.place_piece(event.pos)
+                    self.game_state.update_tiger_pos()
+                    self.game_state.update_trapped_tiger()
+
+        # ESC to go back to mode select
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.current_state = UIState.MAIN_MENU
+
+    def handle_game_over_events(self):
+        """Handle events during game over screen"""
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.current_state = UIState.EXITING
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    self.current_state = UIState.MODE_SELECT
+                elif event.key == pygame.K_ESCAPE:
+                    self.current_state = UIState.MAIN_MENU
+
+    def update_ai_logic(self):
+        """Handle AI moves with proper timing"""
+        should_make_ai_move = False
+
+        if self.current_state == UIState.PLAYING_CVC:
+            should_make_ai_move = True
+        elif self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.GOAT:
+            should_make_ai_move = True
+        elif self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.TIGER:
+            should_make_ai_move = True
+
+        if should_make_ai_move and self.ai_agent:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.ai_move_timer >= self.ai_move_delay:
+                move = self.ai_agent.get_best_move(self.game_state)
+                if move:
+                    self.game_state.make_move(move)
+                    self.game_state.update_tiger_pos()
+                    self.game_state.update_trapped_tiger()
+                    self.ai_move_timer = current_time
+
+    def check_game_over(self):
+        """Check if game is over and handle transition"""
+        if self.game_state.is_game_over():
+            if self.game_over_timer == 0:
+                self.game_over_timer = pygame.time.get_ticks()
+                print("Game Over")
+            elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
+                self.current_state = UIState.GAME_OVER
+                self.game_over_timer = 0
 
     def draw_board(self):
         pygame.draw.line(self.screen, 0, (0+self.offset, 0+self.offset),
@@ -113,104 +242,74 @@ class Game:
 
         # vertical lines
         for i in range(self.grid_cols):
-            pygame.draw.line(self.screen, 0, (i*self.grid_dim+self.offset, 0+self.offset),
-                             (i*self.grid_dim+self.offset, self.grid_height+self.offset-self.grid_dim), 2)
+            pygame.draw.line(self.screen, 0, (i*self.cell_size+self.offset, 0+self.offset),
+                             (i*self.cell_size+self.offset, self.grid_height+self.offset-self.cell_size), 2)
         # horizontal lines
         for i in range(self.grid_rows):
-            pygame.draw.line(self.screen, 0, (0+self.offset, i*self.grid_dim+self.offset),
-                             (self.grid_width+self.offset-self.grid_dim, i*self.grid_dim+self.offset), 2)
+            pygame.draw.line(self.screen, 0, (0+self.offset, i*self.cell_size+self.offset),
+                             (self.grid_width+self.offset-self.cell_size, i*self.cell_size+self.offset), 2)
 
-    def grid_pos(self, col, row):
+    def cell_to_pixel(self, col, row):
         # given col, row returns the corresponding grid position(x, y) or cell position(x, y)
-        return col * self.grid_dim, row * self.grid_dim
+        return col * self.cell_size, row * self.cell_size
 
     def draw_grid_lines(self):
         for row in range(self.grid_rows):
             for col in range(self.grid_cols):
-                sqr_x, sqr_y = self.grid_pos(col, row)
-                sqr = pygame.Rect(sqr_x, sqr_y, self.grid_dim, self.grid_dim)
-                pygame.draw.rect(self.screen, "gray", sqr, 1)  # border
+                sqr_x, sqr_y = self.cell_to_pixel(col, row)
+                sqr = pygame.Rect(sqr_x, sqr_y, self.cell_size, self.cell_size)
+                pygame.draw.rect(
+                    self.screen, COLORS["board"], sqr, 1)  # border
 
     def draw_pieces(self):
-        for row in range(self.grid_rows):
-            for col in range(self.grid_cols):
-                board = self.game_state.board[col+row*self.grid_cols]
+        for i, piece in enumerate(self.game_state.board):
+            row, col = divmod(i, 5)
+            x, y = self.cell_to_pixel(col, row)
+            x, y = x+self.offset//2, y+self.offset//2
 
-                # if board != 0:  # we don't draw empty cells!
-                #     color = self.colors[board]  # image here instead of color
-                #     x, y = self.grid_pos(col, row)
-                #     # draw a point
-                #     pygame.draw.circle(
-                #         self.screen, color, (x + self.offset, y + self.offset), self.offset//4)
-
-                if board == Piece.TIGER:
-                    x, y = self.grid_pos(col, row)
-                    self.screen.blit(
-                        self.bagh_img, (x+self.offset//2, y+self.offset//2))
-                elif board == Piece.GOAT:
-                    x, y = self.grid_pos(col, row)
-                    self.screen.blit(
-                        self.goat_img, (x+self.offset//2, y+self.offset//2))
-
-                # visualize selected_cell
-                if self.selected_cell == col + row * self.grid_cols:
-                    if board == Piece.TIGER:
-                        x, y = self.grid_pos(col, row)
-                        self.screen.blit(
-                            self.bagh_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
-                    elif board == Piece.GOAT:
-                        x, y = self.grid_pos(col, row)
-                        self.screen.blit(
-                            self.goat_selected, (x + self.grid_dim/4, y + self.grid_dim/4))
+            if piece == Piece.GOAT:
+                img = self.goat_selected if i == self.selected_cell else self.goat_img
+                self.screen.blit(img, (x, y))
+            elif piece == Piece.TIGER:
+                img = self.bagh_selected if i == self.selected_cell else self.bagh_img
+                self.screen.blit(img, (x, y))
 
     def place_piece(self, pos):
+        # Disable player input if it's AI's turn or it's game over
+        if (self.current_state == UIState.PLAYING_CVC or
+            (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.GOAT) or
+                (self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.TIGER) or
+                self.game_state.is_game_over()):
+            return
+
         mouse_x, mouse_y = pos
-        col = mouse_x // self.grid_dim
-        row = mouse_y // self.grid_dim
-        cell_pos = col+row*self.grid_cols  # 2d to 1d index
+        col, row = mouse_x // self.cell_size, mouse_y // self.cell_size
+        if col >= 5 or row >= 5:
+            return
 
-        board = self.game_state.board[cell_pos]
-
-        # If no piece is selected:
-        #     Click on an empty cell → place a new piece (1).
-        #     Click on an existing piece (1) → mark it as selected.
-        # If a piece is selected:
-        #     Click on an empty cell → move it there.
-        #     Click on any cell (even invalid move) → cancel selection.
+        idx = col + row * self.grid_cols
+        piece = self.game_state.board[idx]
 
         if self.selected_cell is None:
-            # change this by turn
-            if board == Piece.EMPTY:
-                if self.game_state.turn == Piece.GOAT and self.game_state.goat_count > 0:
-                    self.game_state.board[cell_pos] = Piece.GOAT
-                    self.game_state.change_turn()
-                    self.game_state.goat_count -= 1
-            elif board == self.game_state.turn:  # select only those cells whose turn it is
-                if self.game_state.goat_count > 0 and self.game_state.turn == Piece.GOAT:
-                    self.selected_cell = None
-                elif self.game_state.turn == Piece.TIGER or self.game_state.goat_count == 0:
-                    self.selected_cell = cell_pos
+            if self.game_state.turn == Piece.GOAT and self.game_state.goat_count > 0:
+                # Placement
+                if piece == Piece.EMPTY:
+                    self.game_state.make_move((idx, idx))
+                    self.game_state.update_tiger_pos()
+                    self.game_state.update_trapped_tiger()
+                    # Reset AI timer so it waits before responding to player move
+                    self.ai_move_timer = pygame.time.get_ticks()
+                    return
+            elif piece == self.game_state.turn:
+                self.selected_cell = idx
         else:
-            # if another cell is selected for moving the piece to
-            if board == Piece.EMPTY:
-                # move to adjacent empty
-                if cell_pos in self.game_state.graph[self.selected_cell]:
-                    self.game_state.board[self.selected_cell] = Piece.EMPTY
-                    self.game_state.board[cell_pos] = self.game_state.turn
-                    self.game_state.change_turn()
-
-                # avg the position of two cells gives us the middle cell (in all directions)
-                if (self.game_state.board[self.selected_cell] == Piece.TIGER):
-
-                    bali_goat = math.ceil((self.selected_cell + cell_pos)/2)
-
-                    # goat ho ra khana milxa
-                    if (self.game_state.board[bali_goat] == Piece.GOAT and bali_goat in self.game_state.graph[self.selected_cell] and bali_goat in self.game_state.graph[cell_pos]):
-                        self.game_state.board[bali_goat] = Piece.EMPTY
-                        self.game_state.board[self.selected_cell] = Piece.EMPTY
-                        self.game_state.board[cell_pos] = self.game_state.turn
-                        self.game_state.eaten_goat_count += 1
-                        self.game_state.change_turn()
+            move = (self.selected_cell, idx)
+            if move in self.game_state.get_legal_moves():
+                self.game_state.make_move(move)
+                self.game_state.update_tiger_pos()
+                self.game_state.update_trapped_tiger()
+                # Reset AI timer so it waits before responding to player move
+                self.ai_move_timer = pygame.time.get_ticks()
             self.selected_cell = None
 
     def draw_status(self):
@@ -223,172 +322,95 @@ class Game:
             f"Tigers Trapped: {self.game_state.trapped_tiger_count}", True, "black")
 
         self.screen.blit(goat_text, (0, self.grid_height-50))
-        self.screen.blit(eaten_text, (self.grid_dim*2, self.grid_height-50))
+        self.screen.blit(eaten_text, (self.cell_size*2, self.grid_height-50))
         self.screen.blit(
-            trapped_text, (self.grid_dim*4-80, self.grid_height-50))
+            trapped_text, (self.cell_size*4-80, self.grid_height-50))
 
-    def game(self):
-        # self.draw_grid_lines()  # for testing only
-        self.handle_events()
-        self.draw_board()
-        self.draw_pieces()
-        self.draw_status()
-
-    def reset_screen(self):
-        self.screen.fill("antiquewhite")
-
-    def update(self):
-        self.keys = pygame.key.get_pressed()
-        self.reset_screen()
-        self.game()
-        for surf in self.surfs:
-            self.screen.blit(surf, (0, 0))
-        pygame.display.update()
-        self.clock.tick(self.tick_speed)
-
-    def run(self):
-        while self.running:
-            self.show_main_menu()
-            # self.play_game()
-            self.update()
-        pygame.quit()
-
-    def play_game(self):
-        while self.running:
-            self.update()
-
-    def show_main_menu(self):
-        while True:
-            self.screen.fill("lightblue")
-            self.draw_text("Baghchal", 64, self.screen_size[0] // 2, 100)
-            play_btn = self.draw_button("Play", 277, 350, 200, 60)
-            exit_btn = self.draw_button("Exit", 277, 450, 200, 60)
-
-            pygame.display.update()
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                    return
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if play_btn.collidepoint(event.pos):
-                        mode = self.play_mode()
-                    if exit_btn.collidepoint(event.pos):
-                        self.running = False
-                        return None
-
-    def play_mode(self):
-        while True:
-            self.screen.fill("purple")
-            self.draw_text("Select mode", 64, self.screen_size[0]//2, 100)
-            pvp = self.draw_button("Player vs Player", 127, 350, 550, 60)
-            pvc_goat = self.draw_button("Player vs Goat AI", 107, 450, 600, 60)
-            pvc_tiger = self.draw_button(
-                "Player vs Tiger AI", 107, 550, 600, 60)
-            cvc = self.draw_button("Computer vs Computer", 87, 650, 650, 60)
-
-            pygame.display.update()
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    # self.running = False
-                    return None
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    if pvp.collidepoint(event.pos):
-                        mode = self.play_game()  # start game player vs player
-                    elif pvc_goat.collidepoint(event.pos):
-                        mode = self.play_pvc_goat()  # add pvc
-                    elif pvc_tiger.collidepoint(event.pos):
-                        mode = self.play_pvc_tiger()  # add pvc
-                    elif cvc.collidepoint(event.pos):
-                        mode = self.play_cvc()  # add cvc
-
-    def play_pvc_goat(self):
-        agent = MinimaxAgent(depth=5)  # depth can be adjusted
-        while self.running:
-            if self.game_state.turn == Piece.GOAT:
-                move = agent.get_best_move(self.game_state)
-                pygame.time.delay(500)
-                if move:
-                    self.game_state.make_move(*move)
-                    self.game_state.update_tiger_pos()
-                    self.game_state.update_trapped_tiger()
-                    self.game_state.check_end_game()
-            self.update()
-
-    def play_pvc_tiger(self):
-        agent = MinimaxAgent(depth=4)
-        while self.running:
-
-            if self.game_state.turn == Piece.TIGER:
-                move = agent.get_best_move(self.game_state)
-                pygame.time.delay(500)
-                if move:
-                    self.game_state.make_move(*move)
-                    self.game_state.update_tiger_pos()
-                    self.game_state.update_trapped_tiger()
-                    self.game_state.check_end_game()
-            self.update()
-
-    def play_cvc(self):
-        # you can use a smaller depth to speed up play
-        agent = MinimaxAgent(depth=4)
-
-        while self.running:
-
-            # pygame.time.delay(800)
-            move = agent.get_best_move(self.game_state)
-            if move:
-                self.game_state.make_move(*move)
-                self.game_state.update_tiger_pos()
-                self.game_state.update_trapped_tiger()
-                self.game_state.check_end_game()
-            self.update()
-
-    def draw_text(self, text, size, x, y):
-        font = pygame.font.Font("assets/font.ttf", size)
-        text_surface = font.render(text, True, "black")
+    def draw_text(self, text, size, x, y, color=None):
+        """Draw text at specified position"""
+        if color is None:
+            color = COLORS["text"]
+        font = pygame.font.Font(ASSETS["font"], size)
+        text_surface = font.render(text, True, color)
         text_rect = text_surface.get_rect(center=(x, y))
         self.screen.blit(text_surface, text_rect)
 
     def draw_button(self, text, x, y, w, h):
+        """Draw a button and return its rect"""
         rect = pygame.Rect(x, y, w, h)
         mouse_pos = pygame.mouse.get_pos()
+
         if rect.collidepoint(mouse_pos):
-            pygame.draw.rect(self.screen, "gray", rect, 2)
+            pygame.draw.rect(self.screen, COLORS["board"], rect, 2)
 
         self.draw_text(text, 32, x + w // 2, y + h // 2)
-        return pygame.Rect(x, y, w, h)
+        return rect
 
-    def make_move(self, src, dst):
-        # Goat placement
-        if src == dst:
-            if self.game_state.turn == Piece.GOAT and self.game_state.goat_count > 0 and self.game_state.board[src] == Piece.EMPTY:
-                self.game_state.board[src] = Piece.GOAT
-                self.game_state.goat_count -= 1
-                self.game_state.change_turn()
-            return
+    def render_main_menu(self):
+        """Render the main menu"""
+        self.screen.fill(COLORS["menu_bg"])
+        self.draw_text("Baghchal", 64, self.screen_size[0] // 2, 100)
+        self.draw_button("Play", 277, 350, 200, 60)
+        self.draw_button("Exit", 277, 450, 200, 60)
 
-        # Moving pieces
-        if self.game_state.board[src] != self.game_state.turn or self.game_state.board[dst] != Piece.EMPTY:
-            return  # invalid move
+    def render_mode_select(self):
+        """Render the mode selection screen"""
+        self.screen.fill(COLORS["mode_bg"])
+        self.draw_text("Select mode", 64, self.screen_size[0] // 2, 100)
+        self.draw_button("Player vs Player", 127, 350, 550, 60)
+        self.draw_button("Player vs Goat AI", 107, 450, 600, 60)
+        self.draw_button("Player vs Tiger AI", 107, 550, 600, 60)
+        self.draw_button("Computer vs Computer", 87, 650, 650, 60)
+        self.draw_text("Press ESC to go back", 24,
+                       self.screen_size[0] // 2, 750)
 
-        # Normal adjacent move
-        if dst in self.game_state.graph[src]:
-            self.game_state.board[src] = Piece.EMPTY
-            self.game_state.board[dst] = self.game_state.turn
-            self.game_state.change_turn()
-            return
+    def render_game(self):
+        """Render the game screen"""
+        self.screen.fill(COLORS["bg"])
+        self.draw_board()
+        self.draw_pieces()
+        self.draw_status()
 
-        # Tiger capture
-        if self.game_state.board[src] == Piece.TIGER:
-            mid = (src + dst) // 2
-            if (self.game_state.board[mid] == Piece.GOAT and
-                    mid in self.game_state.graph[src] and dst in self.game_state.graph[mid]):
-                self.game_state.board[mid] = Piece.EMPTY
-                self.game_state.board[src] = Piece.EMPTY
-                self.game_state.board[dst] = Piece.TIGER
-                self.game_state.eaten_goat_count += 1
-                self.game_state.change_turn()
+    def render_game_over(self):
+        """Render the game over screen"""
+        self.screen.fill("darkred")
+        self.draw_text(
+            "Game Over!", 72, self.screen_size[0] // 2, self.screen_size[1] // 2 - 50, "white")
+        self.draw_text("Press SPACE to play again", 36,
+                       self.screen_size[0] // 2, self.screen_size[1] // 2 + 20, "white")
+        self.draw_text("Press ESC for main menu", 36,
+                       self.screen_size[0] // 2, self.screen_size[1] // 2 + 60, "white")
 
+    def update(self):
+        """Main update loop - handles state transitions and rendering"""
+        # Handle events based on current state
+        if self.current_state == UIState.MAIN_MENU:
+            self.handle_main_menu_events()
+            self.render_main_menu()
 
+        elif self.current_state == UIState.MODE_SELECT:
+            self.handle_mode_select_events()
+            self.render_mode_select()
+
+        elif self.current_state in [UIState.PLAYING_PVP, UIState.PLAYING_PVC_GOAT,
+                                    UIState.PLAYING_PVC_TIGER, UIState.PLAYING_CVC]:
+            self.handle_game_events()
+            self.update_ai_logic()
+            self.check_game_over()
+            self.render_game()
+
+        elif self.current_state == UIState.GAME_OVER:
+            self.handle_game_over_events()
+            self.render_game_over()
+
+        elif self.current_state == UIState.EXITING:
+            self.running = False
+
+        pygame.display.flip()
+        self.clock.tick(self.tick_speed)
+
+    def run(self):
+        """Main game loop"""
+        while self.running:
+            self.update()
+        pygame.quit()
