@@ -14,17 +14,16 @@ class MinimaxAgent:
         best_move = None
 
         moves = game_state.get_legal_moves()
-        # if random() < 0.08 and game_state.turn == Piece.TIGER:
+        # if random() < 0.5 and game_state.turn == Piece.TIGER:
         #     return choice(moves)
         for move in moves:
             simulated = self.simulate_move(game_state, move)
             val = self.minimax(simulated, self.depth - 1, float('-inf'),
                                float('inf'), maximizing=(game_state.turn == Piece.GOAT))
-
-            if game_state.turn == Piece.TIGER and val > best_val:
+            if game_state.turn == Piece.TIGER and val >= best_val:
                 best_val = val
                 best_move = move
-            elif game_state.turn == Piece.GOAT and val < best_val:
+            elif game_state.turn == Piece.GOAT and val <= best_val:
                 best_val = val
                 best_move = move
 

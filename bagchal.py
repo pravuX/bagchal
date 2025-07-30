@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import override
 
 
 # REMEMBER:
@@ -18,12 +19,21 @@ class GameState:
              15: [10, 16, 20], 16: [10, 11, 12, 15, 17, 20, 21, 22], 17: [12, 16, 18, 22], 18: [12, 13, 14, 17, 19, 22, 23, 24], 19: [14, 18, 24],
              20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
 
+    # TODO remove later
+    piece = {
+        -1: "G", 0: ' ', 1: "T"
+    }
+
     def __init__(self, board, turn, goat_count, eaten_goat_count):
         self.board = board
         self.turn = turn
         self.goat_count = goat_count
         self.eaten_goat_count = eaten_goat_count
         self.trapped_tiger_count = 0
+
+    @override
+    def __repr__(self) -> str:
+        return f"Turn: {self.turn}, Goat Left: {self.goat_count}, Eaten Goat: {self.eaten_goat_count}, Trapped Tiger: {self.trapped_tiger_count}"
 
     def update_tiger_pos(self):
         self.pos_tiger = [i for i, cell in enumerate(
@@ -37,8 +47,17 @@ class GameState:
         self.trapped_tiger_count = count
 
     def get_result(self):
-        if self.trapped_tiger_count == 4:
-            return Piece.GOAT
+        # general logic for trappign
+        # trapped = no legal moves
+        # legal_moves = self.get_legal_moves, turn
+        # len(legal_moves) == 0 => Trapped
+        # kasle jityo? -turn
+        # TODO: (declare goat trap as draw later)
+        legal_moves = self.get_legal_moves()
+        if (len(legal_moves)) == 0:
+            return self.turn * -1
+        # if self.trapped_tiger_count == 4:
+        #     return Piece.GOAT
         elif self.eaten_goat_count > 4:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
             return Piece.TIGER
         # draw here
@@ -69,6 +88,7 @@ class GameState:
     def make_move(self, move):
         src, dst = move
         if src == dst:
+            # Placement
             if self.turn == Piece.GOAT and self.goat_count > 0 and self.board[src] == Piece.EMPTY:
                 self.board[src] = Piece.GOAT
                 self.goat_count -= 1
@@ -78,12 +98,14 @@ class GameState:
         if self.board[src] != self.turn or self.board[dst] != Piece.EMPTY:
             return
 
+        # Movement
         if dst in self.graph[src]:
             self.board[src] = Piece.EMPTY
-            self.board[dst] = self.turn
+            self.board[dst] = Piece.TIGER if Piece.TIGER == self.turn else Piece.GOAT
             self.change_turn()
             return
 
+        # Capture
         if self.board[src] == Piece.TIGER:
             mid = (src + dst) // 2
             if self.board[mid] == Piece.GOAT and mid in self.graph[src] and dst in self.graph[mid]:
@@ -93,13 +115,24 @@ class GameState:
                 self.eaten_goat_count += 1
                 self.change_turn()
 
+    # TODO: this is the same as simulate_move for minimax
+    # this can be reworked so make_move always returns a new state
+    def make_move_mcts(self, move):
+        new_board = self.board.copy()
+        new_state = GameState(
+            new_board, self.turn, self.goat_count, self.eaten_goat_count)
+        new_state.make_move(move)
+        new_state.update_tiger_pos()
+        new_state.update_trapped_tiger()
+        return new_state
+
     def evaluate_board(self):
         goats_on_board = sum(1 for s in self.board if s == Piece.GOAT)
         pos_goat = [i for i, cell in enumerate(
             self.board) if cell == Piece.GOAT]
 
         if self.is_game_over():
-            return 100 * self.get_result()
+            return 1000 * self.get_result()
 
         tiger_moves = 0
         capture_opportunities = 0
@@ -109,6 +142,7 @@ class GameState:
         edge_center_bonus = 0
         goat_grouping_bonus = 0
         tiger_surround_penalty = 0
+        tiger_grouping_penalty = 0
 
         center_positions = {6, 8, 12, 16, 18}
         center_outside = {2, 10, 14, 22}
@@ -122,6 +156,8 @@ class GameState:
             for adj in self.graph[tiger]:
                 if self.board[adj] == Piece.EMPTY:
                     tiger_moves += 1
+                elif self.board[adj] == Piece.TIGER:
+                    tiger_grouping_penalty += 1
                 elif self.board[adj] == Piece.GOAT:
                     cap_pos = adj - (tiger - adj)
                     if cap_pos in self.graph[adj] and self.board[cap_pos] == Piece.EMPTY:
@@ -145,6 +181,7 @@ class GameState:
             + 0.25 * tiger_center_bonus  # reward center postions
             + 0.5 * tiger_exact_center_bonus
             - 0.5 * tiger_surround_penalty  # tigers surrounded by goats = bad
+            - 0.4 * tiger_grouping_penalty  # discourage tiger clusters
         )
 
         goat_score = (
