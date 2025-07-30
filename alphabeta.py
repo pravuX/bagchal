@@ -1,5 +1,6 @@
-from random import randint, choice
+from random import random, choice
 from bagchal import Piece, GameState
+
 
 class MinimaxAgent:
     # Tiger is always the maximizing player
@@ -7,40 +8,39 @@ class MinimaxAgent:
     def __init__(self, depth=3):
         self.depth = depth
 
-    def get_best_move(self, game):
-        best_val = float('-inf') if game.turn == Piece.TIGER else float('inf')
+    def get_best_move(self, game_state):
+        best_val = float(
+            '-inf') if game_state.turn == Piece.TIGER else float('inf')
         best_move = None
 
-        moves = game.generate_legal_moves()
-        if randint(1, 10) > 8 and game.turn == Piece.TIGER:
-            return choice(moves)
-        if randint(1, 10) > 9 and game.turn == Piece.GOAT:
-            return choice(moves)
+        moves = game_state.get_legal_moves()
+        # if random() < 0.08 and game_state.turn == Piece.TIGER:
+        #     return choice(moves)
         for move in moves:
-            simulated = self.simulate_move(game, move)
+            simulated = self.simulate_move(game_state, move)
             val = self.minimax(simulated, self.depth - 1, float('-inf'),
-                               float('inf'), maximizing=(game.turn == Piece.GOAT))
+                               float('inf'), maximizing=(game_state.turn == Piece.GOAT))
 
-            if game.turn == Piece.TIGER and val > best_val:
+            if game_state.turn == Piece.TIGER and val > best_val:
                 best_val = val
                 best_move = move
-            elif game.turn == Piece.GOAT and val < best_val:
+            elif game_state.turn == Piece.GOAT and val < best_val:
                 best_val = val
                 best_move = move
 
         return best_move
 
-    def minimax(self, game_board, depth, alpha, beta, maximizing):
+    def minimax(self, game_state, depth, alpha, beta, maximizing):
         if depth == 0:
-            return game_board.evaluate_board()
+            return game_state.evaluate_board()
 
-        moves = game_board.generate_legal_moves()
+        moves = game_state.get_legal_moves()
 
         if maximizing:
             max_eval = float('-inf')
             for move in moves:
-                new_board = self.simulate_move(game_board, move)
-                eval = self.minimax(new_board, depth - 1, alpha, beta, False)
+                new_state = self.simulate_move(game_state, move)
+                eval = self.minimax(new_state, depth - 1, alpha, beta, False)
                 max_eval = max(max_eval, eval)
                 alpha = max(alpha, eval)
                 if beta <= alpha:
@@ -49,16 +49,19 @@ class MinimaxAgent:
         else:
             min_eval = float('inf')
             for move in moves:
-                new_board = self.simulate_move(game_board, move)
-                eval = self.minimax(new_board, depth - 1, alpha, beta, True)
+                new_state = self.simulate_move(game_state, move)
+                eval = self.minimax(new_state, depth - 1, alpha, beta, True)
                 min_eval = min(min_eval, eval)
                 beta = min(beta, eval)
                 if beta <= alpha:
                     break
             return min_eval
 
-    def simulate_move(self, game, move):
-        new_board = GameState(
-            game.board, game.turn, game.goat_count, game.eaten_goat_count)
-        new_board.make_move(*move)
-        return new_board
+    def simulate_move(self, game_state, move):
+        new_board = game_state.board.copy()
+        new_state = GameState(
+            new_board, game_state.turn, game_state.goat_count, game_state.eaten_goat_count)
+        new_state.make_move(move)
+        new_state.update_tiger_pos()
+        new_state.update_trapped_tiger()
+        return new_state
