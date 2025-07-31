@@ -19,7 +19,6 @@ class GameState:
              15: [10, 16, 20], 16: [10, 11, 12, 15, 17, 20, 21, 22], 17: [12, 16, 18, 22], 18: [12, 13, 14, 17, 19, 22, 23, 24], 19: [14, 18, 24],
              20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
 
-    # TODO remove later
     piece = {
         -1: "G", 0: ' ', 1: "T"
     }
@@ -33,7 +32,22 @@ class GameState:
 
     @override
     def __repr__(self) -> str:
-        return f"Turn: {self.turn}, Goat Left: {self.goat_count}, Eaten Goat: {self.eaten_goat_count}, Trapped Tiger: {self.trapped_tiger_count}"
+        return f"Turn: {self.piece[self.turn]}, Goat Left: {self.goat_count}, Eaten Goat: {self.eaten_goat_count}, Trapped Tiger: {self.trapped_tiger_count}"
+
+    def stringify(self):
+        string_rep = ""
+        for p in self.board:
+            string_rep += self.piece[p]
+        return string_rep
+
+    def key(self):
+        return (
+            self.stringify(),
+            self.turn,
+            self.eaten_goat_count,
+            self.goat_count,
+            self.trapped_tiger_count
+        )
 
     def update_tiger_pos(self):
         self.pos_tiger = [i for i, cell in enumerate(
@@ -51,13 +65,10 @@ class GameState:
         # trapped = no legal moves
         # legal_moves = self.get_legal_moves, turn
         # len(legal_moves) == 0 => Trapped
-        # kasle jityo? -turn
-        # TODO: (declare goat trap as draw later)
+        # who won? -turn
         legal_moves = self.get_legal_moves()
-        if (len(legal_moves)) == 0:
+        if (len(legal_moves)) == 0:  # if no legal moves remain, then the that player is trapped
             return self.turn * -1
-        # if self.trapped_tiger_count == 4:
-        #     return Piece.GOAT
         elif self.eaten_goat_count > 4:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
             return Piece.TIGER
         # draw here
@@ -85,7 +96,7 @@ class GameState:
     def change_turn(self):
         self.turn *= -1
 
-    def make_move(self, move):
+    def apply_move(self, move):
         src, dst = move
         if src == dst:
             # Placement
@@ -115,13 +126,11 @@ class GameState:
                 self.eaten_goat_count += 1
                 self.change_turn()
 
-    # TODO: this is the same as simulate_move for minimax
-    # this can be reworked so make_move always returns a new state
-    def make_move_mcts(self, move):
+    def make_move(self, move):
         new_board = self.board.copy()
         new_state = GameState(
             new_board, self.turn, self.goat_count, self.eaten_goat_count)
-        new_state.make_move(move)
+        new_state.apply_move(move)
         new_state.update_tiger_pos()
         new_state.update_trapped_tiger()
         return new_state
