@@ -1,3 +1,4 @@
+from collections import defaultdict
 from enum import Enum
 import pygame
 from bagchal import Piece
@@ -52,17 +53,26 @@ class Game:
         self.minimax_agent = None
         self.mcts_agent = None
         self.ai_move_timer = 0
-        self.ai_move_delay = 500  # milliseconds
+        self.ai_move_delay = 200  # milliseconds
 
         # Game over state
         self.game_over_timer = 0
-        self.game_over_delay = 1000  # milliseconds
+        self.game_over_delay = 5000  # milliseconds
 
         self.initialize_board_data()
         self.selected_cell = None
 
         self.initialize_pygame_state(tick_speed)
         self.load_assets()
+
+        self.remove_later_state_hash = defaultdict(int)
+
+    def remove_later_state_hash_update(self):
+        state_key = self.game_state.key()
+        if state_key in self.remove_later_state_hash:
+            self.remove_later_state_hash[state_key] += 1
+        else:
+            self.remove_later_state_hash[state_key] = 1
 
     def initialize_board_data(self):
 
@@ -108,6 +118,7 @@ class Game:
     def reset_game(self):
         self.game_state.reset()
         self.selected_cell = None
+        self.remove_later_state_hash = defaultdict(int)
 
     def handle_main_menu_events(self):
         """Handle events specific to main menu"""
@@ -138,31 +149,38 @@ class Game:
                 if pvp_rect.collidepoint(event.pos):
                     self.reset_game()
                     self.current_state = UIState.PLAYING_PVP
+
                 elif pvc_goat_rect.collidepoint(event.pos):
+
                     self.reset_game()
                     # this performs surprisingly well
                     # self.minimax_agent = MinimaxAgent(depth=2)
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, max_simulations=5000)
+                        initial_state=self.game_state, time_limit=0.5)
                     self.current_state = UIState.PLAYING_PVC_GOAT
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
+
                 elif pvc_tiger_rect.collidepoint(event.pos):
+
                     self.reset_game()
                     # self.minimax_agent = MinimaxAgent(depth=2)
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, max_simulations=5000)
+                        initial_state=self.game_state, max_simulations=5)
                     self.current_state = UIState.PLAYING_PVC_TIGER
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
+
                 elif cvc_rect.collidepoint(event.pos):
+
                     self.reset_game()
                     # self.minimax_agent = MinimaxAgent(depth=2)
+                    # Early Game
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, max_simulations=5000)
+                        initial_state=self.game_state, time_limit=0.5)
                     self.current_state = UIState.PLAYING_CVC
                     # Initialize AI timer to current time so it waits before first move
-                    self.ai_move_timer = pygame.time.get_ticks()
+                    # self.ai_move_timer = pygame.time.get_ticks()
 
         # ESC to go back to main menu
         keys = pygame.key.get_pressed()
@@ -209,7 +227,7 @@ class Game:
         elif self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.TIGER:
             should_make_ai_move = True
 
-        if self.game_state.is_game_over():
+        if self.is_game_over():
             should_make_ai_move = False
 
         # if should_make_ai_move and self.minimax_agent and self.game_state.goat_count > 0:  # Placement
@@ -218,10 +236,8 @@ class Game:
             if current_time - self.ai_move_timer >= self.ai_move_delay:
                 move = self.minimax_agent.get_best_move(self.game_state)
                 if move:
-                    # self.game_state.make_move(move)
-                    # self.game_state.update_tiger_pos()
-                    # self.game_state.update_trapped_tiger()
-                    self.game_state = self.game_state.make_move_mcts(move)
+                    self.game_state = self.game_state.make_move(move)
+                    self.remove_later_state_hash_update()
                     self.ai_move_timer = current_time
 
         # if should_make_ai_move and self.mcts_agent and self.game_state.goat_count == 0:  # Movement
@@ -231,17 +247,29 @@ class Game:
                 move = self.mcts_agent.search()
                 # self.mcts_agent.visualize_tree()
                 if move:
-                    # self.game_state.make_move(move)
-                    # self.game_state.update_tiger_pos()
-                    # self.game_state.update_trapped_tiger()
-                    self.game_state = self.game_state.make_move_mcts(move)
+                    self.game_state = self.game_state.make_move(move)
+                    self.remove_later_state_hash_update()
+                    if self.game_state.goat_count > 15:  # Early game
+                        time_limit = 0.5
+                    elif self.game_state.goat_count > 5:  # Mid game
+                        time_limit = 1.0
+                    else:  # End game
+                        time_limit = 2.0
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, max_simulations=5000)
+                        initial_state=self.game_state, time_limit=time_limit)
                     self.ai_move_timer = current_time
+
+    def is_game_over(self):
+        # TODO: Refactor
+        is_game_over = self.game_state.is_game_over()
+        state_key = self.game_state.key()
+        if self.remove_later_state_hash[state_key] > 3:
+            is_game_over = True
+        return is_game_over
 
     def check_game_over(self):
         """Check if game is over and handle transition"""
-        if self.game_state.is_game_over():
+        if self.is_game_over():
             if self.game_over_timer == 0:
                 self.game_over_timer = pygame.time.get_ticks()
                 print("Game Over")
@@ -308,7 +336,7 @@ class Game:
         if (self.current_state == UIState.PLAYING_CVC or
             (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.GOAT) or
                 (self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.TIGER) or
-                self.game_state.is_game_over()):
+                self.is_game_over()):
             return
 
         mouse_x, mouse_y = pos
@@ -323,8 +351,9 @@ class Game:
             if self.game_state.turn == Piece.GOAT and self.game_state.goat_count > 0:
                 # Placement
                 if piece == Piece.EMPTY:
-                    self.game_state = self.game_state.make_move_mcts(
+                    self.game_state = self.game_state.make_move(
                         (idx, idx))
+                    self.remove_later_state_hash_update()
                     # self.game_state.make_move((idx, idx))
                     # self.game_state.update_tiger_pos()
                     # self.game_state.update_trapped_tiger()
@@ -339,7 +368,8 @@ class Game:
                 # self.game_state.make_move(move)
                 # self.game_state.update_tiger_pos()
                 # self.game_state.update_trapped_tiger()
-                self.game_state = self.game_state.make_move_mcts(move)
+                self.game_state = self.game_state.make_move(move)
+                self.remove_later_state_hash_update()
                 # Reset AI timer so it waits before responding to player move
                 self.ai_move_timer = pygame.time.get_ticks()
             self.selected_cell = None
@@ -413,8 +443,10 @@ class Game:
         self.screen.fill("darkred")
         self.draw_text(
             "Game Over!", 72, self.screen_size[0] // 2, self.screen_size[1] // 2 - 200, "white")
+        result_text = f"{pieces[self.game_state.get_result()]} Won!" if self.game_state.get_result(
+        ) else "It's a Draw!"
         self.draw_text(
-            f"{pieces[self.game_state.get_result()]} Won!", 36, self.screen_size[0] // 2, self.screen_size[1] // 2 - 100, "white")
+            result_text, 36, self.screen_size[0] // 2, self.screen_size[1] // 2 - 100, "white")
         self.draw_text("Press SPACE to play again", 36,
                        self.screen_size[0] // 2, self.screen_size[1] // 2, "white")
         self.draw_text("Press ESC for main menu", 36,
