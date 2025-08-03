@@ -59,24 +59,23 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [0, 2, 10, 15]
+    pos_tiger = [0, 2, 4, 10]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
-    pos_goat = [1, 3, 4, 5, 6, 7, 8, 9, 11,
-                13, 14, 16, 17, 18, 19, 21, 22, 23, 24]
+    pos_goat = [1, 3, 5, 6, 7, 8, 9, 11, 12, 13, 15, 19, 20, 21, 23, 24]
     for pos in pos_goat:
         board[pos] = Piece.GOAT
-    goat_count = 1
-    eaten_goat_count = 0
+    goat_count = 0
+    eaten_goat_count = 3
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
     game_state.update_tiger_pos()
     game_state.update_trapped_tiger()
     display_board(game_state)
-    mcts = MCTS(initial_state=game_state, max_simulations=1)
+    mcts = MCTS(initial_state=game_state, max_simulations=1000)
     move = mcts.search()
-    mcts.visualize_tree(max_depth=1)
+    # mcts.visualize_tree(max_depth=10)
     print(game_state)
     print(f"Move selected: {move}")
     print(f"Simulations run: {mcts.simulations_run}")
@@ -120,7 +119,7 @@ def test_mcts():
     state_hash = defaultdict(int)
     move_count = 0
 
-    time_limit = 1.0
+    time_limit = 30
     while not game_state.is_game_over():
         state_key = game_state.key()
         state_hash[state_key] += 1
@@ -146,7 +145,7 @@ def test_mcts():
         # else:  # End game
         #     time_limit = 2.0
 
-        mcts = MCTS(initial_state=game_state, max_simulations=500)
+        mcts = MCTS(initial_state=game_state, max_simulations=100)
         # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
         move = mcts.search()
 
@@ -184,6 +183,7 @@ def test_mcts():
     # Final results
     system('clear')
     display_board(game_state)
+    print(len(game_state.transposition_table_with_scores))
 
     result = game_state.get_result()
     if result:
@@ -229,14 +229,14 @@ if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
     # run_game()
-    # scratch()
+    scratch()
 
-    with Profile() as profile:
-        # scratch()
-        test_mcts()
-        (
-            Stats(profile)
-            .strip_dirs()
-            .sort_stats(SortKey.CALLS)
-            .print_stats()
-        )
+    # with Profile() as profile:
+    #     # scratch()
+    #     test_mcts()
+    #     (
+    #         Stats(profile)
+    #         .strip_dirs()
+    #         .sort_stats(SortKey.CALLS)
+    #         .print_stats()
+    #     )

@@ -208,28 +208,28 @@ class GameState:
         self.trapped_tiger_count = 0
 
     def tiger_priority(self, move):
-        priority_score = 0
+        priority_score = 10
         next_state = self.make_move(move)
+        if next_state.eaten_goat_count > 4:
+            # immediate win
+            return 20
         if next_state.eaten_goat_count > self.eaten_goat_count:
             # this move leads to capture
-            priority_score += 1
-            if next_state.eaten_goat_count > 4:
-                # this move leads to immediate win
-                priority_score += 5
+            priority_score += 5
         return priority_score
 
     def goat_priority(self, move):
         src, dst = move
         is_placement_phase = src == dst
-        priority_score = 0
+        priority_score = 5
         next_state = self.make_move(move)
         if next_state.trapped_tiger_count == 4:
             # immediate win -> high reward
-            return 100
+            return 50
         if next_state.trapped_tiger_count > self.trapped_tiger_count:
             # more the tigers trapped, greater the reward
             diff = next_state.trapped_tiger_count - self.trapped_tiger_count
-            priority_score += 10 * diff  # TODO fine tune this
+            priority_score += 7 * diff  # TODO fine tune this
 
         pos_tiger = [i for i, p in enumerate(
             self.board) if p == Piece.TIGER]
@@ -238,6 +238,10 @@ class GameState:
         for adj in GameState.graph[dst]:
             if self.board[adj] == Piece.GOAT and adj != src:
                 priority_score += 1
+
+        strategic_positions = {2, 10, 14, 22}
+        if is_placement_phase and dst in strategic_positions:
+            priority_score += 2
 
         # reward moves that block captures
         # the more it blocks captures, the greater the reward
@@ -250,20 +254,20 @@ class GameState:
                             # this move blocks capture by placing(or moving) a piece at the capture_position
                             # blocking a capture can also mean moving the threatened piece to capture_position
                             if dst == capture_pos:
-                                priority_score += 4
+                                priority_score += 5
                             # how to allow escaping by moving away from the threatening position
                             # we know that a capture is possible here
                             # we check if src == adj (it means that the piece at src is capturable)
                             # moving it will help avoid a capture, so we reward that
                             elif src == adj:
-                                priority_score += 4
+                                priority_score += 5
 
                         elif not is_placement_phase and src == capture_pos:
                             # here, there is already a piece on the capture position
                             # thus we check if making this move allows another piece to be captured
                             # i.e. if the piece blocks a capture currently, and moving it will threaten
                             # another piece
-                            priority_score -= 4  # TODO fine tune this
+                            priority_score -= 5  # TODO fine tune this
 
         # if placing(or moving) a piece leads to immediate capture assign it
         # a very low priority
@@ -275,12 +279,9 @@ class GameState:
                     # a piece can move into threat either from a different position or capture_position
                     if capture_pos in GameState.graph[dst] and (self.board[capture_pos] == Piece.EMPTY or capture_pos == src):
                         threatened = True
-                        priority_score -= 100
+                        priority_score -= 15
                         break
             if threatened:
                 break
 
-        strategic_positions = {2, 10, 14, 22}
-        if is_placement_phase and dst in strategic_positions:
-            priority_score += 2
         return priority_score

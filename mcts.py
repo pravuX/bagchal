@@ -18,8 +18,26 @@ class Node:
         self.prioritized_moves_with_scores = self.state.prioritize_moves()
         self.prioritized_moves = [move for move,
                                   _ in self.prioritized_moves_with_scores]
-
+        self.prioritized_scores = [score for _,
+                                   score in self.prioritized_moves_with_scores]
         self.player = self.state.turn
+        self.calculate_prior_prob_dist()
+
+    def calculate_prior_prob_dist(self, temp=1):
+        if self.is_terminal():
+            return
+
+        # softmax for move probabilites based on their priority scores
+        prioritized_scores = np.array(
+            self.prioritized_scores, dtype=np.float64)
+        prioritized_scores = prioritized_scores / temp
+        stabilized_scores = prioritized_scores - np.max(prioritized_scores)
+        e_prioritized_moves = np.exp(stabilized_scores)
+        e_prioritized_moves_sum = e_prioritized_moves.sum()
+        # reversed because Node.children stores moves in descending order
+        # of priority score
+        self.prior_prob_dist = np.flip(
+            e_prioritized_moves / e_prioritized_moves_sum)
 
     def is_fully_expanded(self):
         return len(self.prioritized_moves) == 0
@@ -36,20 +54,29 @@ class Node:
         return self.state.is_game_over()
 
     def best_child(self, c_param=1):
+        # this is only called on a node that is fully expanded
+        # i.e all children visited at least once
 
-        # Progressive Bias
-        # if self.visit_count < 50:
-        #   return max(self.children, key=priority_score)
-
-        def uct(child):
-            if child.visit_count == 0:  # ensures each child is explored at least once
-                return float('inf')
+        # Progressive Bias based on the number of visits using prior_prob_dist
+        # if self.visit_count < 100:
+        #     sampled_child = np.random.choice(
+        #         self.children, p=self.prior_prob_dist)
+        #     return sampled_child
+        #
+        # else:
+        def uct(child_with_index):
+            child_index, child = child_with_index
             exploitation = child.total_value / child.visit_count  # Q
             exploration = c_param * \
                 np.sqrt(np.log(self.visit_count) / child.visit_count)
-            return exploitation + exploration
+            # the child list and priority score list are in opposite order
+            priority_index = len(self.prioritized_scores) - child_index-1
+            heuristic_bias = self.prioritized_scores[priority_index] / \
+                child.visit_count
+            return exploitation + exploration + heuristic_bias
 
-        return max(self.children, key=uct)
+        _, best_uct_child = max(enumerate(self.children), key=uct)
+        return best_uct_child
 
 
 class MCTS:
@@ -58,6 +85,8 @@ class MCTS:
         self.max_simulations = max_simulations
         self.root = Node(initial_state)
         print(self.root.prioritized_moves)
+        # print(self.root.prioritized_scores)
+        # print(self.root.prior_prob_dist)
         self.time_limit = time_limit
         self.simulations_run = 0
 
