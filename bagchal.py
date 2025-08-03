@@ -1,5 +1,6 @@
 from enum import IntEnum
 from typing import override
+import numpy as np
 
 
 # REMEMBER:
@@ -51,13 +52,11 @@ class GameState:
             self.trapped_tiger_count
         )
 
-    def update_tiger_pos(self):
-        self.pos_tiger = [i for i, cell in enumerate(
-            self.board) if cell == Piece.TIGER]
-
     def update_trapped_tiger(self):
         count = 0
-        for tiger in self.pos_tiger:
+        pos_tiger = [i for i, cell in enumerate(
+            self.board) if cell == Piece.TIGER]
+        for tiger in pos_tiger:
             if (self.is_trapped(tiger)):
                 count += 1
         self.trapped_tiger_count = count
@@ -129,16 +128,25 @@ class GameState:
                 self.eaten_goat_count += 1
                 self.change_turn()
 
-    def make_move(self, move):
+    def make_move(self, move, simulate=False):
         new_board = self.board.copy()
         new_state = GameState(
             new_board, self.turn, self.goat_count, self.eaten_goat_count)
         new_state.apply_move(move)
-        new_state.update_tiger_pos()
         new_state.update_trapped_tiger()
+        if not simulate:  # otherwise there is infinite recursion
+            new_state.init_prioritization()
         return new_state
 
-    def prioritize_moves(self, return_best_move=False):
+    def init_prioritization(self):
+        self.prioritized_moves_with_scores = self.prioritize_moves()
+        self.prioritized_moves = [move for move,
+                                  _ in self.prioritized_moves_with_scores]
+        self.prioritized_scores = [score for _,
+                                   score in self.prioritized_moves_with_scores]
+        self.calculate_prior_prob_dist()
+
+    def prioritize_moves(self):
         state_key = self.key()
         if state_key in GameState.transposition_table_with_scores:
             return list(GameState.transposition_table_with_scores[state_key])
@@ -156,9 +164,6 @@ class GameState:
         GameState.transposition_table_with_scores[state_key] = tuple(
             scored_moves)
 
-        if return_best_move:
-            best_move, priority_score = scored_moves[-1]
-            return best_move
         return scored_moves
 
     def get_legal_moves(self):
@@ -209,7 +214,7 @@ class GameState:
 
     def tiger_priority(self, move):
         priority_score = 10
-        next_state = self.make_move(move)
+        next_state = self.make_move(move, simulate=True)
         if next_state.eaten_goat_count > 4:
             # immediate win
             return 20
@@ -222,7 +227,7 @@ class GameState:
         src, dst = move
         is_placement_phase = src == dst
         priority_score = 5
-        next_state = self.make_move(move)
+        next_state = self.make_move(move, simulate=True)
         if next_state.trapped_tiger_count == 4:
             # immediate win -> high reward
             return 50
@@ -239,9 +244,12 @@ class GameState:
             if self.board[adj] == Piece.GOAT and adj != src:
                 priority_score += 1
 
-        strategic_positions = {2, 10, 14, 22}
+        strategic_positions = [2, 10, 14, 22]
+        outer_edge = [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19]
         if is_placement_phase and dst in strategic_positions:
-            priority_score += 2
+            priority_score += 1
+        if dst in outer_edge:
+            priority_score += 1
 
         # reward moves that block captures
         # the more it blocks captures, the greater the reward
@@ -285,3 +293,18 @@ class GameState:
                 break
 
         return priority_score
+
+    def calculate_prior_prob_dist(self, temp=1):
+        if self.is_game_over():
+            return
+
+        # softmax for move probabilites based on their priority scores
+        prioritized_scores = np.array(
+            self.prioritized_scores, dtype=np.float64)
+        prioritized_scores = prioritized_scores / temp
+        stabilized_scores = prioritized_scores - np.max(prioritized_scores)
+        e_prioritized_moves = np.exp(stabilized_scores)
+        e_prioritized_moves_sum = e_prioritized_moves.sum()
+        # reversed because Node.children stores moves in descending order
+        # of priority score
+        self.prior_prob_dist = e_prioritized_moves / e_prioritized_moves_sum

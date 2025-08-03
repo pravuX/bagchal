@@ -1,5 +1,4 @@
 from collections import defaultdict
-import random
 import time
 import numpy as np
 from bagchal import Piece, GameState
@@ -14,36 +13,16 @@ class Node:
         self.children = []
         self.visit_count = 0
         self.total_value = 0.0
-
-        self.prioritized_moves_with_scores = self.state.prioritize_moves()
-        self.prioritized_moves = [move for move,
-                                  _ in self.prioritized_moves_with_scores]
-        self.prioritized_scores = [score for _,
-                                   score in self.prioritized_moves_with_scores]
         self.player = self.state.turn
-        self.calculate_prior_prob_dist()
 
-    def calculate_prior_prob_dist(self, temp=1):
-        if self.is_terminal():
-            return
-
-        # softmax for move probabilites based on their priority scores
-        prioritized_scores = np.array(
-            self.prioritized_scores, dtype=np.float64)
-        prioritized_scores = prioritized_scores / temp
-        stabilized_scores = prioritized_scores - np.max(prioritized_scores)
-        e_prioritized_moves = np.exp(stabilized_scores)
-        e_prioritized_moves_sum = e_prioritized_moves.sum()
-        # reversed because Node.children stores moves in descending order
-        # of priority score
-        self.prior_prob_dist = np.flip(
-            e_prioritized_moves / e_prioritized_moves_sum)
+        self.prioritized_moves = self.state.prioritized_moves
+        self.prioritized_scores = self.state.prioritized_scores
 
     def is_fully_expanded(self):
         return len(self.prioritized_moves) == 0
 
     def expand(self):
-        # the expansion strategy is based on the priority of each move
+        # the expansion policy is based on the priority of each move
         move = self.prioritized_moves.pop()
         next_state = self.state.make_move(move)
         child_node = Node(next_state, parent=self, move=move)
@@ -55,15 +34,8 @@ class Node:
 
     def best_child(self, c_param=1):
         # this is only called on a node that is fully expanded
-        # i.e all children visited at least once
+        # i.e all children that are visited at least once
 
-        # Progressive Bias based on the number of visits using prior_prob_dist
-        # if self.visit_count < 100:
-        #     sampled_child = np.random.choice(
-        #         self.children, p=self.prior_prob_dist)
-        #     return sampled_child
-        #
-        # else:
         def uct(child_with_index):
             child_index, child = child_with_index
             exploitation = child.total_value / child.visit_count  # Q
@@ -84,44 +56,25 @@ class MCTS:
     def __init__(self, initial_state, max_simulations=1000, time_limit=None):
         self.max_simulations = max_simulations
         self.root = Node(initial_state)
-        print(self.root.prioritized_moves)
-        # print(self.root.prioritized_scores)
-        # print(self.root.prior_prob_dist)
         self.time_limit = time_limit
         self.simulations_run = 0
 
         self.goat_wins = 0
         self.tiger_wins = 0
 
-    def rollout_policy(self, state, state_key):
-        if state.turn == Piece.GOAT:
-            if state_key in GameState.transposition_table_with_scores:
+    def rollout_policy(self, state):
 
-                best_move, priority_score = GameState.transposition_table_with_scores[
-                    state_key][-1]
-                return best_move
-
-            best_move = state.prioritize_moves(return_best_move=True)
-            return best_move
-
-        else:
-            possible_moves = state.get_legal_moves()
-            return random.choice(possible_moves)
+        sampled_move_idx = np.random.choice(
+            len(state.prioritized_moves), p=state.prior_prob_dist)
+        return state.prioritized_moves[sampled_move_idx]
 
     def search(self):
-        # print("Initial Tree")
-        # self.visualize_tree()
-        # print()
 
         def search_helper():
             expanded_node = self.tree_policy(self.root)
             result = self.rollout(expanded_node)
             self.backpropagate(expanded_node, result)
             self.simulations_run += 1
-            # print("Simulation", self.simulations_run)
-            # print(GameState.piece[result], "won during rollout.")
-            # self.visualize_tree()
-            # print()
             if result == Piece.GOAT:
                 self.goat_wins += 1
             elif result == Piece.TIGER:
@@ -151,13 +104,13 @@ class MCTS:
         state: GameState = node.state
 
         while not state.is_game_over():
-            state_key_l = state.key()
-            state_hash[state_key_l] += 1
+            state_key = state.key()
+            state_hash[state_key] += 1
 
-            if state_hash[state_key_l] > 3:
+            if state_hash[state_key] > 3:
                 return 0
 
-            move = self.rollout_policy(state, state_key_l)
+            move = self.rollout_policy(state)
             state = state.make_move(move)
 
         result = state.get_result()
