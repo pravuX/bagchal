@@ -156,7 +156,7 @@ class Game:
                     # this performs surprisingly well
                     # self.minimax_agent = MinimaxAgent(depth=2)
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=0.5)
+                        initial_state=self.game_state, time_limit=1)
                     self.current_state = UIState.PLAYING_PVC_GOAT
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -178,6 +178,8 @@ class Game:
                     # Early Game
                     self.mcts_agent = MCTS(
                         initial_state=self.game_state, time_limit=0.5)
+                    # self.mcts_agent = MCTS(
+                    #     initial_state=self.game_state, max_simulations=21)
                     self.current_state = UIState.PLAYING_CVC
                     # Initialize AI timer to current time so it waits before first move
                     # self.ai_move_timer = pygame.time.get_ticks()
@@ -245,18 +247,21 @@ class Game:
             current_time = pygame.time.get_ticks()
             if current_time - self.ai_move_timer >= self.ai_move_delay:
                 move = self.mcts_agent.search()
-                # self.mcts_agent.visualize_tree()
+                # self.mcts_agent.visualize_tree(max_depth=5)
+                # input("Press Any Key to continue")
                 if move:
                     self.game_state = self.game_state.make_move(move)
                     self.remove_later_state_hash_update()
-                    if self.game_state.goat_count > 15:  # Early game
-                        time_limit = 0.5
-                    elif self.game_state.goat_count > 5:  # Mid game
-                        time_limit = 1.0
-                    else:  # End game
-                        time_limit = 2.0
+                    # if self.game_state.goat_count > 15:  # Early game
+                    #     time_limit = 0.5
+                    # elif self.game_state.goat_count > 5:  # Mid game
+                    #     time_limit = 1.0
+                    # else:  # End game
+                    #     time_limit = 2.0
+                    # self.mcts_agent = MCTS(
+                    #     initial_state=self.game_state, time_limit=time_limit)
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=time_limit)
+                        initial_state=self.game_state, time_limit=1)
                     self.ai_move_timer = current_time
 
     def is_game_over(self):

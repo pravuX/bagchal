@@ -57,10 +57,4 @@ class MinimaxAgent:
             return min_eval
 
     def simulate_move(self, game_state, move):
-        new_board = game_state.board.copy()
-        new_state = GameState(
-            new_board, game_state.turn, game_state.goat_count, game_state.eaten_goat_count)
-        new_state.make_move(move)
-        new_state.update_tiger_pos()
-        new_state.update_trapped_tiger()
-        return new_state
+        return game_state.make_move(move)

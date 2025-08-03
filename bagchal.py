@@ -13,6 +13,8 @@ class Piece(IntEnum):
 
 
 class GameState:
+    # state_key: prioritized_moves (move, score) in order of score
+    transposition_table_with_scores = {}
     graph = {0:  [1, 5, 6], 1:  [0, 2, 6], 2:  [1, 3, 6, 7, 8], 3:  [2, 4, 8], 4:  [3, 8, 9],
              5:  [0, 6, 10], 6:  [0, 1, 2, 5, 7, 10, 11, 12], 7:  [2, 6, 8, 12], 8:  [2, 3, 4, 7, 9, 12, 13, 14], 9:  [4, 8, 14],
              10: [5, 6, 11, 15, 16], 11: [6, 10, 12, 16], 12: [6, 7, 8, 11, 13, 16, 17, 18], 13: [8, 12, 14, 18], 14: [8, 9, 13, 18, 19],
@@ -61,7 +63,11 @@ class GameState:
         self.trapped_tiger_count = count
 
     def get_result(self):
-        # general logic for trappign
+        if self.trapped_tiger_count == 4:
+            return Piece.GOAT
+        if self.eaten_goat_count > 4:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
+            return Piece.TIGER
+        # general logic for trapping
         # trapped = no legal moves
         # legal_moves = self.get_legal_moves, turn
         # len(legal_moves) == 0 => Trapped
@@ -69,9 +75,6 @@ class GameState:
         legal_moves = self.get_legal_moves()
         if (len(legal_moves)) == 0:  # if no legal moves remain, then the that player is trapped
             return self.turn * -1
-        elif self.eaten_goat_count > 4:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
-            return Piece.TIGER
-        # draw here
         return None
 
     def is_game_over(self):
@@ -135,74 +138,28 @@ class GameState:
         new_state.update_trapped_tiger()
         return new_state
 
-    def evaluate_board(self):
-        goats_on_board = sum(1 for s in self.board if s == Piece.GOAT)
-        pos_goat = [i for i, cell in enumerate(
-            self.board) if cell == Piece.GOAT]
+    def prioritize_moves(self, return_best_move=False):
+        state_key = self.key()
+        if state_key in GameState.transposition_table_with_scores:
+            return list(GameState.transposition_table_with_scores[state_key])
 
-        if self.is_game_over():
-            return 1000 * self.get_result()
+        # implement move ordering
+        moves = self.get_legal_moves()
+        if self.turn == Piece.TIGER:
+            scored_moves = [(move, self.tiger_priority(move))
+                            for move in moves]
+        else:
+            scored_moves = [(move, self.goat_priority(move)) for move in moves]
 
-        tiger_moves = 0
-        capture_opportunities = 0
-        tiger_center_bonus = 0
-        tiger_exact_center_bonus = 0
-        goat_center_bonus = 0
-        edge_center_bonus = 0
-        goat_grouping_bonus = 0
-        tiger_surround_penalty = 0
-        tiger_grouping_penalty = 0
+        # order scored moves by their priority (asc)
+        scored_moves.sort(key=lambda m: m[1])
+        GameState.transposition_table_with_scores[state_key] = tuple(
+            scored_moves)
 
-        center_positions = {6, 8, 12, 16, 18}
-        center_outside = {2, 10, 14, 22}
-
-        for tiger in self.pos_tiger:
-            if tiger in center_positions:
-                tiger_center_bonus += 1
-            if tiger == 12:
-                tiger_exact_center_bonus += 1
-
-            for adj in self.graph[tiger]:
-                if self.board[adj] == Piece.EMPTY:
-                    tiger_moves += 1
-                elif self.board[adj] == Piece.TIGER:
-                    tiger_grouping_penalty += 1
-                elif self.board[adj] == Piece.GOAT:
-                    cap_pos = adj - (tiger - adj)
-                    if cap_pos in self.graph[adj] and self.board[cap_pos] == Piece.EMPTY:
-                        capture_opportunities += 1
-                        tiger_moves += 2  # emphasize mobility from captures
-                    tiger_surround_penalty += 1
-
-        for goat in pos_goat:
-            if goat in center_positions:
-                goat_center_bonus += 1
-            if goat in center_outside:
-                edge_center_bonus += 1
-            for adj in self.graph[goat]:
-                if self.board[adj] == Piece.GOAT:
-                    goat_grouping_bonus += 1  # reward goat clusters
-
-        tiger_score = (
-            + 10 * self.eaten_goat_count  # reward immediate capture
-            + 6 * capture_opportunities  # reward possible captures
-            + 0.8 * tiger_moves  # reward tiger mobility
-            + 0.25 * tiger_center_bonus  # reward center postions
-            + 0.5 * tiger_exact_center_bonus
-            - 0.5 * tiger_surround_penalty  # tigers surrounded by goats = bad
-            - 0.4 * tiger_grouping_penalty  # discourage tiger clusters
-        )
-
-        goat_score = (
-            + 1 * goats_on_board  # material value of goats already placed
-            + 0.5 * self.goat_count  # material value of goats on hand
-            + 10 * self.trapped_tiger_count  # advantageous for goat
-            + 0.5 * edge_center_bonus  # strong position for goat
-            + 0.25 * goat_center_bonus  # center position = stronger board influence
-            + 0.4 * goat_grouping_bonus  # goats working together
-        )
-
-        return tiger_score - goat_score
+        if return_best_move:
+            best_move, priority_score = scored_moves[-1]
+            return best_move
+        return scored_moves
 
     def get_legal_moves(self):
         moves = []
@@ -249,3 +206,81 @@ class GameState:
         self.goat_count = 20
         self.eaten_goat_count = 0
         self.trapped_tiger_count = 0
+
+    def tiger_priority(self, move):
+        priority_score = 0
+        next_state = self.make_move(move)
+        if next_state.eaten_goat_count > self.eaten_goat_count:
+            # this move leads to capture
+            priority_score += 1
+            if next_state.eaten_goat_count > 4:
+                # this move leads to immediate win
+                priority_score += 5
+        return priority_score
+
+    def goat_priority(self, move):
+        src, dst = move
+        is_placement_phase = src == dst
+        priority_score = 0
+        next_state = self.make_move(move)
+        if next_state.trapped_tiger_count == 4:
+            # immediate win -> high reward
+            return 100
+        if next_state.trapped_tiger_count > self.trapped_tiger_count:
+            # more the tigers trapped, greater the reward
+            diff = next_state.trapped_tiger_count - self.trapped_tiger_count
+            priority_score += 10 * diff  # TODO fine tune this
+
+        pos_tiger = [i for i, p in enumerate(
+            self.board) if p == Piece.TIGER]
+
+        # encourage clustering
+        for adj in GameState.graph[dst]:
+            if self.board[adj] == Piece.GOAT and adj != src:
+                priority_score += 1
+
+        # reward moves that block captures
+        # the more it blocks captures, the greater the reward
+        for tiger in pos_tiger:
+            for adj in GameState.graph[tiger]:
+                if self.board[adj] == Piece.GOAT:
+                    capture_pos = adj - (tiger - adj)
+                    if capture_pos in GameState.graph[adj]:
+                        if self.board[capture_pos] == Piece.EMPTY and capture_pos in GameState.graph[adj]:
+                            # this move blocks capture by placing(or moving) a piece at the capture_position
+                            # blocking a capture can also mean moving the threatened piece to capture_position
+                            if dst == capture_pos:
+                                priority_score += 4
+                            # how to allow escaping by moving away from the threatening position
+                            # we know that a capture is possible here
+                            # we check if src == adj (it means that the piece at src is capturable)
+                            # moving it will help avoid a capture, so we reward that
+                            elif src == adj:
+                                priority_score += 4
+
+                        elif not is_placement_phase and src == capture_pos:
+                            # here, there is already a piece on the capture position
+                            # thus we check if making this move allows another piece to be captured
+                            # i.e. if the piece blocks a capture currently, and moving it will threaten
+                            # another piece
+                            priority_score -= 4  # TODO fine tune this
+
+        # if placing(or moving) a piece leads to immediate capture assign it
+        # a very low priority
+        for tiger in pos_tiger:
+            threatened = False
+            for adj in GameState.graph[tiger]:
+                if adj == dst:  # dst is adjacent to tiger
+                    capture_pos = dst - (tiger - dst)
+                    # a piece can move into threat either from a different position or capture_position
+                    if capture_pos in GameState.graph[dst] and (self.board[capture_pos] == Piece.EMPTY or capture_pos == src):
+                        threatened = True
+                        priority_score -= 100
+                        break
+            if threatened:
+                break
+
+        strategic_positions = {2, 10, 14, 22}
+        if is_placement_phase and dst in strategic_positions:
+            priority_score += 2
+        return priority_score
