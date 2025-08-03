@@ -59,23 +59,24 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [0, 2, 4, 10]
+    # pos_tiger = [0, 2, 4, 10]
+    pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
-    pos_goat = [1, 3, 5, 6, 7, 8, 9, 11, 12, 13, 15, 19, 20, 21, 23, 24]
-    for pos in pos_goat:
-        board[pos] = Piece.GOAT
-    goat_count = 0
-    eaten_goat_count = 3
+    # pos_goat = [1, 3, 5, 6, 7, 8, 9, 11, 17, 13, 14, 15, 19, 20, 21, 23, 24]
+    # for pos in pos_goat:
+    #     board[pos] = Piece.GOAT
+    goat_count = 20
+    eaten_goat_count = 0
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
-    game_state.update_tiger_pos()
     game_state.update_trapped_tiger()
+    game_state.init_prioritization()
     display_board(game_state)
-    mcts = MCTS(initial_state=game_state, max_simulations=1000)
+    mcts = MCTS(initial_state=game_state, max_simulations=42)
     move = mcts.search()
-    # mcts.visualize_tree(max_depth=10)
+    mcts.visualize_tree(max_depth=10)
     print(game_state)
     print(f"Move selected: {move}")
     print(f"Simulations run: {mcts.simulations_run}")
@@ -112,6 +113,8 @@ def test_mcts():
 
     game_state = GameState(board, turn=Piece.GOAT,
                            goat_count=20, eaten_goat_count=0)
+    game_state.update_trapped_tiger()
+    game_state.init_prioritization()
 
     # Performance tracking
     move_times = []
@@ -119,7 +122,7 @@ def test_mcts():
     state_hash = defaultdict(int)
     move_count = 0
 
-    time_limit = 30
+    time_limit = 1
     while not game_state.is_game_over():
         state_key = game_state.key()
         state_hash[state_key] += 1
@@ -145,8 +148,8 @@ def test_mcts():
         # else:  # End game
         #     time_limit = 2.0
 
-        mcts = MCTS(initial_state=game_state, max_simulations=100)
-        # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
+        # mcts = MCTS(initial_state=game_state, max_simulations=500)
+        mcts = MCTS(initial_state=game_state, time_limit=time_limit)
         move = mcts.search()
 
         move_time = time.time() - start_time
@@ -174,11 +177,6 @@ def test_mcts():
 
         game_state = game_state.make_move(move)
         move_count += 1
-
-        # Safety break for very long games
-        if move_count > 200:
-            print("Game ended due to move limit")
-            break
 
     # Final results
     system('clear')
@@ -226,10 +224,10 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    # history = test_mcts()
+    history = test_mcts()
     # analyze_game_performance(history)
     # run_game()
-    scratch()
+    # scratch()
 
     # with Profile() as profile:
     #     # scratch()
