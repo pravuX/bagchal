@@ -37,19 +37,30 @@ class Node:
         # i.e all children that are visited at least once
 
         def uct(child_with_index):
+
             child_index, child = child_with_index
             exploitation = child.total_value / child.visit_count  # Q
             exploration = c_param * \
                 np.sqrt(np.log(self.visit_count) / child.visit_count)
             # the child list and priority score list are in opposite order
             priority_index = len(self.prioritized_scores) - child_index-1
-            # heuristic_bias = self.prioritized_scores[priority_index] / \
-            #     child.visit_count
-            heuristic_bias = self.prioritized_scores[priority_index] * \
-                5 / child.visit_count
+
+            # slower decay rate for goats
+            decay_rate = child.visit_count if self.player == Piece.TIGER else np.sqrt(
+                child.visit_count)
+            heuristic_bias = self.prioritized_scores[priority_index] / decay_rate
+
+            # heuristic_bias = self.prioritized_scores[priority_index] * max(
+            #     0, 1-(child.visit_count/1000)**2)
+
+            # if self.state.goat_count > 0:  # placement_phase
+            #     return priority_index
+
             return exploitation + exploration + heuristic_bias
 
-        # print(self.state)  # got an error one time saying that children was empty?
+        if not self.children:
+            # got an error one time saying that children was empty?
+            print(self.state)
         _, best_uct_child = max(enumerate(self.children), key=uct)
         return best_uct_child
 
@@ -59,6 +70,8 @@ class MCTS:
     def __init__(self, initial_state, max_simulations=1000, time_limit=None):
         self.max_simulations = max_simulations
         self.root = Node(initial_state)
+        print(self.root.prioritized_moves)
+        # print(self.root.prioritized_scores)
         self.time_limit = time_limit
         self.simulations_run = 0
 
