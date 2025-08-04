@@ -60,17 +60,16 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [2, 6, 11, 12]
+    pos_tiger = [0, 4, 15, 19]
     # pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
-    pos_goat = [0, 3, 4, 5, 7, 8, 9, 10, 13, 14,
-                15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    pos_goat = [1, 2, 9, 14, 20, 21, 22]
     for pos in pos_goat:
         board[pos] = Piece.GOAT
-    goat_count = 0
+    goat_count = 13
     eaten_goat_count = 0
-    turn = Piece.GOAT
+    turn = Piece.TIGER
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
     game_state.update_trapped_tiger()
@@ -146,9 +145,11 @@ def test_mcts():
         if game_state.goat_count >= 10:  # Early Placement
             time_limit = 0.5
         elif game_state.goat_count >= 5:  # Mid Placement
-            time_limit = 0.5
-        else:  # Late Placement and Movement Movement
             time_limit = 0.8
+        elif game_state.eaten_goat_count <= 2:
+            time_limit = 1.5
+        else:  # Late Placement and Movement Movement
+            time_limit = 1.8
 
         # mcts = MCTS(initial_state=game_state, max_simulations=500)
         mcts = MCTS(initial_state=game_state, time_limit=time_limit)
@@ -168,14 +169,14 @@ def test_mcts():
             'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
         })
 
-        print(f"Move selected: {move}, Time: {move_time:.2f}s")
-        # stats = mcts.get_move_statistics()
-        print(f"Simulations run: {mcts.simulations_run}")
-        # mcts.visualize_tree(max_depth=10)
-        # pprint.PrettyPrinter(width=20).pprint(stats)
-        print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
-              f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
-        input("Press Enter to continue...")  # Remove for automated testing
+        # print(f"Move selected: {move}, Time: {move_time:.2f}s")
+        # # stats = mcts.get_move_statistics()
+        # print(f"Simulations run: {mcts.simulations_run}")
+        # # mcts.visualize_tree(max_depth=10)
+        # # pprint.PrettyPrinter(width=20).pprint(stats)
+        # print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
+        #       f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
+        # input("Press Enter to continue...")  # Remove for automated testing
 
         game_state = game_state.make_move(move)
         move_count += 1

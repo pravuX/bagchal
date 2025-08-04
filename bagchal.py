@@ -223,21 +223,39 @@ class GameState:
             # this move leads to capture
             priority_score += 5
 
-        src, tiger = move
+        src, dst = move
         # potential capture
-        for adj in GameState.graph[tiger]:
+        for adj in GameState.graph[dst]:
             if self.board[adj] == Piece.GOAT:
-                capture_pos = adj - (tiger - adj)
+                capture_pos = adj - (dst - adj)
                 if capture_pos in GameState.graph[adj] and self.board[capture_pos] == Piece.EMPTY:
                     priority_score += 5
 
+        pos_tiger = [i for i, p in enumerate(
+            self.board) if p == Piece.TIGER]
+
+        for tiger in pos_tiger:
+            if tiger != src:
+                for adj in GameState.graph[tiger]:
+                    if self.board[adj] == Piece.GOAT:
+                        capture_pos = adj - (tiger - adj)
+                        if capture_pos in GameState.graph[adj]:
+                            # a capture is possible but it's blocked by the tiger at src
+                            # so we encourage moving away
+                            if capture_pos == src:
+                                priority_score += 2.5
+                            # but if moving away blocks capture for another tiger,
+                            # we discourage that move
+                            elif capture_pos == dst:
+                                priority_score -= 2.4
+
         strong_positions = [6, 8, 12, 16, 18]
-        if tiger in strong_positions:
+        if dst in strong_positions:
             priority_score += 2
         if src == 12:
-            priority_score -= 2
+            priority_score -= 0.8
 
-        return priority_score
+        return priority_score + np.random.random()  # some noise
 
     def goat_priority(self, move):
         src, dst = move
@@ -266,6 +284,8 @@ class GameState:
         for adj in GameState.graph[dst]:
             if self.board[adj] == Piece.GOAT and adj != src:
                 priority_score += 1.5
+            elif self.board[adj] == Piece.TIGER:
+                priority_score -= 0.1
 
         strategic_positions = [2, 10, 14, 22]
         outer_edge = [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19]
@@ -322,7 +342,7 @@ class GameState:
             if threatened:
                 break
 
-        return priority_score
+        return priority_score + np.random.random()  # some noise
 
     def calculate_prior_prob_dist(self, temp=1):
         if self.is_game_over():

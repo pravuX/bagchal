@@ -46,9 +46,12 @@ class Node:
             priority_index = len(self.prioritized_scores) - child_index-1
 
             # slower decay rate for goats
-            decay_rate = child.visit_count if self.player == Piece.TIGER else np.sqrt(
-                child.visit_count)
-            heuristic_bias = self.prioritized_scores[priority_index] / decay_rate
+            # decay_rate = child.visit_count if self.player == Piece.TIGER else np.sqrt(
+            #     child.visit_count)
+            decay_rate = np.sqrt(child.visit_count)
+
+            heuristic_bias = 10 * \
+                self.prioritized_scores[priority_index] / decay_rate
 
             # heuristic_bias = self.prioritized_scores[priority_index] * max(
             #     0, 1-(child.visit_count/1000)**2)
@@ -71,7 +74,7 @@ class MCTS:
         self.max_simulations = max_simulations
         self.root = Node(initial_state)
         print(self.root.prioritized_moves)
-        # print(self.root.prioritized_scores)
+        print(self.root.prioritized_scores)
         self.time_limit = time_limit
         self.simulations_run = 0
 
