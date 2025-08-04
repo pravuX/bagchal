@@ -141,12 +141,12 @@ def test_mcts():
         start_time = time.time()
 
         # Use different time limits based on game phase
-        # if game_state.goat_count > 15:  # Early game
-        #     time_limit = 0.5
-        # elif game_state.goat_count > 5:  # Mid game
-        #     time_limit = 1.0
-        # else:  # End game
-        #     time_limit = 2.0
+        if game_state.goat_count >= 10:  # Early Placement
+            time_limit = 0.8
+        elif game_state.goat_count >= 5:  # Mid Placement
+            time_limit = 1.0
+        else:  # Late Placement and Movement Movement
+            time_limit = 1.2
 
         # mcts = MCTS(initial_state=game_state, max_simulations=500)
         mcts = MCTS(initial_state=game_state, time_limit=time_limit)
@@ -166,13 +166,13 @@ def test_mcts():
             'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
         })
 
-        print(f"Move selected: {move}, Time: {move_time:.2f}s")
+        # print(f"Move selected: {move}, Time: {move_time:.2f}s")
         # stats = mcts.get_move_statistics()
-        print(f"Simulations run: {mcts.simulations_run}")
+        # print(f"Simulations run: {mcts.simulations_run}")
         # mcts.visualize_tree(max_depth=10)
         # pprint.PrettyPrinter(width=20).pprint(stats)
-        print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
-              f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
+        # print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
+        #       f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
         # input("Press Enter to continue...")  # Remove for automated testing
 
         game_state = game_state.make_move(move)
@@ -181,7 +181,9 @@ def test_mcts():
     # Final results
     system('clear')
     display_board(game_state)
-    print(len(game_state.transposition_table_with_scores))
+    print(game_state)
+    print(len(game_state.transposition_table_with_scores),
+          "unique states encountered.")
 
     result = game_state.get_result()
     if result:
@@ -225,7 +227,7 @@ def analyze_game_performance(game_history):
 # Example usage
 if __name__ == "__main__":
     history = test_mcts()
-    # analyze_game_performance(history)
+    analyze_game_performance(history)
     # run_game()
     # scratch()
 
