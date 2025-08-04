@@ -1,8 +1,8 @@
 from collections import defaultdict
 from enum import Enum
 import pygame
-from bagchal import Piece
-from alphabeta import MinimaxAgent
+from bagchal import GameState, Piece
+# from alphabeta import MinimaxAgent
 from mcts import MCTS
 
 COLORS = {
@@ -119,6 +119,9 @@ class Game:
         self.game_state.reset()
         self.selected_cell = None
         self.remove_later_state_hash = defaultdict(int)
+        GameState.transposition_table_with_scores.clear()
+        self.mcts_agent = MCTS(
+            initial_state=self.game_state, time_limit=1)
 
     def handle_main_menu_events(self):
         """Handle events specific to main menu"""
@@ -153,8 +156,6 @@ class Game:
                 elif pvc_goat_rect.collidepoint(event.pos):
 
                     self.reset_game()
-                    # this performs surprisingly well
-                    # self.minimax_agent = MinimaxAgent(depth=2)
                     self.mcts_agent = MCTS(
                         initial_state=self.game_state, time_limit=1)
                     self.current_state = UIState.PLAYING_PVC_GOAT
@@ -164,9 +165,8 @@ class Game:
                 elif pvc_tiger_rect.collidepoint(event.pos):
 
                     self.reset_game()
-                    # self.minimax_agent = MinimaxAgent(depth=2)
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, max_simulations=5)
+                        initial_state=self.game_state, time_limit=1)
                     self.current_state = UIState.PLAYING_PVC_TIGER
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -178,11 +178,9 @@ class Game:
                     # Early Game
                     self.mcts_agent = MCTS(
                         initial_state=self.game_state, time_limit=0.5)
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, max_simulations=21)
                     self.current_state = UIState.PLAYING_CVC
                     # Initialize AI timer to current time so it waits before first move
-                    # self.ai_move_timer = pygame.time.get_ticks()
+                    self.ai_move_timer = pygame.time.get_ticks()
 
         # ESC to go back to main menu
         keys = pygame.key.get_pressed()
@@ -199,7 +197,6 @@ class Game:
                    (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.TIGER) or \
                    (self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.GOAT):
                     self.place_piece(event.pos)
-                    self.game_state.update_tiger_pos()
                     self.game_state.update_trapped_tiger()
 
         # ESC to go back to mode select
@@ -359,9 +356,6 @@ class Game:
                     self.game_state = self.game_state.make_move(
                         (idx, idx))
                     self.remove_later_state_hash_update()
-                    # self.game_state.make_move((idx, idx))
-                    # self.game_state.update_tiger_pos()
-                    # self.game_state.update_trapped_tiger()
                     # Reset AI timer so it waits before responding to player move
                     self.ai_move_timer = pygame.time.get_ticks()
                     return
@@ -370,9 +364,6 @@ class Game:
         else:
             move = (self.selected_cell, idx)
             if move in self.game_state.get_legal_moves():
-                # self.game_state.make_move(move)
-                # self.game_state.update_tiger_pos()
-                # self.game_state.update_trapped_tiger()
                 self.game_state = self.game_state.make_move(move)
                 self.remove_later_state_hash_update()
                 # Reset AI timer so it waits before responding to player move

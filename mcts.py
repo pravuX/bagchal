@@ -43,10 +43,13 @@ class Node:
                 np.sqrt(np.log(self.visit_count) / child.visit_count)
             # the child list and priority score list are in opposite order
             priority_index = len(self.prioritized_scores) - child_index-1
-            heuristic_bias = self.prioritized_scores[priority_index] / \
-                child.visit_count
+            # heuristic_bias = self.prioritized_scores[priority_index] / \
+            #     child.visit_count
+            heuristic_bias = self.prioritized_scores[priority_index] * \
+                5 / child.visit_count
             return exploitation + exploration + heuristic_bias
 
+        # print(self.state)  # got an error one time saying that children was empty?
         _, best_uct_child = max(enumerate(self.children), key=uct)
         return best_uct_child
 

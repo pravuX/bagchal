@@ -231,10 +231,10 @@ class GameState:
         if next_state.trapped_tiger_count == 4:
             # immediate win -> high reward
             return 50
-        if next_state.trapped_tiger_count > self.trapped_tiger_count:
-            # more the tigers trapped, greater the reward
-            diff = next_state.trapped_tiger_count - self.trapped_tiger_count
-            priority_score += 7 * diff  # TODO fine tune this
+        # more the tigers trapped, greater the reward
+        # if a move untraps a tiger, punish it
+        diff = next_state.trapped_tiger_count - self.trapped_tiger_count
+        priority_score += 7 * diff  # TODO fine tune this
 
         pos_tiger = [i for i, p in enumerate(
             self.board) if p == Piece.TIGER]

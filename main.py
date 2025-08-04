@@ -20,9 +20,11 @@ def run_game():
     board[pos_tiger[2]] = Piece.TIGER
     board[pos_tiger[3]] = Piece.TIGER
 
-    gameState = GameState(board, turn=Piece.GOAT,
-                          goat_count=20, eaten_goat_count=0)
-    game = Game(game_state=gameState)
+    game_state = GameState(board, turn=Piece.GOAT,
+                           goat_count=20, eaten_goat_count=0)
+    game_state.update_trapped_tiger()
+    game_state.init_prioritization()
+    game = Game(game_state=game_state)
     game.run()
 
 
@@ -33,11 +35,10 @@ def debug_mcts():
     goat_count = 0
     eaten_goat_count = 0
     turn = Piece.GOAT
-    gameState = GameState(board, turn=turn,
-                          goat_count=goat_count, eaten_goat_count=eaten_goat_count)
-    gameState.update_tiger_pos()
-    gameState.update_trapped_tiger()
-    print(gameState.get_legal_moves())
+    game_state = GameState(board, turn=turn,
+                           goat_count=goat_count, eaten_goat_count=eaten_goat_count)
+    game_state.update_tiger_pos()
+    print(game_state.get_legal_moves())
 
 
 def debug_minimax():
@@ -46,15 +47,15 @@ def debug_minimax():
     goat_count = 0
     eaten_goat_count = 2
     turn = Piece.TIGER
-    gameState = GameState(board, turn=turn,
-                          goat_count=goat_count, eaten_goat_count=eaten_goat_count)
-    # gameState.update_tiger_pos()
-    # gameState.update_trapped_tiger()
-    # print(gameState.get_legal_moves())
+    game_state = GameState(board, turn=turn,
+                           goat_count=goat_count, eaten_goat_count=eaten_goat_count)
+    # game_state.update_tiger_pos()
+    # game_state.update_trapped_tiger()
+    # print(game_state.get_legal_moves())
 
     # minimax_agent = MinimaxAgent(depth=3)
-    # print(minimax_agent.get_best_move(gameState))
-    print(gameState.stringify())
+    # print(minimax_agent.get_best_move(game_state))
+    print(game_state.stringify())
 
 
 def scratch():
@@ -142,11 +143,11 @@ def test_mcts():
 
         # Use different time limits based on game phase
         if game_state.goat_count >= 10:  # Early Placement
-            time_limit = 0.8
+            time_limit = 0.5
         elif game_state.goat_count >= 5:  # Mid Placement
-            time_limit = 1.0
+            time_limit = 0.5
         else:  # Late Placement and Movement Movement
-            time_limit = 1.2
+            time_limit = 0.8
 
         # mcts = MCTS(initial_state=game_state, max_simulations=500)
         mcts = MCTS(initial_state=game_state, time_limit=time_limit)
@@ -226,9 +227,9 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    history = test_mcts()
-    analyze_game_performance(history)
-    # run_game()
+    # history = test_mcts()
+    # analyze_game_performance(history)
+    run_game()
     # scratch()
 
     # with Profile() as profile:
