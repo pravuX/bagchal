@@ -211,16 +211,32 @@ class GameState:
         self.goat_count = 20
         self.eaten_goat_count = 0
         self.trapped_tiger_count = 0
+        self.init_prioritization()
 
     def tiger_priority(self, move):
         priority_score = 10
         next_state = self.make_move(move, simulate=True)
         if next_state.eaten_goat_count > 4:
             # immediate win
-            return 20
+            return 50
         if next_state.eaten_goat_count > self.eaten_goat_count:
             # this move leads to capture
             priority_score += 5
+
+        src, tiger = move
+        # potential capture
+        for adj in GameState.graph[tiger]:
+            if self.board[adj] == Piece.GOAT:
+                capture_pos = adj - (tiger - adj)
+                if capture_pos in GameState.graph[adj] and self.board[capture_pos] == Piece.EMPTY:
+                    priority_score += 5
+
+        strong_positions = [6, 8, 12, 16, 18]
+        if tiger in strong_positions:
+            priority_score += 2
+        if src == 12:
+            priority_score -= 2
+
         return priority_score
 
     def goat_priority(self, move):
@@ -233,7 +249,14 @@ class GameState:
             return 50
         # more the tigers trapped, greater the reward
         # if a move untraps a tiger, punish it
+        untraps = False
+        traps = False
         diff = next_state.trapped_tiger_count - self.trapped_tiger_count
+        if diff < 0:
+            untraps = True
+        else:
+            traps = True
+
         priority_score += 7 * diff  # TODO fine tune this
 
         pos_tiger = [i for i, p in enumerate(
@@ -242,7 +265,7 @@ class GameState:
         # encourage clustering
         for adj in GameState.graph[dst]:
             if self.board[adj] == Piece.GOAT and adj != src:
-                priority_score += 1
+                priority_score += 1.5
 
         strategic_positions = [2, 10, 14, 22]
         outer_edge = [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19]
@@ -258,16 +281,21 @@ class GameState:
                 if self.board[adj] == Piece.GOAT:
                     capture_pos = adj - (tiger - adj)
                     if capture_pos in GameState.graph[adj]:
-                        if self.board[capture_pos] == Piece.EMPTY and capture_pos in GameState.graph[adj]:
+                        # and capture_pos in GameState.graph[adj]:
+                        if self.board[capture_pos] == Piece.EMPTY:
                             # this move blocks capture by placing(or moving) a piece at the capture_position
                             # blocking a capture can also mean moving the threatened piece to capture_position
                             if dst == capture_pos:
+                                if untraps:  # prioritize blocking more than untrapping
+                                    priority_score -= 7 * diff
                                 priority_score += 5
                             # how to allow escaping by moving away from the threatening position
                             # we know that a capture is possible here
                             # we check if src == adj (it means that the piece at src is capturable)
                             # moving it will help avoid a capture, so we reward that
                             elif src == adj:
+                                if untraps:  # prioritize blocking more than untrapping
+                                    priority_score -= 7 * diff
                                 priority_score += 5
 
                         elif not is_placement_phase and src == capture_pos:
@@ -288,6 +316,8 @@ class GameState:
                     if capture_pos in GameState.graph[dst] and (self.board[capture_pos] == Piece.EMPTY or capture_pos == src):
                         threatened = True
                         priority_score -= 15
+                        if traps:  # don't sacrifice even if trap is possible
+                            priority_score -= 7 * diff
                         break
             if threatened:
                 break
