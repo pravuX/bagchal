@@ -249,16 +249,16 @@ class Game:
                 if move:
                     self.game_state = self.game_state.make_move(move)
                     self.remove_later_state_hash_update()
-                    # if self.game_state.goat_count > 15:  # Early game
-                    #     time_limit = 0.5
-                    # elif self.game_state.goat_count > 5:  # Mid game
-                    #     time_limit = 1.0
-                    # else:  # End game
-                    #     time_limit = 2.0
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=time_limit)
+                    if self.game_state.goat_count >= 10:  # Early game
+                        time_limit = 0.8
+                    elif self.game_state.goat_count > 5:  # Mid game
+                        time_limit = 1.0
+                    else:  # End game
+                        time_limit = 1.5
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=1)
+                        initial_state=self.game_state, time_limit=time_limit)
+                    # self.mcts_agent = MCTS(
+                    #     initial_state=self.game_state, time_limit=1)
                     self.ai_move_timer = current_time
 
     def is_game_over(self):
@@ -275,6 +275,10 @@ class Game:
             if self.game_over_timer == 0:
                 self.game_over_timer = pygame.time.get_ticks()
                 print("Game Over")
+                print(self.game_state)
+                result = GameState.piece[self.game_state.get_result(
+                )] + " Won" if self.game_state.get_result() else "Draw"
+                print("Result:", result)
             elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
                 self.current_state = UIState.GAME_OVER
                 self.game_over_timer = 0
