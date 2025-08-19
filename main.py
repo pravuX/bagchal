@@ -77,7 +77,7 @@ def scratch():
     display_board(game_state)
     mcts = MCTS(initial_state=game_state, max_simulations=500)
     move = mcts.search()
-    # mcts.visualize_tree(max_depth=10)
+    mcts.visualize_tree(max_depth=10)
     print(game_state)
     print(f"Move selected: {move}")
     print(f"Simulations run: {mcts.simulations_run}")
@@ -98,13 +98,6 @@ def display_board(game_state):
             print("-"*21)
 
 
-def update_state_hash(state_key, state_hash):
-    if state_key in state_hash:
-        state_hash[state_key] += 1
-    else:
-        state_hash[state_key] = 1
-
-
 def test_mcts():
     """Enhanced testing with performance metrics"""
     board = [Piece.EMPTY] * 25
@@ -123,7 +116,9 @@ def test_mcts():
     state_hash = defaultdict(int)
     move_count = 0
 
-    time_limit = 1
+    time_limit = 1.5
+    max_simulations = 42
+    # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
     while not game_state.is_game_over():
         state_key = game_state.key()
         state_hash[state_key] += 1
@@ -133,60 +128,59 @@ def test_mcts():
             break
 
         # Display current state
-        system('clear')
-        display_board(game_state)
-        print(f"Move {move_count + 1}")
-        print(game_state)
+        # system('clear')
+        # display_board(game_state)
+        # print(f"Move {move_count + 1}")
+        # print(game_state)
 
         # Time the move decision
-        start_time = time.time()
+        # start_time = time.time()
 
         # Use different time limits based on game phase
         if game_state.goat_count >= 10:  # Early Placement
-            time_limit = 0.5
+            time_limit = 1.5
         elif game_state.goat_count >= 5:  # Mid Placement
-            time_limit = 0.8
+            time_limit = 1.8
         elif game_state.eaten_goat_count <= 2:
             time_limit = 1.5
         else:  # Late Placement and Movement Movement
             time_limit = 1.8
-
-        # mcts = MCTS(initial_state=game_state, max_simulations=500)
         mcts = MCTS(initial_state=game_state, time_limit=time_limit)
         move = mcts.search()
 
-        move_time = time.time() - start_time
-        move_times.append(move_time)
+        # move_time = time.time() - start_time
+        # move_times.append(move_time)
 
         # Store game history
-        game_history.append({
-            'move': move,
-            'player': game_state.turn,
-            'board_state': game_state.stringify(),
-            'goats_remaining': game_state.goat_count,
-            'goats_eaten': game_state.eaten_goat_count,
-            'move_time': move_time,
-            'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
-        })
+        # game_history.append({
+        #     'move': move,
+        #     'player': game_state.turn,
+        #     'board_state': game_state.stringify(),
+        #     'goats_remaining': game_state.goat_count,
+        #     'goats_eaten': game_state.eaten_goat_count,
+        #     'move_time': move_time,
+        #     'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
+        # })
 
         # print(f"Move selected: {move}, Time: {move_time:.2f}s")
-        # # stats = mcts.get_move_statistics()
+        # stats = mcts.get_move_statistics()
         # print(f"Simulations run: {mcts.simulations_run}")
-        # # mcts.visualize_tree(max_depth=10)
-        # # pprint.PrettyPrinter(width=20).pprint(stats)
+        # mcts.visualize_tree(max_depth=10)
+        # pprint.PrettyPrinter(width=20).pprint(stats)
         # print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
         #       f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
-        # input("Press Enter to continue...")  # Remove for automated testing
 
         game_state = game_state.make_move(move)
-        move_count += 1
+        # mcts.re_reoot(game_state, time_limit=time_limit)
+        # move_count += 1
+        # input("Press Enter to continue...")  # Remove for automated testing
 
     # Final results
-    system('clear')
+    # system('clear')
     display_board(game_state)
     print(game_state)
-    print(len(game_state.transposition_table_with_scores),
-          "unique states encountered.")
+    # print(len(game_state.transposition_table_with_scores),
+    #       "unique states encountered.")
 
     result = game_state.get_result()
     if result:
@@ -195,11 +189,11 @@ def test_mcts():
         print("Draw!")
 
     # Performance summary
-    print(f"\nGame Summary:")
-    print(f"Total moves: {move_count}")
-    print(f"Average move time: {np.mean(move_times):.2f}s")
-    print(f"Max move time: {max(move_times):.2f}s")
-    print(f"Min move time: {min(move_times):.2f}s")
+    # print(f"\nGame Summary:")
+    # print(f"Total moves: {move_count}")
+    # print(f"Average move time: {np.mean(move_times):.2f}s")
+    # print(f"Max move time: {max(move_times):.2f}s")
+    # print(f"Min move time: {min(move_times):.2f}s")
 
     return game_history
 
@@ -229,17 +223,17 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    history = test_mcts()
-    analyze_game_performance(history)
+    # history = test_mcts()
+    # analyze_game_performance(history)
     # run_game()
     # scratch()
 
-    # with Profile() as profile:
-    #     # scratch()
-    #     test_mcts()
-    #     (
-    #         Stats(profile)
-    #         .strip_dirs()
-    #         .sort_stats(SortKey.CALLS)
-    #         .print_stats()
-    #     )
+    with Profile() as profile:
+        # scratch()
+        test_mcts()
+        (
+            Stats(profile)
+            .strip_dirs()
+            .sort_stats(SortKey.CALLS)
+            .print_stats()
+        )

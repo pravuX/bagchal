@@ -32,7 +32,7 @@ class Node:
     def is_terminal(self):
         return self.state.is_game_over()
 
-    def best_child(self, c_param=1):
+    def best_child(self, c_param=1.41):
         # this is only called on a node that is fully expanded
         # i.e all children that are visited at least once
 
@@ -49,6 +49,17 @@ class Node:
             # decay_rate = child.visit_count if self.player == Piece.TIGER else np.sqrt(
             #     child.visit_count)
             decay_rate = np.sqrt(child.visit_count)
+            # since a game_state may be repeated for nodes in different
+            # subtrees that are essentially equivalent, the heuristic_bias
+            # is unable to decay fast enough, that's why in many situations
+            # it seems the agent is picking the same moves over and over again.
+            # this is because we're not decaying the heuristic_bias
+            # based on the no of moves played. each "new" game_state (encountered
+            # after making a move) becomes the new root from which MCTS iterations
+            # are performed for the given time. so the visit_count for the node
+            # is still small and so the heuristic_bias dominates.
+            # consequently, for the spectator of the game, it feels like the
+            # agent is trying to force a draw
 
             heuristic_bias = 10 * \
                 self.prioritized_scores[priority_index] / decay_rate
@@ -73,13 +84,39 @@ class MCTS:
     def __init__(self, initial_state, max_simulations=1000, time_limit=None):
         self.max_simulations = max_simulations
         self.root = Node(initial_state)
-        print(self.root.prioritized_moves)
-        print(self.root.prioritized_scores)
+        # print(self.root.prioritized_moves)
+        # print(self.root.prioritized_scores)
         self.time_limit = time_limit
         self.simulations_run = 0
 
         self.goat_wins = 0
         self.tiger_wins = 0
+        # a table counting time number of times a node occurs throughout the
+        # search tree. this is an intervention because of the high possibily
+        # of node(game_state) recurrence in the game.
+        # this doesnot include the states encountered during rollouts.
+        # the count is used to increase the decay rate with the hope of
+        # promoting exploration in late game
+        self.nodes = defaultdict(int)
+
+    def re_reoot(self, new_state, max_simulations=1000, time_limit=None):
+        # reset
+        self.max_simulations = max_simulations
+        self.time_limit = time_limit
+        self.simulations_run = 0
+
+        self.goat_wins = 0
+        self.tiger_wins = 0
+
+        # sever the subtree and make it the new root
+        for child in self.root.children:
+            if child.state.key() == new_state.key():
+                child.parent = None
+                self.root = child
+                return
+
+        # fallback
+        self.root = Node(new_state)
 
     def rollout_policy(self, state):
 
@@ -93,6 +130,7 @@ class MCTS:
             expanded_node = self.tree_policy(self.root)
             result = self.rollout(expanded_node)
             self.backpropagate(expanded_node, result)
+            self.nodes[expanded_node.state.key()] += 1
             self.simulations_run += 1
             if result == Piece.GOAT:
                 self.goat_wins += 1
@@ -110,7 +148,7 @@ class MCTS:
 
         return self.get_best_move()
 
-    def tree_policy(self, node):
+    def tree_policy(self, node: Node):
         while not node.is_terminal():
             if not node.is_fully_expanded():
                 return node.expand()
@@ -138,6 +176,13 @@ class MCTS:
     def backpropagate(self, node, result):
         while node is not None:
             node.visit_count += 1
+            # if result == -node.player:
+            #     node.total_value += 1
+            # elif result == 0:
+            #     node.total_value += 0.5
+            # elif result == node.player:
+            #     node.total_value += 0.0
+
             node.total_value += -node.player * result
             node = node.parent
 

@@ -23,7 +23,7 @@ class GameState:
              20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
 
     piece = {
-        -1: "G", 0: ' ', 1: "T"
+        -1: "G", 0: '·', 1: "T"
     }
 
     def __init__(self, board, turn, goat_count, eaten_goat_count):

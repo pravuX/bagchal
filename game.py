@@ -1,5 +1,6 @@
 from collections import defaultdict
 from enum import Enum
+import pprint
 import pygame
 from bagchal import GameState, Piece
 # from alphabeta import MinimaxAgent
@@ -69,10 +70,7 @@ class Game:
 
     def remove_later_state_hash_update(self):
         state_key = self.game_state.key()
-        if state_key in self.remove_later_state_hash:
-            self.remove_later_state_hash[state_key] += 1
-        else:
-            self.remove_later_state_hash[state_key] = 1
+        self.remove_later_state_hash[state_key] += 1
 
     def initialize_board_data(self):
 
@@ -118,7 +116,7 @@ class Game:
     def reset_game(self):
         self.game_state.reset()
         self.selected_cell = None
-        self.remove_later_state_hash = defaultdict(int)
+        self.remove_later_state_hash.clear()
         GameState.transposition_table_with_scores.clear()
         self.mcts_agent = MCTS(
             initial_state=self.game_state, time_limit=1)
@@ -279,6 +277,7 @@ class Game:
                 result = GameState.piece[self.game_state.get_result(
                 )] + " Won" if self.game_state.get_result() else "Draw"
                 print("Result:", result)
+                # pprint.PrettyPrinter().pprint(self.remove_later_state_hash)
             elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
                 self.current_state = UIState.GAME_OVER
                 self.game_over_timer = 0
