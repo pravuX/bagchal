@@ -60,25 +60,34 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [0, 4, 15, 19]
-    # pos_tiger = [0, 4, 20, 24]
+    # pos_tiger = [0, 4, 15, 19]
+    pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
     pos_goat = [1, 2, 9, 14, 20, 21, 22]
-    for pos in pos_goat:
-        board[pos] = Piece.GOAT
-    goat_count = 13
+    # for pos in pos_goat:
+    #     board[pos] = Piece.GOAT
+    goat_count = 20
     eaten_goat_count = 0
-    turn = Piece.TIGER
+    turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
     game_state.update_trapped_tiger()
     game_state.init_prioritization()
     display_board(game_state)
-    mcts = MCTS(initial_state=game_state, max_simulations=500)
-    move = mcts.search()
-    mcts.visualize_tree(max_depth=10)
     print(game_state)
+    mcts = MCTS(initial_state=game_state, max_simulations=1)
+
+    with Profile() as profile:
+        move = mcts.search()
+        # test_mcts()
+        (
+            Stats(profile)
+            .strip_dirs()
+            .sort_stats(SortKey.TIME)
+            .print_stats()
+        )
+    # mcts.visualize_tree(max_depth=10)
     print(f"Move selected: {move}")
     print(f"Simulations run: {mcts.simulations_run}")
     print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}%",
@@ -226,14 +235,14 @@ if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
     # run_game()
-    # scratch()
+    scratch()
 
-    with Profile() as profile:
-        # scratch()
-        test_mcts()
-        (
-            Stats(profile)
-            .strip_dirs()
-            .sort_stats(SortKey.CALLS)
-            .print_stats()
-        )
+    # with Profile() as profile:
+    #     scratch()
+    #     # test_mcts()
+    #     (
+    #         Stats(profile)
+    #         .strip_dirs()
+    #         .sort_stats(SortKey.TIME)
+    #         .print_stats()
+    #     )
