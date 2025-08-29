@@ -234,8 +234,8 @@ def analyze_game_performance(game_history):
 if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
-    # run_game()
-    scratch()
+    run_game()
+    # scratch()
 
     # with Profile() as profile:
     #     scratch()
