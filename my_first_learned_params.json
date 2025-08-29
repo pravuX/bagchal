@@ -1,0 +1,16 @@
+{
+  "tiger_capture_bonus": 7.032329140013193,
+  "tiger_potential_capture_bonus": 8.668554533849118,
+  "tiger_strategic_position_bonus": 1.8483650420156499,
+  "tiger_center_penalty": 0.4719749452714227,
+  "tiger_unblock_bonus": 1.6316576361686175,
+  "tiger_block_penalty": 4.566195839980748,
+  "goat_trap_bonus": 7.931438766575948,
+  "goat_clustering_bonus": 2.8976920489391595,
+  "goat_tiger_clustering_penalty": 0.1,
+  "goat_strategic_position_bonus": 2.011450461269896,
+  "goat_outer_edge_bonus": 2.2716567589364898,
+  "goat_block_capture_bonus": 8.473083122051769,
+  "goat_escape_bonus": 3.805548482565748,
+  "goat_sacrifice_penalty": 18.065340922538446
+}
