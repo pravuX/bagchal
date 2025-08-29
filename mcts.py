@@ -164,7 +164,7 @@ class MCTS:
             state_key = state.key()
             state_hash[state_key] += 1
 
-            if state_hash[state_key] > 3:
+            if state_hash[state_key] > 9:
                 return 0
 
             move = self.rollout_policy(state)

@@ -164,6 +164,9 @@ class GameState:
         GameState.transposition_table_with_scores[state_key] = tuple(
             scored_moves)
 
+        if len(GameState.transposition_table_with_scores) > 100_000:
+            GameState.transposition_table_with_scores.clear()
+
         return scored_moves
 
     def get_legal_moves(self):

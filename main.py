@@ -1,12 +1,13 @@
 from collections import defaultdict
 from os import system
 from bagchal import GameState, Piece
-from game import Game
-from alphabeta import MinimaxAgent
+# from game import Game
+# from alphabeta import MinimaxAgent
 import pprint
 from mcts import MCTS
 import time
 import numpy as np
+
 
 from cProfile import Profile
 from pstats import SortKey, Stats
@@ -76,17 +77,19 @@ def scratch():
     game_state.init_prioritization()
     display_board(game_state)
     print(game_state)
-    mcts = MCTS(initial_state=game_state, max_simulations=1)
+    # mcts = MCTS(initial_state=game_state, time_limit=1.5)
+    mcts = MCTS(initial_state=game_state, max_simulations=500)
+    move = mcts.search()
 
-    with Profile() as profile:
-        move = mcts.search()
-        # test_mcts()
-        (
-            Stats(profile)
-            .strip_dirs()
-            .sort_stats(SortKey.TIME)
-            .print_stats()
-        )
+    # with Profile() as profile:
+    #     move = mcts.search()
+    #     # test_mcts()
+    #     (
+    #         Stats(profile)
+    #         .strip_dirs()
+    #         .sort_stats(SortKey.TIME)
+    #         .print_stats()
+    #     )
     # mcts.visualize_tree(max_depth=10)
     print(f"Move selected: {move}")
     print(f"Simulations run: {mcts.simulations_run}")
@@ -113,6 +116,9 @@ def test_mcts():
     pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
+    pos_goat = []
+    for pos in pos_goat:
+        board[pos] = Piece.GOAT
 
     game_state = GameState(board, turn=Piece.GOAT,
                            goat_count=20, eaten_goat_count=0)
@@ -121,29 +127,23 @@ def test_mcts():
 
     # Performance tracking
     move_times = []
+    simulations_per_move = []
     game_history = []
     state_hash = defaultdict(int)
     move_count = 0
 
-    time_limit = 1.5
-    max_simulations = 42
+    time_limit = 0.5
     # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
     while not game_state.is_game_over():
         state_key = game_state.key()
         state_hash[state_key] += 1
 
-        if state_hash[state_key] > 3:
+        if state_hash[state_key] > 9:
             print("Draw by repetition!")
             break
 
-        # Display current state
-        # system('clear')
-        # display_board(game_state)
-        # print(f"Move {move_count + 1}")
-        # print(game_state)
-
         # Time the move decision
-        # start_time = time.time()
+        start_time = time.time()
 
         # Use different time limits based on game phase
         if game_state.goat_count >= 10:  # Early Placement
@@ -157,39 +157,47 @@ def test_mcts():
         mcts = MCTS(initial_state=game_state, time_limit=time_limit)
         move = mcts.search()
 
-        # move_time = time.time() - start_time
-        # move_times.append(move_time)
+        move_time = time.time() - start_time
+        move_times.append(move_time)
+
+        simulations_per_move.append(mcts.simulations_run)
 
         # Store game history
-        # game_history.append({
-        #     'move': move,
-        #     'player': game_state.turn,
-        #     'board_state': game_state.stringify(),
-        #     'goats_remaining': game_state.goat_count,
-        #     'goats_eaten': game_state.eaten_goat_count,
-        #     'move_time': move_time,
-        #     'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
-        # })
+        game_history.append({
+            'move': move,
+            'player': game_state.turn,
+            'board_state': game_state.stringify(),
+            'goats_remaining': game_state.goat_count,
+            'goats_eaten': game_state.eaten_goat_count,
+            'move_time': move_time,
+            'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
+        })
 
-        # print(f"Move selected: {move}, Time: {move_time:.2f}s")
+        # Display current state
+        system('clear')
+        display_board(game_state)
+        print(f"Move {move_count + 1}")
+        print(game_state)
+
+        print(f"Move selected: {move}, Time: {move_time:.2f}s")
         # stats = mcts.get_move_statistics()
-        # print(f"Simulations run: {mcts.simulations_run}")
+        print(f"Simulations run: {mcts.simulations_run}")
         # mcts.visualize_tree(max_depth=10)
         # pprint.PrettyPrinter(width=20).pprint(stats)
-        # print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
-        #       f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
+        print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
+              f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
 
         game_state = game_state.make_move(move)
         # mcts.re_reoot(game_state, time_limit=time_limit)
-        # move_count += 1
-        # input("Press Enter to continue...")  # Remove for automated testing
+        move_count += 1
+        input("Press Enter to continue...")  # Remove for automated testing
 
     # Final results
-    # system('clear')
+    system('clear')
     display_board(game_state)
     print(game_state)
-    # print(len(game_state.transposition_table_with_scores),
-    #       "unique states encountered.")
+    print(len(game_state.transposition_table_with_scores),
+          "unique states encountered.")
 
     result = game_state.get_result()
     if result:
@@ -198,11 +206,13 @@ def test_mcts():
         print("Draw!")
 
     # Performance summary
-    # print(f"\nGame Summary:")
-    # print(f"Total moves: {move_count}")
-    # print(f"Average move time: {np.mean(move_times):.2f}s")
-    # print(f"Max move time: {max(move_times):.2f}s")
-    # print(f"Min move time: {min(move_times):.2f}s")
+    print(f"\nGame Summary:")
+    print(f"Total moves: {move_count}")
+    print(f"Average move time: {np.mean(move_times):.2f}s")
+    print(f"Max move time: {max(move_times):.2f}s")
+    print(f"Min move time: {min(move_times):.2f}s")
+    print(f"Max no of simulations: {max(simulations_per_move)}")
+    print(f"Min no of simulations: {min(simulations_per_move)}")
 
     return game_history
 
@@ -232,9 +242,9 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    # history = test_mcts()
-    # analyze_game_performance(history)
-    run_game()
+    history = test_mcts()
+    analyze_game_performance(history)
+    # run_game()
     # scratch()
 
     # with Profile() as profile:
