@@ -1,3 +1,5 @@
+from dataclasses import dataclass, asdict
+from copy import deepcopy
 from enum import IntEnum
 from typing import override
 import numpy as np
@@ -6,6 +8,37 @@ import numpy as np
 # REMEMBER:
 # x -> cols : width
 # y -> rows : height
+
+@dataclass
+class HeuristicParams:
+    """Learnable parameters for move evaluation"""
+    # Tiger parameters
+    tiger_capture_bonus: float = 5.0
+    tiger_potential_capture_bonus: float = 5.0
+    tiger_strategic_position_bonus: float = 2.0
+    tiger_center_penalty: float = 0.8
+    tiger_unblock_bonus: float = 2.5
+    tiger_block_penalty: float = 2.4
+
+    # Goat parameters
+    goat_trap_bonus: float = 5.0
+    goat_clustering_bonus: float = 1.5
+    goat_tiger_clustering_penalty: float = 0.1
+    goat_strategic_position_bonus: float = 1.0
+    goat_outer_edge_bonus: float = 1.0
+    goat_block_capture_bonus: float = 5.0
+    goat_escape_bonus: float = 5.0
+    goat_sacrifice_penalty: float = 15.0
+
+    def mutate(self, mutation_rate: float = 0.1) -> 'HeuristicParams':
+        """Create a mutated version of parameters for evolution"""
+        new_params = deepcopy(self)
+        for field_name, value in asdict(self).items():
+            if np.random.random() < mutation_rate:
+                noise = np.random.normal(0, abs(value) * 0.2)
+                setattr(new_params, field_name, max(0.1, value + noise))
+        return new_params
+
 
 class Piece(IntEnum):
     GOAT = -1
@@ -23,8 +56,15 @@ class GameState:
              20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
 
     piece = {
-        -1: "G", 0: '·', 1: "T"
+        -1: "🐐", 0: '  ', 1: "🐅"
     }
+
+    heuristic_params = HeuristicParams()
+
+    @classmethod
+    def set_heuristic_params(cls, params: HeuristicParams):
+        """Set the heuristic parameters for all GameState instances"""
+        cls.heuristic_params = params
 
     def __init__(self, board, turn, goat_count, eaten_goat_count):
         self.board = board
@@ -217,6 +257,7 @@ class GameState:
         self.init_prioritization()
 
     def tiger_priority(self, move):
+        params = self.heuristic_params
         priority_score = 10
         next_state = self.make_move(move, simulate=True)
         if next_state.eaten_goat_count > 4:
@@ -224,7 +265,7 @@ class GameState:
             return 50
         if next_state.eaten_goat_count > self.eaten_goat_count:
             # this move leads to capture
-            priority_score += 5
+            priority_score += params.tiger_capture_bonus
 
         src, dst = move
         # potential capture
@@ -232,7 +273,7 @@ class GameState:
             if self.board[adj] == Piece.GOAT:
                 capture_pos = adj - (dst - adj)
                 if capture_pos in GameState.graph[adj] and self.board[capture_pos] == Piece.EMPTY:
-                    priority_score += 5
+                    priority_score += params.tiger_potential_capture_bonus
 
         pos_tiger = [i for i, p in enumerate(
             self.board) if p == Piece.TIGER]
@@ -246,21 +287,22 @@ class GameState:
                             # a capture is possible but it's blocked by the tiger at src
                             # so we encourage moving away
                             if capture_pos == src:
-                                priority_score += 2.5
+                                priority_score += params.tiger_unblock_bonus
                             # but if moving away blocks capture for another tiger,
                             # we discourage that move
                             elif capture_pos == dst:
-                                priority_score -= 2.4
+                                priority_score -= params.tiger_block_penalty
 
         strong_positions = [6, 8, 12, 16, 18]
         if dst in strong_positions:
-            priority_score += 2
+            priority_score += params.tiger_strategic_position_bonus
         if src == 12:
-            priority_score -= 0.8
+            priority_score -= params.tiger_center_penalty
 
         return priority_score + np.random.random()  # some noise
 
     def goat_priority(self, move):
+        params = self.heuristic_params  # Use class-level parameters
         src, dst = move
         is_placement_phase = src == dst
         priority_score = 5
@@ -278,7 +320,7 @@ class GameState:
         else:
             traps = True
 
-        priority_score += 7 * diff  # TODO fine tune this
+        priority_score += params.goat_trap_bonus * diff  # TODO fine tune this
 
         pos_tiger = [i for i, p in enumerate(
             self.board) if p == Piece.TIGER]
@@ -286,16 +328,16 @@ class GameState:
         # encourage clustering
         for adj in GameState.graph[dst]:
             if self.board[adj] == Piece.GOAT and adj != src:
-                priority_score += 1.5
+                priority_score += params.goat_clustering_bonus
             elif self.board[adj] == Piece.TIGER:
-                priority_score -= 0.1
+                priority_score -= params.goat_tiger_clustering_penalty
 
         strategic_positions = [2, 10, 14, 22]
         outer_edge = [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19]
         if is_placement_phase and dst in strategic_positions:
-            priority_score += 1
+            priority_score += params.goat_strategic_position_bonus
         if dst in outer_edge:
-            priority_score += 1
+            priority_score += params.goat_outer_edge_bonus
 
         # reward moves that block captures
         # the more it blocks captures, the greater the reward
@@ -310,23 +352,23 @@ class GameState:
                             # blocking a capture can also mean moving the threatened piece to capture_position
                             if dst == capture_pos:
                                 if untraps:  # prioritize blocking more than untrapping
-                                    priority_score -= 7 * diff
-                                priority_score += 5
+                                    priority_score -= params.goat_trap_bonus * diff
+                                priority_score += params.goat_block_capture_bonus
                             # how to allow escaping by moving away from the threatening position
                             # we know that a capture is possible here
                             # we check if src == adj (it means that the piece at src is capturable)
                             # moving it will help avoid a capture, so we reward that
                             elif src == adj:
                                 if untraps:  # prioritize blocking more than untrapping
-                                    priority_score -= 7 * diff
-                                priority_score += 5
+                                    priority_score -= params.goat_trap_bonus * diff
+                                priority_score += params.goat_escape_bonus
 
                         elif not is_placement_phase and src == capture_pos:
                             # here, there is already a piece on the capture position
                             # thus we check if making this move allows another piece to be captured
                             # i.e. if the piece blocks a capture currently, and moving it will threaten
                             # another piece
-                            priority_score -= 5  # TODO fine tune this
+                            priority_score -= params.goat_block_capture_bonus  # TODO fine tune this
 
         # if placing(or moving) a piece leads to immediate capture assign it
         # a very low priority
@@ -338,14 +380,15 @@ class GameState:
                     # a piece can move into threat either from a different position or capture_position
                     if capture_pos in GameState.graph[dst] and (self.board[capture_pos] == Piece.EMPTY or capture_pos == src):
                         threatened = True
-                        priority_score -= 15
+                        priority_score -= params.goat_sacrifice_penalty
                         if traps:  # don't sacrifice even if trap is possible
-                            priority_score -= 7 * diff
+                            priority_score -= params.goat_trap_bonus * diff
                         break
             if threatened:
                 break
 
-        return priority_score + np.random.random()  # some noise
+        # return priority_score + np.random.random()  # some noise
+        return priority_score
 
     def calculate_prior_prob_dist(self, temp=1):
         if self.is_game_over():

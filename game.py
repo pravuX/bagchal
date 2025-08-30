@@ -4,7 +4,8 @@ import pprint
 import pygame
 from bagchal import GameState, Piece
 # from alphabeta import MinimaxAgent
-from mcts import MCTS
+# from mcts import MCTS
+from pw_mcts import MCTS
 
 COLORS = {
     "bg": "antiquewhite",
@@ -119,7 +120,7 @@ class Game:
         self.remove_later_state_hash.clear()
         GameState.transposition_table_with_scores.clear()
         self.mcts_agent = MCTS(
-            initial_state=self.game_state, time_limit=1)
+            initial_state=self.game_state, time_limit=0.6)
 
     def handle_main_menu_events(self):
         """Handle events specific to main menu"""
@@ -155,7 +156,7 @@ class Game:
 
                     self.reset_game()
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=1)
+                        initial_state=self.game_state, time_limit=0.6)
                     self.current_state = UIState.PLAYING_PVC_GOAT
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -164,7 +165,7 @@ class Game:
 
                     self.reset_game()
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=1)
+                        initial_state=self.game_state, time_limit=0.6)
                     self.current_state = UIState.PLAYING_PVC_TIGER
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -175,7 +176,7 @@ class Game:
                     # self.minimax_agent = MinimaxAgent(depth=2)
                     # Early Game
                     self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=0.5)
+                        initial_state=self.game_state, time_limit=0.6)
                     self.current_state = UIState.PLAYING_CVC
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -248,15 +249,15 @@ class Game:
                     self.game_state = self.game_state.make_move(move)
                     self.remove_later_state_hash_update()
                     if self.game_state.goat_count >= 10:  # Early game
-                        time_limit = 0.8
+                        # time_limit = 0.8
+                        time_limit = 0.6
                     elif self.game_state.goat_count > 5:  # Mid game
-                        time_limit = 1.0
+                        # time_limit = 1.0
+                        time_limit = 0.6
                     else:  # End game
-                        time_limit = 1.5
+                        time_limit = 0.6
                     self.mcts_agent = MCTS(
                         initial_state=self.game_state, time_limit=time_limit)
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=1)
                     self.ai_move_timer = current_time
 
     def is_game_over(self):
