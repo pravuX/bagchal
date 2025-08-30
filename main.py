@@ -1,10 +1,11 @@
 from collections import defaultdict
 from os import system
 from bagchal import GameState, Piece
-# from game import Game
+from game import Game
 # from alphabeta import MinimaxAgent
 import pprint
-from mcts import MCTS
+# from mcts import MCTS
+from pw_mcts import MCTS
 import time
 import numpy as np
 
@@ -61,15 +62,15 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    # pos_tiger = [0, 4, 15, 19]
-    pos_tiger = [0, 4, 20, 24]
+    pos_tiger = [5, 12, 15, 16]
+    # pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
-    pos_goat = [1, 2, 9, 14, 20, 21, 22]
-    # for pos in pos_goat:
-    #     board[pos] = Piece.GOAT
-    goat_count = 20
-    eaten_goat_count = 0
+    pos_goat = [1, 2, 3, 4, 6, 7, 8, 9, 13, 14, 18, 19, 20, 21, 22, 23, 24]
+    for pos in pos_goat:
+        board[pos] = Piece.GOAT
+    goat_count = 2
+    eaten_goat_count = 1
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
@@ -77,8 +78,10 @@ def scratch():
     game_state.init_prioritization()
     display_board(game_state)
     print(game_state)
-    # mcts = MCTS(initial_state=game_state, time_limit=1.5)
-    mcts = MCTS(initial_state=game_state, max_simulations=500)
+    mcts = MCTS(initial_state=game_state, time_limit=1.5)
+    print(mcts.root.prioritized_moves)
+    print(mcts.root.prioritized_scores)
+    # mcts = MCTS(initial_state=game_state, max_simulations=1000)
     move = mcts.search()
 
     # with Profile() as profile:
@@ -90,7 +93,7 @@ def scratch():
     #         .sort_stats(SortKey.TIME)
     #         .print_stats()
     #     )
-    # mcts.visualize_tree(max_depth=10)
+    mcts.visualize_tree(max_depth=1)
     print(f"Move selected: {move}")
     print(f"Simulations run: {mcts.simulations_run}")
     print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}%",
@@ -100,14 +103,14 @@ def scratch():
 def display_board(game_state):
     board = game_state.board
     piece = game_state.piece
-    print("-"*21)
+    print("-"*26)
     for i, cell in enumerate(board):
         if i % 5 == 0:
             print("|", end=" ")
         print(piece[cell], end=" | ")
         if (i+1) % 5 == 0:
             print()
-            print("-"*21)
+            print("-"*26)
 
 
 def test_mcts():
@@ -132,13 +135,13 @@ def test_mcts():
     state_hash = defaultdict(int)
     move_count = 0
 
-    time_limit = 0.5
+    time_limit = 0.6
     # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
     while not game_state.is_game_over():
         state_key = game_state.key()
         state_hash[state_key] += 1
 
-        if state_hash[state_key] > 9:
+        if state_hash[state_key] > 3:
             print("Draw by repetition!")
             break
 
@@ -146,15 +149,16 @@ def test_mcts():
         start_time = time.time()
 
         # Use different time limits based on game phase
-        if game_state.goat_count >= 10:  # Early Placement
-            time_limit = 1.5
-        elif game_state.goat_count >= 5:  # Mid Placement
-            time_limit = 1.8
-        elif game_state.eaten_goat_count <= 2:
-            time_limit = 1.5
-        else:  # Late Placement and Movement Movement
-            time_limit = 1.8
-        mcts = MCTS(initial_state=game_state, time_limit=time_limit)
+        # if game_state.goat_count >= 10:  # Early Placement
+        #     time_limit = 1.5
+        # elif game_state.goat_count >= 5:  # Mid Placement
+        #     time_limit = 1.8
+        # elif game_state.eaten_goat_count <= 2:
+        #     time_limit = 1.5
+        # else:  # Late Placement and Movement Movement
+        #     time_limit = 1.8
+        mcts = MCTS(initial_state=game_state,
+                    time_limit=time_limit)
         move = mcts.search()
 
         move_time = time.time() - start_time
@@ -182,7 +186,7 @@ def test_mcts():
         print(f"Move selected: {move}, Time: {move_time:.2f}s")
         # stats = mcts.get_move_statistics()
         print(f"Simulations run: {mcts.simulations_run}")
-        # mcts.visualize_tree(max_depth=10)
+        # mcts.visualize_tree(max_depth=1)
         # pprint.PrettyPrinter(width=20).pprint(stats)
         print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
               f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
@@ -190,7 +194,7 @@ def test_mcts():
         game_state = game_state.make_move(move)
         # mcts.re_reoot(game_state, time_limit=time_limit)
         move_count += 1
-        input("Press Enter to continue...")  # Remove for automated testing
+        # input("Press Enter to continue...")  # Remove for automated testing
 
     # Final results
     system('clear')
@@ -242,9 +246,9 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    history = test_mcts()
-    analyze_game_performance(history)
-    # run_game()
+    # history = test_mcts()
+    # analyze_game_performance(history)
+    run_game()
     # scratch()
 
     # with Profile() as profile:

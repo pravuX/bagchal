@@ -21,7 +21,7 @@ class HeuristicParams:
     tiger_block_penalty: float = 2.4
 
     # Goat parameters
-    goat_trap_bonus: float = 7.0
+    goat_trap_bonus: float = 5.0
     goat_clustering_bonus: float = 1.5
     goat_tiger_clustering_penalty: float = 0.1
     goat_strategic_position_bonus: float = 1.0
@@ -56,7 +56,7 @@ class GameState:
              20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
 
     piece = {
-        -1: "G", 0: '·', 1: "T"
+        -1: "🐐", 0: '  ', 1: "🐅"
     }
 
     heuristic_params = HeuristicParams()
@@ -387,7 +387,8 @@ class GameState:
             if threatened:
                 break
 
-        return priority_score + np.random.random()  # some noise
+        # return priority_score + np.random.random()  # some noise
+        return priority_score
 
     def calculate_prior_prob_dist(self, temp=1):
         if self.is_game_over():
