@@ -113,7 +113,7 @@ class Node:
 
 class MCTS:
     def __init__(self, initial_state: GameState, max_simulations=1000, time_limit=None,
-                 pw_k=1.2, pw_alpha=0.3, c_param=2,
+                 pw_k=1.2, pw_alpha=0.6, c_param=2,
                  rollout_depth=50, rollout_epsilon=0.05):
         """
         rollout_depth: cap for rollout length (plies). If reached, evaluate heuristically.
@@ -258,7 +258,7 @@ class MCTS:
         state = node.state
         state_hash_counts = defaultdict(int)
 
-        depth = 0
+        # depth = 0
         while not state.is_game_over():
             state_key = state.key()
             state_hash_counts[state_key] += 1
@@ -266,13 +266,13 @@ class MCTS:
                 # repetition -> draw-ish outcome
                 return 0.0
 
-            if depth >= self.rollout_depth:
-                # heuristic evaluation (float)
-                return self.evaluate_state(state)
+            # if depth >= self.rollout_depth:
+            #     # heuristic evaluation (float)
+            #     return self.evaluate_state(state)
 
             move = self.rollout_policy(state)
             state = state.make_move(move)
-            depth += 1
+            # depth += 1
 
         # terminal: return exact result (Piece enum) or 0
         res = state.get_result()

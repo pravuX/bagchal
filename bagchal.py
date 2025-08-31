@@ -3,6 +3,7 @@ from copy import deepcopy
 from enum import IntEnum
 from typing import override
 import numpy as np
+from collections import deque
 
 
 # REMEMBER:
@@ -30,15 +31,6 @@ class HeuristicParams:
     goat_escape_bonus: float = 5.0
     goat_sacrifice_penalty: float = 15.0
 
-    def mutate(self, mutation_rate: float = 0.1) -> 'HeuristicParams':
-        """Create a mutated version of parameters for evolution"""
-        new_params = deepcopy(self)
-        for field_name, value in asdict(self).items():
-            if np.random.random() < mutation_rate:
-                noise = np.random.normal(0, abs(value) * 0.2)
-                setattr(new_params, field_name, max(0.1, value + noise))
-        return new_params
-
 
 class Piece(IntEnum):
     GOAT = -1
@@ -65,6 +57,39 @@ class GameState:
     def set_heuristic_params(cls, params: HeuristicParams):
         """Set the heuristic parameters for all GameState instances"""
         cls.heuristic_params = params
+
+    @staticmethod
+    def find_inaccessible_positions(game_state):
+        visited = set()
+        pos_tiger = [i for i, cell in enumerate(
+            game_state.board) if cell == Piece.TIGER]
+        pos_goat = {i for i, cell in enumerate(
+            game_state.board) if cell == Piece.GOAT}
+        queue = deque(pos_tiger)
+
+        while queue:
+            pos = queue.popleft()
+
+            if pos in visited:
+                continue
+            visited.add(pos)
+
+            for adj in GameState.graph[pos]:
+                if game_state.board[adj] == Piece.EMPTY and adj not in visited:  # empty
+                    queue.append(adj)
+
+            for adj in GameState.graph[pos]:
+                if game_state.board[adj] == Piece.GOAT:  # goat adjacent
+                    dx = adj - pos
+                    landing = adj + dx  # capture position
+                    # must be valid neighbor
+                    if 0 <= landing < 25 and landing in GameState.graph[adj]:
+                        if game_state.board[landing] == Piece.EMPTY and landing not in visited:
+                            queue.append(landing)
+
+        all_positions = set(range(25))
+        inaccessible = all_positions - visited - pos_goat  # subtract pos_goat
+        return sorted(list(inaccessible))
 
     def __init__(self, board, turn, goat_count, eaten_goat_count):
         self.board = board
