@@ -55,7 +55,7 @@ class Game:
         self.minimax_agent = None
         self.mcts_agent = None
         self.ai_move_timer = 0
-        self.ai_move_delay = 200  # milliseconds
+        self.ai_move_delay = 50  # milliseconds
 
         # Game over state
         self.game_over_timer = 0
@@ -156,7 +156,7 @@ class Game:
 
                     self.reset_game()
                     # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=1.5)
+                    #     initial_state=self.game_state, time_limit=0.8)
                     self.minimax_agent = MinimaxAgent()
                     self.current_state = UIState.PLAYING_PVC_GOAT
                     # Initialize AI timer to current time so it waits before first move
@@ -165,8 +165,9 @@ class Game:
                 elif pvc_tiger_rect.collidepoint(event.pos):
 
                     self.reset_game()
-                    self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=1.5)
+                    # self.mcts_agent = MCTS(
+                    #     initial_state=self.game_state, time_limit=1.5)
+                    self.minimax_agent = MinimaxAgent()
                     self.current_state = UIState.PLAYING_PVC_TIGER
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -174,10 +175,10 @@ class Game:
                 elif cvc_rect.collidepoint(event.pos):
 
                     self.reset_game()
-                    # self.minimax_agent = MinimaxAgent(depth=2)
+                    self.minimax_agent = MinimaxAgent()
                     # Early Game
-                    self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=1.5)
+                    # self.mcts_agent = MCTS(
+                    #     initial_state=self.game_state, time_limit=1.5)
                     self.current_state = UIState.PLAYING_CVC
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -248,8 +249,8 @@ class Game:
                     elif self.game_state.goat_count >= 0:
                         depth = 6
                     self.minimax_agent = MinimaxAgent(depth=depth)
-
         return
+
         # if should_make_ai_move and self.mcts_agent and self.game_state.goat_count == 0:  # Movement
         if should_make_ai_move and self.mcts_agent:
             current_time = pygame.time.get_ticks()
@@ -260,13 +261,13 @@ class Game:
                 if move:
                     self.game_state = self.game_state.make_move(move)
                     self.remove_later_state_hash_update()
-                    if self.game_state.goat_count >= 10:  # Early game
-                        # time_limit = 0.8
+                    if self.game_state.goat_count >= 10:  # Early Placement
+                        time_limit = 0.8
+                    elif self.game_state.goat_count >= 5:  # Mid Placement
+                        time_limit = 1
+                    elif self.game_state.goat_count >= 2:
                         time_limit = 1.5
-                    elif self.game_state.goat_count > 5:  # Mid game
-                        # time_limit = 1.0
-                        time_limit = 1.5
-                    else:  # End game
+                    elif self.game_state.goat_count >= 0:
                         time_limit = 1.5
                     self.mcts_agent = MCTS(
                         initial_state=self.game_state, time_limit=time_limit)

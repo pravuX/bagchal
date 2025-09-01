@@ -234,10 +234,13 @@ class GameState:
 
         return scored_moves
 
-    def get_legal_moves(self):
+    def get_legal_moves(self, turn=None):
         moves = []
 
-        if self.turn == Piece.GOAT:
+        if not turn:
+            turn = self.turn
+
+        if turn == Piece.GOAT:
             if self.goat_count > 0:
                 # Goat placement phase: place on any empty cell
                 for i in range(25):
@@ -251,7 +254,7 @@ class GameState:
                             if self.board[adj] == Piece.EMPTY:
                                 moves.append((i, adj))
 
-        elif self.turn == Piece.TIGER:
+        elif turn == Piece.TIGER:
             for i in range(25):
                 if self.board[i] == Piece.TIGER:
                     for adj in self.graph[i]:
@@ -285,7 +288,7 @@ class GameState:
         params = self.heuristic_params
         priority_score = 10
         next_state = self.make_move(move, simulate=True)
-        if next_state.eaten_goat_count > 4:
+        if next_state.eaten_goat_count == 5:
             # immediate win
             return 50
         if next_state.eaten_goat_count > self.eaten_goat_count:
@@ -363,6 +366,8 @@ class GameState:
             priority_score += params.goat_strategic_position_bonus
         if dst in outer_edge:
             priority_score += params.goat_outer_edge_bonus
+
+        # punish filling cantonments
 
         # reward moves that block captures
         # the more it blocks captures, the greater the reward
