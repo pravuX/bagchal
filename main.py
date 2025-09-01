@@ -2,7 +2,7 @@ from collections import defaultdict
 from os import system
 from bagchal import GameState, Piece
 from game import Game
-# from alphabeta import MinimaxAgent
+from alphabeta import MinimaxAgent
 import pprint
 # from mcts import MCTS
 from pw_mcts import MCTS
@@ -51,26 +51,24 @@ def debug_minimax():
     turn = Piece.TIGER
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
-    # game_state.update_tiger_pos()
-    # game_state.update_trapped_tiger()
-    # print(game_state.get_legal_moves())
+    game_state.update_trapped_tiger()
+    print(game_state.get_legal_moves())
 
-    # minimax_agent = MinimaxAgent(depth=3)
-    # print(minimax_agent.get_best_move(game_state))
+    minimax_agent = MinimaxAgent(depth=3)
+    print(minimax_agent.get_best_move(game_state))
     print(game_state.stringify())
 
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [5, 12, 15, 16]
-    # pos_tiger = [0, 4, 20, 24]
+    pos_tiger = [4, 14, 22, 24]
+    pos_goat = [2, 3, 8, 9, 10, 12, 13, 16, 17, 18, 20, 21]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
-    pos_goat = [1, 2, 3, 4, 6, 7, 8, 9, 13, 14, 18, 19, 20, 21, 22, 23, 24]
     for pos in pos_goat:
         board[pos] = Piece.GOAT
-    goat_count = 2
-    eaten_goat_count = 1
+    goat_count = 20 - len(pos_goat)
+    eaten_goat_count = 0
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
@@ -78,6 +76,8 @@ def scratch():
     game_state.init_prioritization()
     display_board(game_state)
     print(game_state)
+    print(GameState.find_inaccessible_positions(game_state))
+    return
     mcts = MCTS(initial_state=game_state, time_limit=1.5)
     print(mcts.root.prioritized_moves)
     print(mcts.root.prioritized_scores)
@@ -113,6 +113,64 @@ def display_board(game_state):
             print("-"*26)
 
 
+def test_alphabeta():
+    """Enhanced testing with performance metrics"""
+    board = [Piece.EMPTY] * 25
+    pos_tiger = [0, 4, 20, 24]
+    for pos in pos_tiger:
+        board[pos] = Piece.TIGER
+    pos_goat = []
+    for pos in pos_goat:
+        board[pos] = Piece.GOAT
+
+    game_state = GameState(board, turn=Piece.GOAT,
+                           goat_count=20, eaten_goat_count=0)
+    game_state.update_trapped_tiger()
+    game_state.init_prioritization()
+
+    state_hash = defaultdict(int)
+
+    while not game_state.is_game_over():
+        state_key = game_state.key()
+        state_hash[state_key] += 1
+
+        if state_hash[state_key] > 3:
+            print("Draw by repetition!")
+            break
+
+        if game_state.goat_count >= 10:  # Early Placement
+            depth = 3
+        elif game_state.goat_count >= 5:  # Mid Placement
+            depth = 4
+        elif game_state.goat_count >= 2:
+            depth = 5
+        elif game_state.goat_count >= 0:
+            depth = 6
+        minimax_agent = MinimaxAgent(depth=depth)
+        move = minimax_agent.get_best_move(game_state)
+
+        # Display current state
+        system('clear')
+        display_board(game_state)
+        print(game_state)
+
+        game_state = game_state.make_move(move)
+        input("Press Enter to continue...")  # Remove for automated testing
+
+    # Final results
+    system('clear')
+    display_board(game_state)
+    print(game_state)
+    print(len(game_state.transposition_table_with_scores),
+          "unique states encountered.")
+
+    result = game_state.get_result()
+    if result:
+        print(f"Winner: {game_state.piece[result]}")
+    else:
+        print("Draw!")
+
+
 def test_mcts():
     """Enhanced testing with performance metrics"""
     board = [Piece.EMPTY] * 25
@@ -135,7 +193,7 @@ def test_mcts():
     state_hash = defaultdict(int)
     move_count = 0
 
-    time_limit = 0.6
+    time_limit = 1.5
     # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
     while not game_state.is_game_over():
         state_key = game_state.key()
@@ -250,6 +308,8 @@ if __name__ == "__main__":
     # analyze_game_performance(history)
     run_game()
     # scratch()
+    # debug_minimax()
+    # test_alphabeta()
 
     # with Profile() as profile:
     #     scratch()

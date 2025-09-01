@@ -113,8 +113,8 @@ class Node:
 
 class MCTS:
     def __init__(self, initial_state: GameState, max_simulations=1000, time_limit=None,
-                 pw_k=1.2, pw_alpha=0.3, c_param=2,
-                 rollout_depth=50, rollout_epsilon=0.05):
+                 pw_k=1.2, pw_alpha=0.6, c_param=2,
+                 rollout_depth=40, rollout_epsilon=0.05):
         """
         rollout_depth: cap for rollout length (plies). If reached, evaluate heuristically.
         rollout_epsilon: small randomness in greedy rollout (epsilon-greedy).
@@ -126,9 +126,6 @@ class MCTS:
 
         self.goat_wins = 0
         self.tiger_wins = 0
-
-        # tracking node reuse counts (optional diagnostic)
-        self.nodes = defaultdict(int)
 
         # configure progressive widening & exploration constant
         Node.PW_K = pw_k
@@ -157,55 +154,53 @@ class MCTS:
         idx = int(np.argmax(state.prior_prob_dist))
         return state.prioritized_moves[idx]
 
-    def evaluate_state(self, state: GameState):
+    def evaluate_state(self, state: GameState, depth):
         """
-        Cheap heuristic evaluator returning a float in [-1, 1].
-        Positive -> GOAT advantage, Negative -> TIGER advantage.
-        Heuristic focuses on trapped_tiger_count and eaten_goat_count.
+        Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
-        # update trapped_tiger_count if not already up-to-date
-        # (GameState should call update_trapped_tiger when moves are applied in make_move,
-        # but we call it here to be safe.)
-        # (Don't change GameState state inside evaluator in a way that mutates the game incorrectly)
-        try:
-            trapped = state.trapped_tiger_count
-        except Exception:
-            state.update_trapped_tiger()
-            trapped = state.trapped_tiger_count
 
+        if state.is_game_over():
+            result = state.get_result()
+            if result == Piece.TIGER:
+                return (100 - depth)//100
+            elif result == Piece.GOAT:
+                return (-100 + depth)//100
+
+        trapped = state.trapped_tiger_count
         eaten = state.eaten_goat_count
         goat_left = state.goat_count
         goats_on_board = 20 - (eaten + goat_left)
 
-        # Heuristic idea:
-        # - trapping 4 tigers => decisive goat win
-        # - eating >4 goats => strong tiger advantage
-        # Normalize these heuristics to [-1, 1]
-        trap_score = (trapped / 4.0)  # in [0,1]
-        eat_score = min(eaten / 5.0, 1.0)  # scale to [0,1], >5 saturates
-
-        # Combine: goat wants traps high, tiger wants eaten high (positive)
+        # [0,1], higher = goat advantage
+        trap_score = trapped / 4.0
+        # [0,1], higher = tiger advantage
+        eat_score = min(eaten / 5.0, 1.0)
+        # tiger positive, goat negative
         raw = eat_score - trap_score
 
-        # small bonus for goats having many pieces on board (more goats alive -> better)
-        # 0 means all goats available (placement phase), 1 means all placed & eaten?
-        goat_presence = goats_on_board / 20.0
-        # we invert presence so more goat left gives slight positive advantage for goats
-        goat_presence_bonus = goat_presence * 0.05
-
+        goat_presence = goats_on_board / 20.0  # [0,1]
+        goat_presence_bonus = goat_presence
+        # subtract → goat advantage negative
         raw -= goat_presence_bonus
 
+        inaccessible = GameState.find_inaccessible_positions(state)
+        inaccessibility_score = len(inaccessible) / 10.0   # normalize [0,1]
+        raw -= inaccessibility_score
+
+        # potential captures for tigers
+        tiger_legal_moves = state.get_legal_moves(turn=Piece.TIGER)
+        capture_moves_count = sum(
+            1 for src, dst in tiger_legal_moves if dst not in GameState.graph[src]) / 11
+        raw += capture_moves_count
+
         # Clamp into [-1, 1]
-        raw = max(-1.0, min(1.0, raw))
-        return raw
+        return max(-1.0, min(1.0, raw))
 
     def search(self):
         def search_helper():
             expanded_node = self.tree_policy(self.root)
             result = self.rollout(expanded_node)
             self.backpropagate(expanded_node, result)
-            # track node occurrences
-            self.nodes[expanded_node.state.key()] += 1
             self.simulations_run += 1
             if result == Piece.GOAT:
                 self.goat_wins += 1
@@ -268,7 +263,7 @@ class MCTS:
 
             if depth >= self.rollout_depth:
                 # heuristic evaluation (float)
-                return self.evaluate_state(state)
+                return self.evaluate_state(state, depth)
 
             move = self.rollout_policy(state)
             state = state.make_move(move)
