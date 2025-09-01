@@ -61,14 +61,15 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [4, 14, 22, 24]
-    pos_goat = [2, 3, 8, 9, 10, 12, 13, 16, 17, 18, 20, 21]
+    pos_tiger = [1, 2, 13, 21]
+    empty = set([9, 15, 22])
+    pos_goat = list(set(range(25)) - empty - set(pos_tiger))
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
     for pos in pos_goat:
         board[pos] = Piece.GOAT
-    goat_count = 20 - len(pos_goat)
-    eaten_goat_count = 0
+    goat_count = 0
+    eaten_goat_count = 2
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
@@ -76,7 +77,10 @@ def scratch():
     game_state.init_prioritization()
     display_board(game_state)
     print(game_state)
-    print(GameState.find_inaccessible_positions(game_state))
+    # print(game_state.prioritized_moves)
+    minimax_agent = MinimaxAgent(depth=6)
+    print(minimax_agent.get_best_move(game_state))
+    print(minimax_agent.evaluate_state(game_state))
     return
     mcts = MCTS(initial_state=game_state, time_limit=1.5)
     print(mcts.root.prioritized_moves)
