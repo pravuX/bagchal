@@ -5,7 +5,7 @@ import pygame
 from bagchal import GameState, Piece
 from alphabeta import MinimaxAgent
 # from mcts import MCTS
-# from pw_mcts import MCTS
+from pw_mcts import MCTS
 
 COLORS = {
     "bg": "antiquewhite",
@@ -40,7 +40,7 @@ class UIState(Enum):
 class Game:
     def __init__(self, game_state,
                  caption="bagchal",
-                 cell_size=200,
+                 cell_size=170,
                  tick_speed=30):
         pygame.init()
         pygame.display.set_caption(caption)
@@ -155,9 +155,9 @@ class Game:
                 elif pvc_goat_rect.collidepoint(event.pos):
 
                     self.reset_game()
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=0.8)
-                    self.minimax_agent = MinimaxAgent()
+                    self.mcts_agent = MCTS(
+                        initial_state=self.game_state, time_limit=0.8)
+                    # self.minimax_agent = MinimaxAgent(depth=6)
                     self.current_state = UIState.PLAYING_PVC_GOAT
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -231,25 +231,25 @@ class Game:
             should_make_ai_move = False
 
         # if should_make_ai_move and self.minimax_agent and self.game_state.goat_count > 0:  # Placement
-        if should_make_ai_move and self.minimax_agent:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.ai_move_timer >= self.ai_move_delay:
-                move = self.minimax_agent.get_best_move(self.game_state)
-                if move:
-                    self.game_state = self.game_state.make_move(move)
-                    self.remove_later_state_hash_update()
-                    self.ai_move_timer = current_time
+        # if should_make_ai_move and self.minimax_agent:
+        #     current_time = pygame.time.get_ticks()
+        #     if current_time - self.ai_move_timer >= self.ai_move_delay:
+        #         move = self.minimax_agent.get_best_move(self.game_state)
+        #         if move:
+        #             self.game_state = self.game_state.make_move(move)
+        #             self.remove_later_state_hash_update()
+        #             self.ai_move_timer = current_time
 
-                    if self.game_state.goat_count >= 10:  # Early Placement
-                        depth = 3
-                    elif self.game_state.goat_count >= 5:  # Mid Placement
-                        depth = 4
-                    elif self.game_state.goat_count >= 2:
-                        depth = 5
-                    elif self.game_state.goat_count >= 0:
-                        depth = 6
-                    self.minimax_agent = MinimaxAgent(depth=depth)
-        return
+        #             if self.game_state.goat_count >= 10:  # Early Placement
+        #                 depth = 6
+        #             elif self.game_state.goat_count >= 5:  # Mid Placement
+        #                 depth = 7
+        #             elif self.game_state.goat_count >= 2:
+        #                 depth = 8
+        #             elif self.game_state.goat_count >= 0:
+        #                 depth = 9
+        #             self.minimax_agent = MinimaxAgent(depth=depth)
+        # return
 
         # if should_make_ai_move and self.mcts_agent and self.game_state.goat_count == 0:  # Movement
         if should_make_ai_move and self.mcts_agent:
@@ -388,7 +388,7 @@ class Game:
             self.selected_cell = None
 
     def draw_status(self):
-        font = pygame.font.SysFont(None, 48)
+        font = pygame.font.SysFont(None, 30)
         goat_text = font.render(
             f"Goats Left: {self.game_state.goat_count}", True, "black")
         eaten_text = font.render(
