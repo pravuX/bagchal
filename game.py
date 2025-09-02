@@ -5,7 +5,7 @@ import pygame
 from bagchal import GameState, Piece
 from alphabeta import MinimaxAgent
 # from mcts import MCTS
-from pw_mcts import MCTS
+# from pw_mcts import MCTS
 
 COLORS = {
     "bg": "antiquewhite",
@@ -119,8 +119,8 @@ class Game:
         self.selected_cell = None
         self.remove_later_state_hash.clear()
         GameState.transposition_table_with_scores.clear()
-        self.mcts_agent = MCTS(
-            initial_state=self.game_state, time_limit=1.5)
+        # self.mcts_agent = MCTS(
+        #     initial_state=self.game_state, time_limit=1.5)
 
     def handle_main_menu_events(self):
         """Handle events specific to main menu"""
