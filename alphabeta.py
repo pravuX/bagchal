@@ -23,14 +23,16 @@ class MinimaxAgent:
         for move in moves:
             simulated = self.simulate_move(game_state, move)
             # immediate win for player at root
-            if simulated.is_game_over() and simulated.get_result() == game_state.turn:
-                best_move = move
-                break
+            # if simulated.is_game_over() and simulated.get_result() == game_state.turn:
+            #     best_move = move
+            #     break
 
             self.no_of_nodes += 1
 
             val = self.minimax(simulated, self.depth - 1,
                                alpha, beta)
+
+            # print(move, val, self.depth)
 
             if is_maximizing:
                 if val > current_player_best_val:
@@ -83,46 +85,47 @@ class MinimaxAgent:
     def simulate_move(self, game_state, move):
         return game_state.make_move(move)
 
-    def evaluate_state(self, state: GameState, depth):
+    def evaluate_state(self, state: GameState, depth=0):
         """
         Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
 
+        eat_max = 4
+        trap_max = 3
+        goat_presence_max = 20
+        inaccessible_max = 10
+        potential_capture_max = 11
+
+        w_eat = 1.5
+        w_trap = 1.5
+        w_presence = 0.9
+        w_inacc = 0.6
+        w_potcap = 1.5
+
         if state.is_game_over():
             result = state.get_result()
             if result == Piece.TIGER:
-                return 100 - depth
+                return 100 - (self.depth - depth)  # limit - current
             elif result == Piece.GOAT:
-                return -100 + depth
+                return -100 + (self.depth - depth)
 
         trapped = state.trapped_tiger_count
         eaten = state.eaten_goat_count
         goat_left = state.goat_count
         goats_on_board = 20 - (eaten + goat_left)
 
-        # [0,1], higher = goat advantage
-        trap_score = trapped / 4.0
-        # [0,1], higher = tiger advantage
-        eat_score = min(eaten / 5.0, 1.0)
-        # tiger positive, goat negative
-        raw = eat_score - trap_score
-
-        goat_presence = goats_on_board / 20.0  # [0,1]
-        goat_presence_bonus = goat_presence * 0.05
-        # subtract → goat advantage negative
-        raw -= goat_presence_bonus
-
-        inaccessible = GameState.find_inaccessible_positions(state)
-        inaccessibility_score = len(inaccessible) / 10.0   # normalize [0,1]
-        raw -= inaccessibility_score
-
-        # potential captures for tigers
+        eat_score_norm = eaten / eat_max
         tiger_legal_moves = state.get_legal_moves(turn=Piece.TIGER)
-        capture_moves_count = sum(
-            1 for src, dst in tiger_legal_moves if dst not in GameState.graph[src]) / 11
-        raw += capture_moves_count
+        capture_moves_count_norm = sum(
+            1 for src, dst in tiger_legal_moves if dst not in GameState.graph[src]) / potential_capture_max
 
-        # Clamp into [-1, 1]
-        # return max(-1.0, min(1.0, raw))
-        return raw * 10
-        # return raw
+        trap_score_norm = trapped / trap_max
+        goat_presence_norm = goats_on_board / goat_presence_max
+        inaccessible = GameState.find_inaccessible_positions(state)
+        inaccessibility_score_norm = len(inaccessible) / inaccessible_max
+
+        tiger_score = eat_score_norm * w_eat + capture_moves_count_norm * w_potcap
+        goat_score = trap_score_norm * w_trap + goat_presence_norm * \
+            w_presence + inaccessibility_score_norm * w_inacc
+
+        return (tiger_score - goat_score)  # [-3.0, 3.0]
