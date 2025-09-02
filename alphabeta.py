@@ -2,8 +2,10 @@ from bagchal import Piece, GameState
 
 
 class MinimaxAgent:
+    previous_evaluations = {}  # state_key -> evaluation
     # Tiger is the maximizing player
     # Goat is the minimizing player
+
     def __init__(self, depth=3):
         self.depth = depth
         self.no_of_nodes = 0
@@ -22,17 +24,10 @@ class MinimaxAgent:
 
         for move in moves:
             simulated = self.simulate_move(game_state, move)
-            # immediate win for player at root
-            # if simulated.is_game_over() and simulated.get_result() == game_state.turn:
-            #     best_move = move
-            #     break
-
             self.no_of_nodes += 1
 
             val = self.minimax(simulated, self.depth - 1,
                                alpha, beta)
-
-            # print(move, val, self.depth)
 
             if is_maximizing:
                 if val > current_player_best_val:
@@ -46,8 +41,8 @@ class MinimaxAgent:
                 beta = min(beta, current_player_best_val)
 
             # Pruning at the root level (can happen if beta <= alpha)
-            # if beta <= alpha:
-            #     break
+            if beta <= alpha:
+                break
 
         return best_move
 
@@ -90,6 +85,11 @@ class MinimaxAgent:
         Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
 
+        state_key = state.key()
+
+        if state_key in MinimaxAgent.previous_evaluations:
+            return MinimaxAgent.previous_evaluations[state_key]
+
         eat_max = 4
         trap_max = 3
         goat_presence_max = 20
@@ -128,4 +128,6 @@ class MinimaxAgent:
         goat_score = trap_score_norm * w_trap + goat_presence_norm * \
             w_presence + inaccessibility_score_norm * w_inacc
 
-        return (tiger_score - goat_score)  # [-3.0, 3.0]
+        final_evaluation = tiger_score - goat_score  # [-3.0, 3.0]
+        MinimaxAgent.previous_evaluations[state_key] = final_evaluation
+        return final_evaluation
