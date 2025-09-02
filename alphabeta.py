@@ -28,6 +28,7 @@ class MinimaxAgent:
 
             val = self.minimax(simulated, self.depth - 1,
                                alpha, beta)
+            print(move, val)
 
             if is_maximizing:
                 if val > current_player_best_val:
@@ -41,8 +42,8 @@ class MinimaxAgent:
                 beta = min(beta, current_player_best_val)
 
             # Pruning at the root level (can happen if beta <= alpha)
-            if beta <= alpha:
-                break
+            # if beta <= alpha:
+            #     break
 
         return best_move
 

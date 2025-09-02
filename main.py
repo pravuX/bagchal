@@ -61,15 +61,20 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [1, 2, 13, 21]
-    empty = set([9, 15, 22])
-    pos_goat = list(set(range(25)) - empty - set(pos_tiger))
+    pos_tiger = [0, 4, 20, 24]
+
+    pos_goat = [9, 10, 14, 15, 19, 21, 22, 23]
+
+    # pos_tiger = [1, 2, 13, 21]
+    # empty = set([9, 15, 22])
+    # pos_goat = list(set(range(25)) - empty - set(pos_tiger))
+    pos_goat = [9, 10, 14, 15, 19, 21, 22, 23]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
     for pos in pos_goat:
         board[pos] = Piece.GOAT
-    goat_count = 0
-    eaten_goat_count = 2
+    goat_count = 12
+    eaten_goat_count = 0
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
@@ -77,31 +82,10 @@ def scratch():
     game_state.init_prioritization()
     display_board(game_state)
     print(game_state)
-    # print(game_state.prioritized_moves)
-    minimax_agent = MinimaxAgent(depth=6)
+    print(game_state.prioritized_moves)
+    minimax_agent = MinimaxAgent(depth=4)
     print(minimax_agent.get_best_move(game_state))
     print(minimax_agent.evaluate_state(game_state))
-    return
-    mcts = MCTS(initial_state=game_state, time_limit=1.5)
-    print(mcts.root.prioritized_moves)
-    print(mcts.root.prioritized_scores)
-    # mcts = MCTS(initial_state=game_state, max_simulations=1000)
-    move = mcts.search()
-
-    # with Profile() as profile:
-    #     move = mcts.search()
-    #     # test_mcts()
-    #     (
-    #         Stats(profile)
-    #         .strip_dirs()
-    #         .sort_stats(SortKey.TIME)
-    #         .print_stats()
-    #     )
-    mcts.visualize_tree(max_depth=1)
-    print(f"Move selected: {move}")
-    print(f"Simulations run: {mcts.simulations_run}")
-    print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}%",
-          f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}%")
 
 
 def display_board(game_state):
