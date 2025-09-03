@@ -81,7 +81,7 @@ class MinimaxAgent:
                 break
 
             val = self.minimax(simulated, depth - 1,
-                               alpha, beta)
+                               alpha, beta, start_time, time_limit)
 
             if is_maximizing:
                 if val > current_player_best_val:
@@ -100,7 +100,11 @@ class MinimaxAgent:
 
         return best_move
 
-    def minimax(self, game_state: GameState, depth, alpha, beta):
+    def minimax(self, game_state: GameState, depth, alpha, beta, start_time, time_limit):
+        if self.no_of_nodes & 1023 == 0:
+            if time.time() - start_time > time_limit:
+                raise TimeoutError
+
         original_alpha = alpha
 
         best_move = None
@@ -131,7 +135,8 @@ class MinimaxAgent:
             for move in moves:
                 new_state = self.simulate_move(game_state, move)
                 self.no_of_nodes += 1
-                evaluation = self.minimax(new_state, depth - 1, alpha, beta)
+                evaluation = self.minimax(
+                    new_state, depth - 1, alpha, beta, start_time, time_limit)
                 if evaluation > max_eval:
                     max_eval = evaluation
                     best_move = move
@@ -154,7 +159,8 @@ class MinimaxAgent:
             for move in moves:
                 new_state = self.simulate_move(game_state, move)
                 self.no_of_nodes += 1
-                evaluation = self.minimax(new_state, depth - 1, alpha, beta)
+                evaluation = self.minimax(
+                    new_state, depth - 1, alpha, beta, start_time, time_limit)
                 if evaluation < min_eval:
                     min_eval = evaluation
                     best_move = move
