@@ -1,6 +1,11 @@
+import time
 from bagchal import Piece, GameState
 # type of evaluation that is stored in the transposition_table
 exact_flag, alpha_flag, beta_flag = 0, 1, 2
+
+
+class TimeoutError(Exception):
+    pass
 
 
 class MinimaxAgent:
@@ -13,10 +18,39 @@ class MinimaxAgent:
     # Goat is the minimizing player
 
     def __init__(self, depth=3):
-        self.depth = depth
+        self.max_depth = depth
         self.no_of_nodes = 0
 
-    def get_best_move(self, game_state):
+    def get_best_move(self, game_state, time_limit=1.5):
+        self.no_of_nodes = 0
+
+        start_time = time.time()
+        best_move_so_far = None
+
+        if game_state.prioritized_moves:
+            best_move_so_far = game_state.prioritized_moves[::-1][0]
+
+        for depth in range(1, 100):
+            try:
+                # print(f"Searching at depth {depth}")
+
+                best_move_for_this_depth = self._search_root_at_depth(
+                    game_state, depth, start_time, time_limit)
+
+                best_move_so_far = best_move_for_this_depth
+                elapsed_time = time.time() - start_time
+                # print(
+                #     f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s")
+            except TimeoutError:
+                # print(
+                #     f"  > Timeout occurred at depth {depth}. Using best move from depth {depth-1}.")
+                break  # Exit the loop if time runs out
+
+        # print(
+        #     f"Final best move: {best_move_so_far}. Total nodes: {self.no_of_nodes}")
+        return best_move_so_far
+
+    def _search_root_at_depth(self, game_state, depth, start_time, time_limit):
         is_maximizing = game_state.turn == Piece.TIGER
 
         alpha = float('-inf')
@@ -28,7 +62,17 @@ class MinimaxAgent:
 
         moves = game_state.prioritized_moves[::-1]
 
+        state_key = game_state.key()
+        if state_key in self.transposition_table:
+            _, _, _, hash_move = self.transposition_table[state_key]
+            if hash_move and hash_move in moves:
+                moves.remove(hash_move)
+                moves.insert(0, hash_move)
+
         for move in moves:
+            if time.time() - start_time > time_limit:
+                raise TimeoutError()
+
             simulated = self.simulate_move(game_state, move)
             self.no_of_nodes += 1
 
@@ -36,7 +80,7 @@ class MinimaxAgent:
                 best_move = move
                 break
 
-            val = self.minimax(simulated, self.depth - 1,
+            val = self.minimax(simulated, depth - 1,
                                alpha, beta)
 
             if is_maximizing:
@@ -97,6 +141,7 @@ class MinimaxAgent:
                     break
 
             if max_eval >= beta:
+                # caused beta-cutoff
                 MinimaxAgent.record_hash(
                     state_key, depth, max_eval, beta_flag, best_move)
             else:
@@ -119,6 +164,7 @@ class MinimaxAgent:
                     break
 
             if min_eval <= original_alpha:
+                # caused alpha-cutoff
                 MinimaxAgent.record_hash(
                     state_key, depth, min_eval, alpha_flag, best_move)
             else:
@@ -154,9 +200,11 @@ class MinimaxAgent:
         if state.is_game_over():
             result = state.get_result()
             if result == Piece.TIGER:
-                return 1000 - (self.depth - depth)  # limit - current
+                # return 1000 - (self.depth - depth)  # limit - current
+                return 1000
             elif result == Piece.GOAT:
-                return -1000 + (self.depth - depth)
+                # return -1000 + (self.depth - depth)
+                return -1000
 
         trapped = state.trapped_tiger_count
         eaten = state.eaten_goat_count
@@ -187,7 +235,6 @@ class MinimaxAgent:
 
         if hashed_depth >= depth:
             if flag == exact_flag:
-                # Perfect, we have the exact score.
                 return hashed_eval
 
             # This is an UPPER bound (true_value <= hashed_eval)

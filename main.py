@@ -118,6 +118,7 @@ def test_alphabeta():
 
     state_hash = defaultdict(int)
 
+    minimax_agent = MinimaxAgent()
     while not game_state.is_game_over():
         state_key = game_state.key()
         state_hash[state_key] += 1
@@ -126,21 +127,26 @@ def test_alphabeta():
             print("Draw by repetition!")
             break
 
-        if game_state.goat_count >= 10:  # Early Placement
-            depth = 3
-        elif game_state.goat_count >= 5:  # Mid Placement
-            depth = 4
-        elif game_state.goat_count >= 2:
-            depth = 5
-        elif game_state.goat_count >= 0:
-            depth = 6
-        minimax_agent = MinimaxAgent(depth=depth)
-        move = minimax_agent.get_best_move(game_state)
+        start_time = time.time()
+
+        # if game_state.goat_count >= 10:  # Early Placement
+        #     depth = 3
+        # elif game_state.goat_count >= 5:  # Mid Placement
+        #     depth = 4
+        # elif game_state.goat_count >= 2:
+        #     depth = 5
+        # elif game_state.goat_count >= 0:
+        #     depth = 6
+        # minimax_agent = MinimaxAgent(depth=depth)
+        move = minimax_agent.get_best_move(game_state, time_limit=0.6)
+
+        move_time = time.time() - start_time
 
         # Display current state
         system('clear')
         display_board(game_state)
         print(game_state)
+        print(f"Took {move_time:.2f}s. Move Selected{move}")
 
         game_state = game_state.make_move(move)
         input("Press Enter to continue...")  # Remove for automated testing
@@ -294,10 +300,10 @@ def analyze_game_performance(game_history):
 if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
-    run_game()
+    # run_game()
     # scratch()
     # debug_minimax()
-    # test_alphabeta()
+    test_alphabeta()
 
     # with Profile() as profile:
     #     scratch()

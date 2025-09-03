@@ -67,11 +67,11 @@ class Game:
         self.initialize_pygame_state(tick_speed)
         self.load_assets()
 
-        self.remove_later_state_hash = defaultdict(int)
+        self.state_hash = defaultdict(int)
 
-    def remove_later_state_hash_update(self):
+    def state_hash_update(self):
         state_key = self.game_state.key()
-        self.remove_later_state_hash[state_key] += 1
+        self.state_hash[state_key] += 1
 
     def initialize_board_data(self):
 
@@ -117,7 +117,7 @@ class Game:
     def reset_game(self):
         self.game_state.reset()
         self.selected_cell = None
-        self.remove_later_state_hash.clear()
+        self.state_hash.clear()
         GameState.transposition_table_with_scores.clear()
         # self.mcts_agent = MCTS(
         #     initial_state=self.game_state, time_limit=1.5)
@@ -157,7 +157,7 @@ class Game:
                     self.reset_game()
                     # self.mcts_agent = MCTS(
                     #     initial_state=self.game_state, time_limit=0.8)
-                    self.minimax_agent = MinimaxAgent(depth=4)
+                    self.minimax_agent = MinimaxAgent()
                     self.current_state = UIState.PLAYING_PVC_GOAT
                     # Initialize AI timer to current time so it waits before first move
                     self.ai_move_timer = pygame.time.get_ticks()
@@ -234,21 +234,22 @@ class Game:
         if should_make_ai_move and self.minimax_agent:
             current_time = pygame.time.get_ticks()
             if current_time - self.ai_move_timer >= self.ai_move_delay:
-                move = self.minimax_agent.get_best_move(self.game_state)
+                move = self.minimax_agent.get_best_move(
+                    self.game_state, time_limit=0.6)
                 if move:
                     self.game_state = self.game_state.make_move(move)
-                    self.remove_later_state_hash_update()
+                    self.state_hash_update()
                     self.ai_move_timer = current_time
 
-                    if self.game_state.goat_count >= 10:  # Early Placement
-                        depth = 4
-                    elif self.game_state.goat_count >= 5:  # Mid Placement
-                        depth = 5
-                    elif self.game_state.goat_count >= 2:
-                        depth = 6
-                    elif self.game_state.goat_count >= 0:
-                        depth = 7
-                    self.minimax_agent = MinimaxAgent(depth=depth)
+                    # if self.game_state.goat_count >= 10:  # Early Placement
+                    #     depth = 4
+                    # elif self.game_state.goat_count >= 5:  # Mid Placement
+                    #     depth = 5
+                    # elif self.game_state.goat_count >= 2:
+                    #     depth = 6
+                    # elif self.game_state.goat_count >= 0:
+                    #     depth = 7
+                    # self.minimax_agent = MinimaxAgent(depth=depth)
         return
 
         # if should_make_ai_move and self.mcts_agent and self.game_state.goat_count == 0:  # Movement
@@ -260,7 +261,7 @@ class Game:
                 # input("Press Any Key to continue")
                 if move:
                     self.game_state = self.game_state.make_move(move)
-                    self.remove_later_state_hash_update()
+                    self.state_hash_update()
                     if self.game_state.goat_count >= 10:  # Early Placement
                         time_limit = 0.8
                     elif self.game_state.goat_count >= 5:  # Mid Placement
@@ -277,7 +278,7 @@ class Game:
         # TODO: Refactor
         is_game_over = self.game_state.is_game_over()
         state_key = self.game_state.key()
-        if self.remove_later_state_hash[state_key] > 3:
+        if self.state_hash[state_key] > 3:
             is_game_over = True
         return is_game_over
 
@@ -291,7 +292,7 @@ class Game:
                 result = GameState.piece[self.game_state.get_result(
                 )] + " Won" if self.game_state.get_result() else "Draw"
                 print("Result:", result)
-                # pprint.PrettyPrinter().pprint(self.remove_later_state_hash)
+                # pprint.PrettyPrinter().pprint(self.state_hash)
             elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
                 self.current_state = UIState.GAME_OVER
                 self.game_over_timer = 0
@@ -372,7 +373,7 @@ class Game:
                 if piece == Piece.EMPTY:
                     self.game_state = self.game_state.make_move(
                         (idx, idx))
-                    self.remove_later_state_hash_update()
+                    self.state_hash_update()
                     # Reset AI timer so it waits before responding to player move
                     self.ai_move_timer = pygame.time.get_ticks()
                     return
@@ -382,7 +383,7 @@ class Game:
             move = (self.selected_cell, idx)
             if move in self.game_state.get_legal_moves():
                 self.game_state = self.game_state.make_move(move)
-                self.remove_later_state_hash_update()
+                self.state_hash_update()
                 # Reset AI timer so it waits before responding to player move
                 self.ai_move_timer = pygame.time.get_ticks()
             self.selected_cell = None
