@@ -32,22 +32,22 @@ class MinimaxAgent:
 
         for depth in range(1, 100):
             try:
-                # print(f"Searching at depth {depth}")
+                print(f"Searching at depth {depth}")
 
                 best_move_for_this_depth = self._search_root_at_depth(
                     game_state, depth, start_time, time_limit)
 
                 best_move_so_far = best_move_for_this_depth
                 elapsed_time = time.time() - start_time
-                # print(
-                #     f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s")
+                print(
+                    f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s")
             except TimeoutError:
-                # print(
-                #     f"  > Timeout occurred at depth {depth}. Using best move from depth {depth-1}.")
+                print(
+                    f"  > Timeout occurred at depth {depth}. Using best move from depth {depth-1}.")
                 break  # Exit the loop if time runs out
 
-        # print(
-        #     f"Final best move: {best_move_so_far}. Total nodes: {self.no_of_nodes}")
+        print(
+            f"Final best move: {best_move_so_far}. Total nodes: {self.no_of_nodes}")
         return best_move_so_far
 
     def _search_root_at_depth(self, game_state, depth, start_time, time_limit):
@@ -116,7 +116,7 @@ class MinimaxAgent:
                 return val
 
         if depth == 0 or game_state.is_game_over():
-            val = self.evaluate_state(game_state, depth)
+            val = self.evaluate_state(game_state)
             MinimaxAgent.record_hash(state_key, depth, val, exact_flag, None)
             return val
 
@@ -181,7 +181,7 @@ class MinimaxAgent:
     def simulate_move(self, game_state, move):
         return game_state.make_move(move)
 
-    def evaluate_state(self, state: GameState, depth=0):
+    def evaluate_state(self, state: GameState):
         """
         Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
@@ -191,47 +191,58 @@ class MinimaxAgent:
         if state_key in MinimaxAgent.previous_evaluations:
             return MinimaxAgent.previous_evaluations[state_key]
 
-        eat_max = 4
-        trap_max = 3
-        goat_presence_max = 20
-        inaccessible_max = 10
-        potential_capture_max = 11
+        is_placement = state.goat_count > 0
 
-        w_eat = 1.5
-        w_trap = 1.5
-        w_presence = 0.9
-        w_inacc = 0.6
+        eat_max = 4  # before win
+        potential_capture_max = 11
+        inaccessible_max = 10
+
+        trap_max = 3  # before win
+        goat_presence_max = 20
+        tiger_mobility_max = 25
+
+        w_eat = 2
         w_potcap = 1.5
+        w_mobility = 0 if is_placement else 0.5
+
+        w_trap = 1.5
+        w_presence = 0.6
+        w_inacc = 0.9
 
         if state.is_game_over():
             result = state.get_result()
-            if result == Piece.TIGER:
-                # return 1000 - (self.depth - depth)  # limit - current
-                return 1000
-            elif result == Piece.GOAT:
-                # return -1000 + (self.depth - depth)
-                return -1000
+            return 1000 if result == Piece.TIGER else -1000
 
         trapped = state.trapped_tiger_count
         eaten = state.eaten_goat_count
         goat_left = state.goat_count
         goats_on_board = 20 - (eaten + goat_left)
 
-        eat_score_norm = eaten / eat_max
+        goat_positions = [i for i, p in enumerate(
+            state.board) if p == Piece.GOAT]
+
+        eaten_score = eaten / eat_max
         tiger_legal_moves = state.get_legal_moves(turn=Piece.TIGER)
-        capture_moves_count_norm = sum(
-            1 for src, dst in tiger_legal_moves if dst not in GameState.graph[src]) / potential_capture_max
+        potential_captures = sum(
+            1 for src, dst in tiger_legal_moves if dst not in GameState.graph[src])
+        tiger_normal_moves = len(tiger_legal_moves) - potential_captures
+        potential_capture_score = potential_captures / potential_capture_max
+        tiger_mobility_score = tiger_normal_moves / tiger_mobility_max
 
-        trap_score_norm = trapped / trap_max
-        goat_presence_norm = goats_on_board / goat_presence_max
+        trap_score = trapped / trap_max
+        goat_presence_score = goats_on_board / goat_presence_max
         inaccessible = GameState.find_inaccessible_positions(state)
-        inaccessibility_score_norm = len(inaccessible) / inaccessible_max
+        inaccessibility_score = len(inaccessible) / inaccessible_max
 
-        tiger_score = eat_score_norm * w_eat + capture_moves_count_norm * w_potcap
-        goat_score = trap_score_norm * w_trap + goat_presence_norm * \
-            w_presence + inaccessibility_score_norm * w_inacc
+        tiger_score = (eaten_score * w_eat +
+                       potential_capture_score * w_potcap +
+                       tiger_mobility_score * w_mobility)
 
-        final_evaluation = tiger_score - goat_score  # [-3.0, 3.0]
+        goat_score = (trap_score * w_trap +
+                      goat_presence_score * w_presence +
+                      inaccessibility_score * w_inacc)
+
+        final_evaluation = tiger_score - goat_score  # [-3.0, 3.5]
         MinimaxAgent.previous_evaluations[state_key] = final_evaluation
         return final_evaluation
 

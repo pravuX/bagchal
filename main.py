@@ -61,19 +61,18 @@ def debug_minimax():
 
 def scratch():
     board = [Piece.EMPTY] * 25
-    pos_tiger = [0, 4, 20, 24]
+    pos_tiger = [0, 9, 12, 24]
 
-    pos_goat = [9, 10, 14, 15, 19, 21, 22, 23]
+    pos_goat = [10, 11, 15, 16, 17, 18, 20, 21, 22, 23]
 
     # pos_tiger = [1, 2, 13, 21]
     # empty = set([9, 15, 22])
     # pos_goat = list(set(range(25)) - empty - set(pos_tiger))
-    pos_goat = [9, 10, 14, 15, 19, 21, 22, 23]
     for pos in pos_tiger:
         board[pos] = Piece.TIGER
     for pos in pos_goat:
         board[pos] = Piece.GOAT
-    goat_count = 12
+    goat_count = 20 - len(pos_goat)
     eaten_goat_count = 0
     turn = Piece.GOAT
     game_state = GameState(board, turn=turn,
@@ -83,9 +82,10 @@ def scratch():
     display_board(game_state)
     print(game_state)
     print(game_state.prioritized_moves)
-    minimax_agent = MinimaxAgent(depth=4)
-    print(minimax_agent.get_best_move(game_state))
-    print(minimax_agent.evaluate_state(game_state))
+    minimax_agent = MinimaxAgent()
+    move = minimax_agent.get_best_move(game_state, time_limit=1)
+    print(move)
+    print(minimax_agent.evaluate_state(game_state.make_move(move)))
 
 
 def display_board(game_state):
@@ -138,7 +138,7 @@ def test_alphabeta():
         # elif game_state.goat_count >= 0:
         #     depth = 6
         # minimax_agent = MinimaxAgent(depth=depth)
-        move = minimax_agent.get_best_move(game_state, time_limit=0.6)
+        move = minimax_agent.get_best_move(game_state, time_limit=1)
 
         move_time = time.time() - start_time
 
@@ -301,9 +301,9 @@ if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
     # run_game()
-    # scratch()
+    scratch()
     # debug_minimax()
-    test_alphabeta()
+    # test_alphabeta()
 
     # with Profile() as profile:
     #     scratch()

@@ -235,7 +235,7 @@ class Game:
             current_time = pygame.time.get_ticks()
             if current_time - self.ai_move_timer >= self.ai_move_delay:
                 move = self.minimax_agent.get_best_move(
-                    self.game_state, time_limit=0.6)
+                    self.game_state, time_limit=1)
                 if move:
                     self.game_state = self.game_state.make_move(move)
                     self.state_hash_update()
