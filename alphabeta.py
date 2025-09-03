@@ -80,8 +80,10 @@ class MinimaxAgent:
                 best_move = move
                 break
 
+            history = {game_state.key()}
+
             val = self.minimax(simulated, depth - 1,
-                               alpha, beta, start_time, time_limit)
+                               alpha, beta, start_time, time_limit, history)
 
             if is_maximizing:
                 if val > current_player_best_val:
@@ -100,7 +102,7 @@ class MinimaxAgent:
 
         return best_move
 
-    def minimax(self, game_state: GameState, depth, alpha, beta, start_time, time_limit):
+    def minimax(self, game_state: GameState, depth, alpha, beta, start_time, time_limit, history):
         if self.no_of_nodes & 1023 == 0:
             if time.time() - start_time > time_limit:
                 raise TimeoutError
@@ -110,6 +112,10 @@ class MinimaxAgent:
         best_move = None
 
         state_key = game_state.key()
+        if state_key in history:
+            # discourage repeating moves
+            return 0
+
         if state_key in MinimaxAgent.transposition_table:
             val = MinimaxAgent.get_hashed_value(state_key, depth, alpha, beta)
             if val != None:
@@ -135,8 +141,10 @@ class MinimaxAgent:
             for move in moves:
                 new_state = self.simulate_move(game_state, move)
                 self.no_of_nodes += 1
+
+                new_history = history | {game_state.key()}
                 evaluation = self.minimax(
-                    new_state, depth - 1, alpha, beta, start_time, time_limit)
+                    new_state, depth - 1, alpha, beta, start_time, time_limit, new_history)
                 if evaluation > max_eval:
                     max_eval = evaluation
                     best_move = move
@@ -159,8 +167,10 @@ class MinimaxAgent:
             for move in moves:
                 new_state = self.simulate_move(game_state, move)
                 self.no_of_nodes += 1
+
+                new_history = history | {game_state.key()}
                 evaluation = self.minimax(
-                    new_state, depth - 1, alpha, beta, start_time, time_limit)
+                    new_state, depth - 1, alpha, beta, start_time, time_limit, new_history)
                 if evaluation < min_eval:
                     min_eval = evaluation
                     best_move = move
@@ -201,13 +211,13 @@ class MinimaxAgent:
         goat_presence_max = 20
         tiger_mobility_max = 25
 
-        w_eat = 2
+        w_eat = 1.5
         w_potcap = 1.5
         w_mobility = 0 if is_placement else 0.5
 
         w_trap = 1.5
-        w_presence = 0.6
-        w_inacc = 0.9
+        w_presence = 0.9
+        w_inacc = 0.6
 
         if state.is_game_over():
             result = state.get_result()
@@ -275,3 +285,8 @@ class MinimaxAgent:
     def record_hash(state_key, depth, evaluation, flag, best_move):
         MinimaxAgent.transposition_table[state_key] = (
             depth, evaluation, flag, best_move)
+
+    @staticmethod
+    def key_without_turn(game_state):
+        string_rep, turn, eaten_goat_count, goat_count, trapped_tiger_count = game_state.key()
+        return (string_rep, eaten_goat_count, goat_count, trapped_tiger_count)

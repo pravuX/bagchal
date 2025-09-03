@@ -85,6 +85,8 @@ def scratch():
     minimax_agent = MinimaxAgent()
     move = minimax_agent.get_best_move(game_state, time_limit=1)
     print(move)
+
+    print(minimax_agent.evaluate_state(game_state))
     print(minimax_agent.evaluate_state(game_state.make_move(move)))
 
 
@@ -300,8 +302,8 @@ def analyze_game_performance(game_history):
 if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
-    # run_game()
-    scratch()
+    run_game()
+    # scratch()
     # debug_minimax()
     # test_alphabeta()
 
