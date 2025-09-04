@@ -113,6 +113,7 @@ class Node:
 
 class MCTS:
     previous_evaluations = {}
+
     def __init__(self, initial_state: GameState, max_simulations=1000, time_limit=None,
                  pw_k=1.2, pw_alpha=0.6, c_param=2,
                  rollout_depth=30, rollout_epsilon=0):
@@ -154,7 +155,6 @@ class MCTS:
         # highest prior probability index
         idx = int(np.argmax(state.prior_prob_dist))
         return state.prioritized_moves[idx]
-
 
     def evaluate_state(self, state: GameState, depth=0):
         """
