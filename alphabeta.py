@@ -1,5 +1,5 @@
 import time
-from bagchal import Piece, GameState
+from bagchal import Piece, GameState, HeuristicParams
 # type of evaluation that is stored in the transposition_table
 exact_flag, alpha_flag, beta_flag = 0, 1, 2
 
@@ -9,10 +9,9 @@ class TimeoutError(Exception):
 
 
 class MinimaxAgent:
-    previous_evaluations = {}  # state_key -> evaluation
 
+    heuristic_params = HeuristicParams()
     # state_key -> (depth, evaluation, flag, best_move)
-    transposition_table = {}
 
     # Tiger is the maximizing player
     # Goat is the minimizing player
@@ -20,6 +19,8 @@ class MinimaxAgent:
     def __init__(self, depth=3):
         self.max_depth = depth
         self.no_of_nodes = 0
+        self.previous_evaluations = {}  # state_key -> evaluation
+        self.transposition_table = {}
 
     def get_best_move(self, game_state, time_limit=1.5):
         self.no_of_nodes = 0
@@ -32,22 +33,22 @@ class MinimaxAgent:
 
         for depth in range(1, 100):
             try:
-                print(f"Searching at depth {depth}")
+                # print(f"Searching at depth {depth}")
 
                 best_move_for_this_depth = self._search_root_at_depth(
                     game_state, depth, start_time, time_limit)
 
                 best_move_so_far = best_move_for_this_depth
                 elapsed_time = time.time() - start_time
-                print(
-                    f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s")
+                # print(
+                #     f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s")
             except TimeoutError:
-                print(
-                    f"  > Timeout occurred at depth {depth}. Using best move from depth {depth-1}.")
+                # print(
+                #     f"  > Timeout occurred at depth {depth}. Using best move from depth {depth-1}.")
                 break  # Exit the loop if time runs out
 
-        print(
-            f"Final best move: {best_move_so_far}. Total nodes: {self.no_of_nodes}")
+        # print(
+        #     f"Final best move: {best_move_so_far}. Total nodes: {self.no_of_nodes}")
         return best_move_so_far
 
     def _search_root_at_depth(self, game_state, depth, start_time, time_limit):
@@ -80,7 +81,7 @@ class MinimaxAgent:
                 best_move = move
                 break
 
-            history = {game_state.key()}
+            history = {self.key_without_turn(game_state)}
 
             val = self.minimax(simulated, depth - 1,
                                alpha, beta, start_time, time_limit, history)
@@ -111,25 +112,27 @@ class MinimaxAgent:
 
         best_move = None
 
-        state_key = game_state.key()
-        if state_key in history:
+        without_turn_state_key = self.key_without_turn(game_state)
+        if without_turn_state_key in history:
             # discourage repeating moves
+            # print("HIttttt")
             return 0
 
-        if state_key in MinimaxAgent.transposition_table:
-            val = MinimaxAgent.get_hashed_value(state_key, depth, alpha, beta)
+        state_key = game_state.key()
+        if state_key in self.transposition_table:
+            val = self.get_hashed_value(state_key, depth, alpha, beta)
             if val != None:
                 return val
 
         if depth == 0 or game_state.is_game_over():
             val = self.evaluate_state(game_state)
-            MinimaxAgent.record_hash(state_key, depth, val, exact_flag, None)
+            self.record_hash(state_key, depth, val, exact_flag, None)
             return val
 
         moves = game_state.prioritized_moves[::-1]
 
-        if state_key in MinimaxAgent.transposition_table:
-            _, _, _, hash_move = MinimaxAgent.transposition_table[state_key]
+        if state_key in self.transposition_table:
+            _, _, _, hash_move = self.transposition_table[state_key]
             if hash_move in moves:
                 moves.remove(hash_move)
                 moves.insert(0, hash_move)
@@ -142,7 +145,7 @@ class MinimaxAgent:
                 new_state = self.simulate_move(game_state, move)
                 self.no_of_nodes += 1
 
-                new_history = history | {game_state.key()}
+                new_history = history | {self.key_without_turn(game_state)}
                 evaluation = self.minimax(
                     new_state, depth - 1, alpha, beta, start_time, time_limit, new_history)
                 if evaluation > max_eval:
@@ -155,10 +158,10 @@ class MinimaxAgent:
 
             if max_eval >= beta:
                 # caused beta-cutoff
-                MinimaxAgent.record_hash(
+                self.record_hash(
                     state_key, depth, max_eval, beta_flag, best_move)
             else:
-                MinimaxAgent.record_hash(
+                self.record_hash(
                     state_key, depth, max_eval, exact_flag, best_move)
 
             return max_eval
@@ -168,7 +171,7 @@ class MinimaxAgent:
                 new_state = self.simulate_move(game_state, move)
                 self.no_of_nodes += 1
 
-                new_history = history | {game_state.key()}
+                new_history = history | {self.key_without_turn(game_state)}
                 evaluation = self.minimax(
                     new_state, depth - 1, alpha, beta, start_time, time_limit, new_history)
                 if evaluation < min_eval:
@@ -181,10 +184,10 @@ class MinimaxAgent:
 
             if min_eval <= original_alpha:
                 # caused alpha-cutoff
-                MinimaxAgent.record_hash(
+                self.record_hash(
                     state_key, depth, min_eval, alpha_flag, best_move)
             else:
-                MinimaxAgent.record_hash(
+                self.record_hash(
                     state_key, depth, min_eval, exact_flag, best_move)
             return min_eval
 
@@ -198,8 +201,8 @@ class MinimaxAgent:
 
         state_key = state.key()
 
-        if state_key in MinimaxAgent.previous_evaluations:
-            return MinimaxAgent.previous_evaluations[state_key]
+        if state_key in self.previous_evaluations:
+            return self.previous_evaluations[state_key]
 
         is_placement = state.goat_count > 0
 
@@ -211,13 +214,14 @@ class MinimaxAgent:
         goat_presence_max = 20
         tiger_mobility_max = 25
 
-        w_eat = 1.5
-        w_potcap = 1.5
-        w_mobility = 0 if is_placement else 0.5
+        w_eat = self.heuristic_params.w_eat
+        w_potcap = self.heuristic_params.w_potcap
+        w_mobility = 0 if is_placement else self.heuristic_params.w_mobility
 
-        w_trap = 1.5
-        w_presence = 0.9
-        w_inacc = 0.6
+        w_trap = self.heuristic_params.w_trap
+        w_presence = self.heuristic_params.w_presence
+        w_inacc = self.heuristic_params.w_inacc
+
 
         if state.is_game_over():
             result = state.get_result()
@@ -253,12 +257,11 @@ class MinimaxAgent:
                       inaccessibility_score * w_inacc)
 
         final_evaluation = tiger_score - goat_score  # [-3.0, 3.5]
-        MinimaxAgent.previous_evaluations[state_key] = final_evaluation
+        self.previous_evaluations[state_key] = final_evaluation
         return final_evaluation
 
-    @staticmethod
-    def get_hashed_value(state_key, depth, alpha, beta):
-        hashed_depth, hashed_eval, flag, _ = MinimaxAgent.transposition_table[state_key]
+    def get_hashed_value(self, state_key, depth, alpha, beta):
+        hashed_depth, hashed_eval, flag, _ = self.transposition_table[state_key]
 
         if hashed_depth >= depth:
             if flag == exact_flag:
@@ -281,9 +284,8 @@ class MinimaxAgent:
         # The stored value is not useful (either too shallow or doesn't cause a cutoff).
         return None
 
-    @staticmethod
-    def record_hash(state_key, depth, evaluation, flag, best_move):
-        MinimaxAgent.transposition_table[state_key] = (
+    def record_hash(self, state_key, depth, evaluation, flag, best_move):
+        self.transposition_table[state_key] = (
             depth, evaluation, flag, best_move)
 
     @staticmethod

@@ -4,3 +4,4 @@
 __pycache__/
 pyrightconfig.json
 note.md
+log/

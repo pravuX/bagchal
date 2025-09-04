@@ -13,24 +13,52 @@ from collections import deque
 @dataclass
 class HeuristicParams:
     """Learnable parameters for move evaluation"""
-    # Tiger parameters
-    tiger_capture_bonus: float = 5.0
-    tiger_potential_capture_bonus: float = 5.0
-    tiger_strategic_position_bonus: float = 2.0
-    tiger_center_penalty: float = 0.8
-    tiger_unblock_bonus: float = 2.5
-    tiger_block_penalty: float = 2.4
+    # # Tiger parameters
+    # tiger_capture_bonus: float = 5.0
+    # tiger_potential_capture_bonus: float = 5.0
+    # tiger_strategic_position_bonus: float = 2.0
+    # tiger_center_penalty: float = 0.8
+    # tiger_unblock_bonus: float = 2.5
+    # tiger_block_penalty: float = 2.4
 
-    # Goat parameters
-    goat_trap_bonus: float = 5.0
-    goat_clustering_bonus: float = 1.5
-    goat_tiger_clustering_penalty: float = 0.1
-    goat_strategic_position_bonus: float = 1.0
-    goat_outer_edge_bonus: float = 1.0
-    goat_block_capture_bonus: float = 5.0
-    goat_escape_bonus: float = 5.0
-    goat_sacrifice_penalty: float = 15.0
+    # # Goat parameters
+    # goat_trap_bonus: float = 5.0
+    # goat_clustering_bonus: float = 1.5
+    # goat_tiger_clustering_penalty: float = 0.1
+    # goat_strategic_position_bonus: float = 1.0
+    # goat_outer_edge_bonus: float = 1.0
+    # goat_block_capture_bonus: float = 5.0
+    # goat_escape_bonus: float = 5.0
+    # goat_sacrifice_penalty: float = 15.0
 
+    #Tiger parameters
+
+    tiger_capture_bonus: float = 1.8760
+    tiger_potential_capture_bonus: float = 7.9525
+    tiger_strategic_position_bonus: float = 1.9416
+    tiger_center_penalty: float = 1.7566
+    tiger_unblock_bonus: float = 9.7144
+    tiger_block_penalty: float = 6.2767
+
+    #Goat parameters
+    goat_trap_bonus: float = 0.6218
+    goat_clustering_bonus: float = 3.4160
+    goat_tiger_clustering_penalty: float = 3.9709
+    goat_strategic_position_bonus: float = 1.8084
+    goat_outer_edge_bonus: float = 4.9919
+    goat_block_capture_bonus: float = 14.7796
+    goat_escape_bonus: float = 8.4067
+    goat_sacrifice_penalty: float = 29.8451
+
+
+    #State evaluation
+
+    w_eat: float = 1.2322
+    w_potcap: float = 1.8946
+    w_mobility: float = 0.5699
+    w_trap: float = 0.5001
+    w_presence: float = 0.8651
+    w_inacc: float = 0.5730
 
 class Piece(IntEnum):
     GOAT = -1
