@@ -1,140 +1,87 @@
 from collections import defaultdict
 import time
 import numpy as np
-from bagchal import Piece, GameState
+from bagchal import GameState, Piece
 
 
 class Node:
-    def __init__(self, state, parent=None, move=None):
-        self.state: GameState = state
-        self.parent = parent
-        self.move = move
+    def __init__(self, game_state: GameState, parent=None, move=None):
+        self.game_state: GameState = game_state
+        self.parent: Node = parent
+        self.move = move  # incoming move
 
         self.children = []
         self.visit_count = 0
-        self.total_value = 0.0
-        self.player = self.state.turn
+        """
+        results = { -1: count, 1: count, 0: count}
+        """
+        self.results = defaultdict(int)
 
-        self.prioritized_moves = self.state.prioritized_moves
-        self.prioritized_scores = self.state.prioritized_scores
+        self.player_to_move = self.game_state.turn
+
+        self.unexpanded_moves = self.game_state.get_legal_moves()
 
     def is_fully_expanded(self):
-        return len(self.prioritized_moves) == 0
-
-    def expand(self):
-        # the expansion policy is based on the priority of each move
-        move = self.prioritized_moves.pop()
-        next_state = self.state.make_move(move)
-        child_node = Node(next_state, parent=self, move=move)
-        self.children.append(child_node)
-        return child_node
+        if self.is_terminal():
+            return True
+        # has no unvisited child
+        return len(self.unexpanded_moves) == 0
 
     def is_terminal(self):
-        return self.state.is_game_over()
+        return self.game_state.is_game_over()
 
-    def best_child(self, c_param=1.41):
-        # this is only called on a node that is fully expanded
-        # i.e all children that are visited at least once
+    def expand(self):
+        move = self.unexpanded_moves.pop()
+        next_state = self.game_state.make_move(move)
+        child = Node(next_state, parent=self, move=move)
+        self.children.append(child)
 
-        def uct(child_with_index):
+        return child
 
-            child_index, child = child_with_index
-            exploitation = child.total_value / child.visit_count  # Q
+    def best_child(self, c_param=0.7):
+
+        def uct(child: Node):
+            if child.visit_count == 0:
+                return float('inf')
+
+            # exploitation
+            # from parent's perspective
+            wins = child.results[self.player_to_move]
+            losses = child.results[-self.player_to_move]
+            exploitation = (wins - losses) / \
+                child.visit_count
+
             exploration = c_param * \
-                np.sqrt(np.log(self.visit_count) / child.visit_count)
-            # the child list and priority score list are in opposite order
-            priority_index = len(self.prioritized_scores) - child_index-1
+                np.sqrt(np.log(self.visit_count)/child.visit_count)
 
-            # slower decay rate for goats
-            # decay_rate = child.visit_count if self.player == Piece.TIGER else np.sqrt(
-            #     child.visit_count)
-            decay_rate = np.sqrt(child.visit_count)
-            # since a game_state may be repeated for nodes in different
-            # subtrees that are essentially equivalent, the heuristic_bias
-            # is unable to decay fast enough, that's why in many situations
-            # it seems the agent is picking the same moves over and over again.
-            # this is because we're not decaying the heuristic_bias
-            # based on the no of moves played. each "new" game_state (encountered
-            # after making a move) becomes the new root from which MCTS iterations
-            # are performed for the given time. so the visit_count for the node
-            # is still small and so the heuristic_bias dominates.
-            # consequently, for the spectator of the game, it feels like the
-            # agent is trying to force a draw
+            return exploitation + exploration
 
-            heuristic_bias = 10 * \
-                self.prioritized_scores[priority_index] / decay_rate
-
-            # heuristic_bias = self.prioritized_scores[priority_index] * max(
-            #     0, 1-(child.visit_count/1000)**2)
-
-            # if self.state.goat_count > 0:  # placement_phase
-            #     return priority_index
-
-            return exploitation + exploration + heuristic_bias
-
-        if not self.children:
-            # got an error one time saying that children was empty?
-            print(self.state)
-        _, best_uct_child = max(enumerate(self.children), key=uct)
-        return best_uct_child
+        return max(self.children, key=uct)
 
 
 class MCTS:
-
-    def __init__(self, initial_state, max_simulations=1000, time_limit=None):
-        self.max_simulations = max_simulations
+    def __init__(self, initial_state: GameState, max_simulations=1000, time_limit=None):
         self.root = Node(initial_state)
-        # print(self.root.prioritized_moves)
-        # print(self.root.prioritized_scores)
-        self.time_limit = time_limit
-        self.simulations_run = 0
-
-        self.goat_wins = 0
-        self.tiger_wins = 0
-        # a table counting time number of times a node occurs throughout the
-        # search tree. this is an intervention because of the high possibily
-        # of node(game_state) recurrence in the game.
-        # this doesnot include the states encountered during rollouts.
-        # the count is used to increase the decay rate with the hope of
-        # promoting exploration in late game
-        self.nodes = defaultdict(int)
-
-    def re_reoot(self, new_state, max_simulations=1000, time_limit=None):
-        # reset
         self.max_simulations = max_simulations
         self.time_limit = time_limit
         self.simulations_run = 0
-
         self.goat_wins = 0
         self.tiger_wins = 0
-
-        # sever the subtree and make it the new root
-        for child in self.root.children:
-            if child.state.key() == new_state.key():
-                child.parent = None
-                self.root = child
-                return
-
-        # fallback
-        self.root = Node(new_state)
-
-    def rollout_policy(self, state):
-
-        sampled_move_idx = np.random.choice(
-            len(state.prioritized_moves), p=state.prior_prob_dist)
-        return state.prioritized_moves[sampled_move_idx]
+        self.draws = 0
 
     def search(self):
 
         def search_helper():
+            # performs one iteration of MCTS
             expanded_node = self.tree_policy(self.root)
             result = self.rollout(expanded_node)
             self.backpropagate(expanded_node, result)
-            self.nodes[expanded_node.state.key()] += 1
             self.simulations_run += 1
-            if result == Piece.GOAT:
+            if result == 0:
+                self.draws += 1
+            elif result == Piece.GOAT:
                 self.goat_wins += 1
-            elif result == Piece.TIGER:
+            else:
                 self.tiger_wins += 1
 
         if self.time_limit is not None:
@@ -143,77 +90,46 @@ class MCTS:
                 search_helper()
             return self.get_best_move()
 
+        # otherwise fall back to the simulation count limit
         while self.simulations_run < self.max_simulations:
             search_helper()
-
         return self.get_best_move()
+
+    def get_best_move(self):
+        max_child: Node = self.root.best_child(c_param=0)
+        most_visited_child = max(
+            self.root.children, key=lambda c: c.visit_count)
+        return most_visited_child.move
 
     def tree_policy(self, node: Node):
         while not node.is_terminal():
             if not node.is_fully_expanded():
                 return node.expand()
-            else:
-                node = node.best_child()
+            node = node.best_child()
         return node
 
-    def rollout(self, node):
-        state_hash = defaultdict(int)
-        state: GameState = node.state
+    def rollout_policy(self, game_state: GameState):
+        moves = game_state.get_legal_moves()
+        return moves[np.random.randint(len(moves))]
 
-        while not state.is_game_over():
-            state_key = state.key()
-            state_hash[state_key] += 1
+    def rollout(self, node: Node):
+        game_state = node.game_state
 
-            if state_hash[state_key] > 9:
-                return 0
+        while not game_state.is_game_over():
+            move = self.rollout_policy(game_state)
+            game_state = game_state.make_move(move)
 
-            move = self.rollout_policy(state)
-            state = state.make_move(move)
+        return game_state.get_result()
 
-        result = state.get_result()
-        return result
-
-    def backpropagate(self, node, result):
+    def backpropagate(self, node: Node, result):
         while node is not None:
             node.visit_count += 1
-            # if result == -node.player:
-            #     node.total_value += 1
-            # elif result == 0:
-            #     node.total_value += 0.5
-            # elif result == node.player:
-            #     node.total_value += 0.0
-
-            node.total_value += -node.player * result
+            node.results[result] += 1
             node = node.parent
 
-    def get_best_move(self):
-        """Select best move based on visit count (most robust)"""
-        if not self.root.children:
-            return None
-
-        most_visited_child = max(
-            self.root.children, key=lambda c: c.visit_count)
-        return most_visited_child.move
-
-    def get_move_statistics(self):
-        """Get statistics about the search for analysis"""
-        if not self.root.children:
-            return {}
-
-        stats = {}
-        for child in self.root.children:
-            move = child.move
-            stats[move] = {
-                'visits': child.visit_count,
-                'q-value': child.total_value / child.visit_count if child.visit_count > 0 else 0,
-            }
-
-        return stats
-
     def visualize_tree(self, node=None, prefix="", is_last=True, max_depth=3, current_depth=0):
-        """Visualize search tree with enhanced information"""
         if node is None:
-            node = self.root
+            node: Node = self.root
             print("MCTS Search Tree")
             print("================")
 
@@ -221,26 +137,16 @@ class MCTS:
             return
 
         connector = "└── " if is_last else "├── "
-        move_str = f"Move: {node.move}" if node.move else "Root"
-
-        # Enhanced node information
-        avg_value = node.total_value / node.visit_count if node.visit_count > 0 else 0
-        print(f"{prefix}{connector}{move_str} | "
-              f"N: {node.visit_count}, "
-              f"V: {node.total_value}, "
-              f"Q: {avg_value:.3f}, "
-              f"Turn: {node.state.piece[node.player]}")
+        move_str = f"Move: {node.move}" if node.move != None else "Root"
+        wins = node.results[node.player_to_move]
+        avg_value = wins / node.visit_count if node.visit_count > 0 else 0
+        print(
+            f"{prefix}{connector}{move_str} | Q: {wins:.3f}, N: {node.visit_count}, Q/N: {avg_value:.3f}, Turn: {GameState.piece[node.player_to_move]}")
 
         prefix += "    " if is_last else "│   "
-
-        child_count = len(node.children)
-        sorted_children = sorted(
+        children = sorted(
             node.children, key=lambda c: c.visit_count, reverse=True)
-
-        # Show top 5 children only
-        # for i, child in enumerate(sorted_children[:5]):
-        for i, child in enumerate(sorted_children):
-            # is_last_child = (i == min(4, child_count - 1))
-            is_last_child = (i == child_count - 1)
+        for i, child in enumerate(children):
+            is_last_child = (i == len(children) - 1)
             self.visualize_tree(child, prefix, is_last_child,
                                 max_depth, current_depth + 1)
