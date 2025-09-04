@@ -1,1 +1,0 @@
-self.running = False
