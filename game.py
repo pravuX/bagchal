@@ -1,11 +1,10 @@
+import threading
 from collections import defaultdict
 from enum import Enum
-import pprint
 import pygame
 from bagchal import GameState, Piece
 from alphabeta import MinimaxAgent
-# from mcts import MCTS
-# from pw_mcts import MCTS
+from continuous_mcts import MCTS
 
 COLORS = {
     "bg": "antiquewhite",
@@ -45,7 +44,7 @@ class Game:
         pygame.init()
         pygame.display.set_caption(caption)
 
-        self.game_state = game_state
+        self.game_state: GameState = game_state
         self.cell_size = cell_size
 
         self.current_state = UIState.MAIN_MENU
@@ -54,8 +53,11 @@ class Game:
         # AI agent (initialized when needed)
         self.minimax_agent = None
         self.mcts_agent = None
-        self.ai_move_timer = 0
-        self.ai_move_delay = 50  # milliseconds
+        self.ai_thread = None
+        # ai thinking time in seconds
+        self.time_limit = 0.8
+        self.ai_is_thinking = False
+        self.ai_result_move = None
 
         # Game over state
         self.game_over_timer = 0
@@ -119,8 +121,8 @@ class Game:
         self.selected_cell = None
         self.state_hash.clear()
         GameState.transposition_table_with_scores.clear()
-        # self.mcts_agent = MCTS(
-        #     initial_state=self.game_state, time_limit=1.5)
+        self.mcts_agent = None
+        self.minimax_agent = None
 
     def handle_main_menu_events(self):
         """Handle events specific to main menu"""
@@ -153,35 +155,41 @@ class Game:
                     self.current_state = UIState.PLAYING_PVP
 
                 elif pvc_goat_rect.collidepoint(event.pos):
-
                     self.reset_game()
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=0.8)
-                    self.minimax_agent = MinimaxAgent()
+
+                    # self.mcts_agent = None
+                    self.minimax_agent = None
+
+                    self.mcts_agent = MCTS()
+                    # self.minimax_agent = MinimaxAgent()
+
                     self.current_state = UIState.PLAYING_PVC_GOAT
-                    # Initialize AI timer to current time so it waits before first move
-                    self.ai_move_timer = pygame.time.get_ticks()
+                    # self.ai_move_timer = pygame.time.get_ticks()
 
                 elif pvc_tiger_rect.collidepoint(event.pos):
-
                     self.reset_game()
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=1.5)
-                    self.minimax_agent = MinimaxAgent()
+
+                    # self.mcts_agent = None
+                    self.minimax_agent = None
+
+                    self.mcts_agent = MCTS()
+                    # self.minimax_agent = MinimaxAgent()
+
                     self.current_state = UIState.PLAYING_PVC_TIGER
-                    # Initialize AI timer to current time so it waits before first move
-                    self.ai_move_timer = pygame.time.get_ticks()
+                    # self.ai_move_timer = pygame.time.get_ticks()
 
                 elif cvc_rect.collidepoint(event.pos):
 
                     self.reset_game()
-                    self.minimax_agent = MinimaxAgent()
-                    # Early Game
-                    # self.mcts_agent = MCTS(
-                    #     initial_state=self.game_state, time_limit=1.5)
+
+                    # self.mcts_agent = None
+                    self.minimax_agent = None
+
+                    self.mcts_agent = MCTS()
+                    # self.minimax_agent = MinimaxAgent()
+
                     self.current_state = UIState.PLAYING_CVC
-                    # Initialize AI timer to current time so it waits before first move
-                    self.ai_move_timer = pygame.time.get_ticks()
+                    # self.ai_move_timer = pygame.time.get_ticks()
 
         # ESC to go back to main menu
         keys = pygame.key.get_pressed()
@@ -216,66 +224,74 @@ class Game:
                 elif event.key == pygame.K_ESCAPE:
                     self.current_state = UIState.MAIN_MENU
 
+    def _ai_worker(self, agent, game_state):
+        """This function runs on a separate thread."""
+        try:
+            if hasattr(agent, "search"):  # MCTS
+                move = agent.search(game_state, time_limit=self.time_limit)
+            else:  # Minimax
+                move = agent.get_best_move(
+                    game_state, time_limit=self.time_limit)
+
+            # When the search is done, store the result
+            self.ai_result_move = move
+        finally:
+            # Always make sure we signal that we are done
+            self.ai_is_thinking = False
+
     def update_ai_logic(self):
         """Handle AI moves with proper timing"""
-        should_make_ai_move = False
 
+        is_ai_turn = False
         if self.current_state == UIState.PLAYING_CVC:
-            should_make_ai_move = True
+            is_ai_turn = True
         elif self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.GOAT:
-            should_make_ai_move = True
+            is_ai_turn = True
         elif self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.TIGER:
-            should_make_ai_move = True
+            is_ai_turn = True
 
-        if self.is_game_over():
-            should_make_ai_move = False
+        if not is_ai_turn or self.is_game_over():
+            return
 
-        # if should_make_ai_move and self.minimax_agent and self.game_state.goat_count > 0:  # Placement
-        if should_make_ai_move and self.minimax_agent:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.ai_move_timer >= self.ai_move_delay:
-                move = self.minimax_agent.get_best_move(
-                    self.game_state, time_limit=1)
-                if move:
-                    self.game_state = self.game_state.make_move(move)
-                    self.state_hash_update()
-                    self.ai_move_timer = current_time
+        # 1. If a result has arrived, apply it
+        if self.ai_result_move is not None:
+            move = self.ai_result_move
+            self.ai_result_move = None  # Consume the result
 
-                    # if self.game_state.goat_count >= 10:  # Early Placement
-                    #     depth = 4
-                    # elif self.game_state.goat_count >= 5:  # Mid Placement
-                    #     depth = 5
-                    # elif self.game_state.goat_count >= 2:
-                    #     depth = 6
-                    # elif self.game_state.goat_count >= 0:
-                    #     depth = 7
-                    # self.minimax_agent = MinimaxAgent(depth=depth)
-        return
+            if move:
+                self.game_state = self.game_state.make_move(move)
+                self.state_hash_update()
 
-        # if should_make_ai_move and self.mcts_agent and self.game_state.goat_count == 0:  # Movement
-        if should_make_ai_move and self.mcts_agent:
-            current_time = pygame.time.get_ticks()
-            if current_time - self.ai_move_timer >= self.ai_move_delay:
-                move = self.mcts_agent.search()
-                # self.mcts_agent.visualize_tree(max_depth=5)
-                # input("Press Any Key to continue")
-                if move:
-                    self.game_state = self.game_state.make_move(move)
-                    self.state_hash_update()
-                    if self.game_state.goat_count >= 10:  # Early Placement
-                        time_limit = 0.8
-                    elif self.game_state.goat_count >= 5:  # Mid Placement
-                        time_limit = 1
+                if self.mcts_agent:
+                    # dnyamic time limit for MCTS Agent
+
+                    if self.game_state.goat_count >= 10:
+                        self.time_limit = 0.8
+                    elif self.game_state.goat_count >= 5:
+                        self.time_limit = 1.0
                     elif self.game_state.goat_count >= 2:
-                        time_limit = 1.5
-                    elif self.game_state.goat_count >= 0:
-                        time_limit = 1.5
-                    self.mcts_agent = MCTS(
-                        initial_state=self.game_state, time_limit=time_limit)
-                    self.ai_move_timer = current_time
+                        self.time_limit = 1.5
+                    else:
+                        self.time_limit = 1.5
+
+            return  # End this update cycle
+
+        # 2. If it's the AI's turn and it's not already thinking, start the thread
+        if not self.ai_is_thinking:
+            self.ai_is_thinking = True
+
+            agent = self.minimax_agent or self.mcts_agent
+
+            state_for_ai = self.game_state
+
+            # Create and start the thread
+            self.ai_thread = threading.Thread(
+                target=self._ai_worker,
+                args=(agent, state_for_ai)
+            )
+            self.ai_thread.start()
 
     def is_game_over(self):
-        # TODO: Refactor
         is_game_over = self.game_state.is_game_over()
         state_key = self.game_state.key()
         if self.state_hash[state_key] > 3:
@@ -292,7 +308,6 @@ class Game:
                 result = GameState.piece[self.game_state.get_result(
                 )] + " Won" if self.game_state.get_result() else "Draw"
                 print("Result:", result)
-                # pprint.PrettyPrinter().pprint(self.state_hash)
             elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
                 self.current_state = UIState.GAME_OVER
                 self.game_over_timer = 0
@@ -353,10 +368,7 @@ class Game:
 
     def place_piece(self, pos):
         # Disable player input if it's AI's turn or it's game over
-        if (self.current_state == UIState.PLAYING_CVC or
-            (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece.GOAT) or
-                (self.current_state == UIState.PLAYING_PVC_TIGER and self.game_state.turn == Piece.TIGER) or
-                self.is_game_over()):
+        if self.ai_is_thinking or self.is_game_over():
             return
 
         mouse_x, mouse_y = pos
@@ -375,7 +387,7 @@ class Game:
                         (idx, idx))
                     self.state_hash_update()
                     # Reset AI timer so it waits before responding to player move
-                    self.ai_move_timer = pygame.time.get_ticks()
+                    # self.ai_move_timer = pygame.time.get_ticks()
                     return
             elif piece == self.game_state.turn:
                 self.selected_cell = idx
@@ -385,7 +397,7 @@ class Game:
                 self.game_state = self.game_state.make_move(move)
                 self.state_hash_update()
                 # Reset AI timer so it waits before responding to player move
-                self.ai_move_timer = pygame.time.get_ticks()
+                # self.ai_move_timer = pygame.time.get_ticks()
             self.selected_cell = None
 
     def draw_status(self):
@@ -448,7 +460,6 @@ class Game:
         self.draw_status()
 
     def render_game_over(self):
-        # TODO
         pieces = {
             -1: "Goat",
             1: "Tiger"

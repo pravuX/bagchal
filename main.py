@@ -4,7 +4,8 @@ from bagchal import GameState, Piece
 from game import Game
 from alphabeta import MinimaxAgent
 import pprint
-from mcts import MCTS
+# from mcts import MCTS
+from continuous_mcts import MCTS
 # from pw_mcts import MCTS
 import time
 import numpy as np
@@ -60,11 +61,11 @@ def debug_minimax():
 
 
 def scratch():
-    # pos_tiger = [0, 9, 12, 24]
-    # pos_goat = [10, 11, 15, 16, 17, 18, 20, 21, 22, 23]
+    board = [Piece.EMPTY] * 25
 
-    # pos_tiger = [1, 2, 13, 21]
-    # empty = set([9, 15, 22])
+    # early movement
+    # pos_tiger = [0, 6, 13, 19]
+    # empty = set([5])
     # pos_goat = list(set(range(25)) - empty - set(pos_tiger))
     # for pos in pos_tiger:
     #     board[pos] = Piece.TIGER
@@ -76,7 +77,21 @@ def scratch():
     # game_state = GameState(board, turn=turn,
     #                        goat_count=goat_count, eaten_goat_count=eaten_goat_count)
 
-    board = [Piece.EMPTY] * 25
+    # late placement
+    # pos_tiger = [0, 9, 12, 24]
+    # pos_goat = [10, 11, 15, 16, 17, 18, 20, 21, 22, 23]
+    #
+    # for pos in pos_tiger:
+    #     board[pos] = Piece.TIGER
+    # for pos in pos_goat:
+    #     board[pos] = Piece.GOAT
+    # goat_count = 20 - len(pos_goat)
+    # eaten_goat_count = 0
+    # turn = Piece.GOAT
+    # game_state = GameState(board, turn=turn,
+    #                        goat_count=goat_count, eaten_goat_count=eaten_goat_count)
+
+    # initial configuration
     pos_tiger = [0, 4, 20, 24]
     board[pos_tiger[0]] = Piece.TIGER
     board[pos_tiger[1]] = Piece.TIGER
@@ -94,15 +109,14 @@ def scratch():
 
     # for minimax agent
     # minimax_agent = MinimaxAgent()
-    # move = minimax_agent.get_best_move(game_state, time_limit=1)
+    # move = minimax_agent.get_best_move(game_state, time_limit=0.3)
     # print(move)
-    #
     # print(minimax_agent.evaluate_state(game_state))
     # print(minimax_agent.evaluate_state(game_state.make_move(move)))
 
     # for mcts agent
     mcts = MCTS(initial_state=game_state,
-                time_limit=5)
+                time_limit=0.8)
     move = mcts.search()
     mcts.visualize_tree(max_depth=1)
     print(move)
@@ -324,8 +338,8 @@ def analyze_game_performance(game_history):
 if __name__ == "__main__":
     # history = test_mcts()
     # analyze_game_performance(history)
-    # run_game()
-    scratch()
+    run_game()
+    # scratch()
     # debug_minimax()
     # test_alphabeta()
 

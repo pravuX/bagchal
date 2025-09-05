@@ -12,10 +12,7 @@ class Node:
 
         self.children = []
         self.visit_count = 0
-        """
-        results = { -1: count, 1: count, 0: count}
-        """
-        self.results = defaultdict(int)
+        self.total_value = 0.0
 
         self.player_to_move = self.game_state.turn
 
@@ -54,10 +51,7 @@ class Node:
 
             # exploitation
             # from parent's perspective
-            wins = child.results[self.player_to_move]
-            losses = child.results[-self.player_to_move]
-            exploitation = (wins - losses) / \
-                child.visit_count
+            exploitation = -1 * (child.total_value / child.visit_count)
 
             exploration = c_param * \
                 np.sqrt(np.log(self.visit_count)/child.visit_count)
@@ -70,7 +64,11 @@ class Node:
 class MCTS:
     previous_evaluations = {}  # state_key -> evaluation
 
-    def __init__(self, initial_state: GameState, max_simulations=1000, time_limit=None):
+    def __init__(self):
+        self.rollout_epsilon = 0.05
+        self.rollout_depth = 30
+
+    def search(self, initial_state: GameState, max_simulations=1000, time_limit=None):
         self.root = Node(initial_state)
         self.max_simulations = max_simulations
         self.time_limit = time_limit
@@ -78,10 +76,6 @@ class MCTS:
         self.goat_wins = 0
         self.tiger_wins = 0
         self.draws = 0
-        self.rollout_epsilon = 0.05
-        self.rollout_depth = 30
-
-    def search(self):
 
         def search_helper():
             # performs one iteration of MCTS
@@ -149,13 +143,9 @@ class MCTS:
             if depth >= self.rollout_depth:
                 heuristic_score = self.evaluate_state(game_state)
 
-                prob_tiger_win = self._convert_score_to_win_probability(
-                    heuristic_score, k=0.3)
+                norm_result = np.tanh(0.4 * heuristic_score)
 
-                if np.random.random() < prob_tiger_win:
-                    return Piece.TIGER
-                else:
-                    return Piece.GOAT
+                return norm_result
 
             move = self.rollout_policy(game_state)
             game_state = game_state.make_move(move)
@@ -167,7 +157,7 @@ class MCTS:
     def backpropagate(self, node: Node, result):
         while node is not None:
             node.visit_count += 1
-            node.results[result] += 1
+            node.total_value += node.player_to_move * result
             node = node.parent
 
     def visualize_tree(self, node=None, prefix="", is_last=True, max_depth=3, current_depth=0):
@@ -181,7 +171,7 @@ class MCTS:
 
         connector = "└── " if is_last else "├── "
         move_str = f"Move: {node.move}" if node.move != None else "Root"
-        wins = node.results[node.player_to_move]
+        wins = node.total_value
         avg_value = wins / node.visit_count if node.visit_count > 0 else 0
         print(
             f"{prefix}{connector}{move_str} | Q: {wins:.3f}, N: {node.visit_count}, Q/N: {avg_value:.3f}, Turn: {GameState.piece[node.player_to_move]}")
@@ -258,12 +248,3 @@ class MCTS:
         final_evaluation = tiger_score - goat_score
         self.previous_evaluations[state_key] = final_evaluation
         return final_evaluation
-
-    def _convert_score_to_win_probability(self, score, k=1.0):
-        """
-        Converts a heuristic score into a win probability for the Tiger player
-        using the logistic (sigmoid) function.
-        k: A scaling factor to control the sharpness of the transition.
-           A smaller k makes the transition gentler. You can tune this.
-        """
-        return 1 / (1 + np.exp(-k * score))

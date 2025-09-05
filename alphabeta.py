@@ -1,5 +1,5 @@
 import time
-from bagchal import Piece, GameState, HeuristicParams
+from bagchal import Piece, GameState
 # type of evaluation that is stored in the transposition_table
 exact_flag, alpha_flag, beta_flag = 0, 1, 2
 
@@ -9,9 +9,10 @@ class TimeoutError(Exception):
 
 
 class MinimaxAgent:
+    previous_evaluations = {}  # state_key -> evaluation
 
-    heuristic_params = HeuristicParams()
     # state_key -> (depth, evaluation, flag, best_move)
+    transposition_table = {}
 
     # Tiger is the maximizing player
     # Goat is the minimizing player
@@ -19,8 +20,6 @@ class MinimaxAgent:
     def __init__(self, depth=3):
         self.max_depth = depth
         self.no_of_nodes = 0
-        self.previous_evaluations = {}  # state_key -> evaluation
-        self.transposition_table = {}
 
     def get_best_move(self, game_state, time_limit=1.5):
         self.no_of_nodes = 0
@@ -214,14 +213,13 @@ class MinimaxAgent:
         goat_presence_max = 20
         tiger_mobility_max = 25
 
-        w_eat = self.heuristic_params.w_eat
-        w_potcap = self.heuristic_params.w_potcap
-        w_mobility = 0 if is_placement else self.heuristic_params.w_mobility
+        w_eat = GameState.heuristic_params.w_eat
+        w_potcap = GameState.heuristic_params.w_potcap
+        w_mobility = 0 if is_placement else GameState.heuristic_params.w_mobility
 
-        w_trap = self.heuristic_params.w_trap
-        w_presence = self.heuristic_params.w_presence
-        w_inacc = self.heuristic_params.w_inacc
-
+        w_trap = GameState.heuristic_params.w_trap
+        w_presence = GameState.heuristic_params.w_presence
+        w_inacc = GameState.heuristic_params.w_inacc
 
         if state.is_game_over():
             result = state.get_result()
@@ -260,8 +258,9 @@ class MinimaxAgent:
         self.previous_evaluations[state_key] = final_evaluation
         return final_evaluation
 
-    def get_hashed_value(self, state_key, depth, alpha, beta):
-        hashed_depth, hashed_eval, flag, _ = self.transposition_table[state_key]
+    @staticmethod
+    def get_hashed_value(state_key, depth, alpha, beta):
+        hashed_depth, hashed_eval, flag, _ = MinimaxAgent.transposition_table[state_key]
 
         if hashed_depth >= depth:
             if flag == exact_flag:
@@ -284,8 +283,9 @@ class MinimaxAgent:
         # The stored value is not useful (either too shallow or doesn't cause a cutoff).
         return None
 
-    def record_hash(self, state_key, depth, evaluation, flag, best_move):
-        self.transposition_table[state_key] = (
+    @staticmethod
+    def record_hash(state_key, depth, evaluation, flag, best_move):
+        MinimaxAgent.transposition_table[state_key] = (
             depth, evaluation, flag, best_move)
 
     @staticmethod

@@ -31,7 +31,7 @@ class HeuristicParams:
     # goat_escape_bonus: float = 5.0
     # goat_sacrifice_penalty: float = 15.0
 
-    #Tiger parameters
+    # Tiger parameters
 
     tiger_capture_bonus: float = 1.8760
     tiger_potential_capture_bonus: float = 7.9525
@@ -40,7 +40,7 @@ class HeuristicParams:
     tiger_unblock_bonus: float = 9.7144
     tiger_block_penalty: float = 6.2767
 
-    #Goat parameters
+    # Goat parameters
     goat_trap_bonus: float = 0.6218
     goat_clustering_bonus: float = 3.4160
     goat_tiger_clustering_penalty: float = 3.9709
@@ -50,15 +50,14 @@ class HeuristicParams:
     goat_escape_bonus: float = 8.4067
     goat_sacrifice_penalty: float = 29.8451
 
-
-    #State evaluation
-
+    # State evaluation
     w_eat: float = 1.2322
     w_potcap: float = 1.8946
     w_mobility: float = 0.5699
     w_trap: float = 0.5001
     w_presence: float = 0.8651
     w_inacc: float = 0.5730
+
 
 class Piece(IntEnum):
     GOAT = -1
@@ -138,7 +137,7 @@ class GameState:
 
     def key(self):
         return (
-            self.stringify(),
+            tuple(self.board),
             self.turn,
             self.eaten_goat_count,
             self.goat_count,
@@ -237,7 +236,7 @@ class GameState:
                                   _ in self.prioritized_moves_with_scores]
         self.prioritized_scores = [score for _,
                                    score in self.prioritized_moves_with_scores]
-        self.calculate_prior_prob_dist()
+        # self.calculate_prior_prob_dist()
 
     def prioritize_moves(self):
         state_key = self.key()
@@ -376,7 +375,7 @@ class GameState:
         else:
             traps = True
 
-        priority_score += params.goat_trap_bonus * diff  # TODO fine tune this
+        priority_score += params.goat_trap_bonus * diff
 
         pos_tiger = [i for i, p in enumerate(
             self.board) if p == Piece.TIGER]
@@ -445,8 +444,8 @@ class GameState:
             if threatened:
                 break
 
-        # return priority_score + np.random.random()  # some noise
-        return priority_score
+        return priority_score + np.random.random()  # some noise
+        # return priority_score
 
     def calculate_prior_prob_dist(self, temp=1):
         if self.is_game_over():
