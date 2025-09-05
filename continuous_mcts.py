@@ -5,14 +5,18 @@ from bagchal import GameState, Piece
 
 
 class Node:
-    def __init__(self, game_state: GameState, parent=None, move=None):
+
+    __slots__ = ['game_state', 'parent', 'move', 'children',
+                 'visit_count', 'total_value', 'player_to_move', 'unexpanded_moves']
+
+    def __init__(self, game_state: GameState, total_value=0.0, parent=None, move=None):
         self.game_state: GameState = game_state
         self.parent: Node = parent
         self.move = move  # incoming move
 
         self.children = []
         self.visit_count = 0
-        self.total_value = 0.0
+        self.total_value = total_value
 
         self.player_to_move = self.game_state.turn
 
@@ -30,7 +34,19 @@ class Node:
     def expand(self):
         move = self.unexpanded_moves.pop()
         next_state = self.game_state.make_move(move)
-        child = Node(next_state, parent=self, move=move)
+
+        # First Play Urgency (FPU)
+        idx = self.game_state.prioritized_moves.index(move)
+        priority_score = self.game_state.prioritized_scores[idx]
+        # priority_scores are from the parent's perspective, so we invert them
+        # to be for the player to move at the child node!
+        priority_score_norm = -1 * np.tanh(0.1 * priority_score)
+        # the ranges are a bit crazy !! (TODO: need to tune the priority_scores)
+        # print(np.tanh(0.1 * priority_score))
+
+        child = Node(next_state, total_value=priority_score_norm,
+                     parent=self, move=move)
+
         self.children.append(child)
 
         return child
@@ -87,7 +103,7 @@ class MCTS:
                 self.draws += 1
             elif result == Piece.GOAT:
                 self.goat_wins += 1
-            else:
+            elif result == Piece.TIGER:
                 self.tiger_wins += 1
 
         if self.time_limit is not None:

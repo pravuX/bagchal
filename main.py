@@ -115,9 +115,9 @@ def scratch():
     # print(minimax_agent.evaluate_state(game_state.make_move(move)))
 
     # for mcts agent
-    mcts = MCTS(initial_state=game_state,
-                time_limit=0.8)
-    move = mcts.search()
+    mcts = MCTS()
+    move = mcts.search(initial_state=game_state,
+                       time_limit=1)
     mcts.visualize_tree(max_depth=1)
     print(move)
     print(f"Total Simulations: {mcts.simulations_run}")
