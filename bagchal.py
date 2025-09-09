@@ -1,58 +1,27 @@
-from dataclasses import dataclass, asdict
-from copy import deepcopy
-from enum import IntEnum
-from typing import override
+from dataclasses import dataclass
 import numpy as np
 from collections import deque
 
+Piece_GOAT = -1
+Piece_EMPTY = 0
+Piece_TIGER = 1
 
-# REMEMBER:
-# x -> cols : width
-# y -> rows : height
 
 @dataclass
 class HeuristicParams:
-    """Learnable parameters for move evaluation"""
-    # # Tiger parameters
-    # tiger_capture_bonus: float = 5.0
-    # tiger_potential_capture_bonus: float = 5.0
-    # tiger_strategic_position_bonus: float = 2.0
-    # tiger_center_penalty: float = 0.8
-    # tiger_unblock_bonus: float = 2.5
-    # tiger_block_penalty: float = 2.4
+    """Learnable parameters for move evaluation and state evaluation"""
+    # Tiger parameters
+    tiger_capture_bonus: float = 30
+    tiger_potential_capture_bonus: float = 20
+    tiger_block_penalty: float = 30
 
-    # # Goat parameters
-    # goat_trap_bonus: float = 5.0
-    # goat_clustering_bonus: float = 1.5
-    # goat_tiger_clustering_penalty: float = 0.1
-    # goat_strategic_position_bonus: float = 1.0
-    # goat_outer_edge_bonus: float = 1.0
-    # goat_block_capture_bonus: float = 5.0
-    # goat_escape_bonus: float = 5.0
-    # goat_sacrifice_penalty: float = 15.0
+    # Goat parameters
+    goat_sacrifice_penalty: float = 30
+    goat_clustering_bonus: float = 5
+    goat_strategic_position_bonus: float = 5
+    goat_outer_edge_bonus: float = 5
 
-    #Tiger parameters
-
-    tiger_capture_bonus: float = 1.8760
-    tiger_potential_capture_bonus: float = 7.9525
-    tiger_strategic_position_bonus: float = 1.9416
-    tiger_center_penalty: float = 1.7566
-    tiger_unblock_bonus: float = 9.7144
-    tiger_block_penalty: float = 6.2767
-
-    #Goat parameters
-    goat_trap_bonus: float = 0.6218
-    goat_clustering_bonus: float = 3.4160
-    goat_tiger_clustering_penalty: float = 3.9709
-    goat_strategic_position_bonus: float = 1.8084
-    goat_outer_edge_bonus: float = 4.9919
-    goat_block_capture_bonus: float = 14.7796
-    goat_escape_bonus: float = 8.4067
-    goat_sacrifice_penalty: float = 29.8451
-
-
-    #State evaluation
-
+    # State evaluation
     w_eat: float = 1.2322
     w_potcap: float = 1.8946
     w_mobility: float = 0.5699
@@ -60,15 +29,9 @@ class HeuristicParams:
     w_presence: float = 0.8651
     w_inacc: float = 0.5730
 
-class Piece(IntEnum):
-    GOAT = -1
-    EMPTY = 0
-    TIGER = 1
-
 
 class GameState:
-    # state_key: prioritized_moves (move, score) in order of score
-    transposition_table_with_scores = {}
+
     graph = {0:  [1, 5, 6], 1:  [0, 2, 6], 2:  [1, 3, 6, 7, 8], 3:  [2, 4, 8], 4:  [3, 8, 9],
              5:  [0, 6, 10], 6:  [0, 1, 2, 5, 7, 10, 11, 12], 7:  [2, 6, 8, 12], 8:  [2, 3, 4, 7, 9, 12, 13, 14], 9:  [4, 8, 14],
              10: [5, 6, 11, 15, 16], 11: [6, 10, 12, 16], 12: [6, 7, 8, 11, 13, 16, 17, 18], 13: [8, 12, 14, 18], 14: [8, 9, 13, 18, 19],
@@ -78,387 +41,324 @@ class GameState:
     piece = {
         -1: "🐐", 0: '  ', 1: "🐅"
     }
+    all_positions = np.arange(25)
 
-    heuristic_params = HeuristicParams()
+    capture_edges = {0: [(1, 2), (5, 10), (6, 12)], 1: [(2, 3), (6, 11)], 2: [(1, 0), (3, 4), (6, 10), (7, 12), (8, 14)], 3: [(2, 1), (8, 13)], 4: [(3, 2), (8, 12), (9, 14)],
+                     5: [(6, 7), (10, 15)], 6: [(7, 8), (11, 16), (12, 18)], 7: [(6, 5), (8, 9), (12, 17)], 8: [(7, 6), (12, 16), (13, 18)], 9: [(8, 7), (14, 19)],
+                     10: [(5, 0), (6, 2), (11, 12), (15, 20), (16, 22)], 11: [(6, 1), (12, 13), (16, 21)], 12: [(6, 0), (7, 2), (8, 4), (11, 10), (13, 14), (16, 20), (17, 22), (18, 24)],
+                     13: [(8, 3), (12, 11), (18, 23)], 14: [(8, 2), (9, 4), (13, 12), (18, 22), (19, 24)], 15: [(10, 5), (16, 17)], 16: [(11, 6), (12, 8), (17, 18)],
+                     17: [(12, 7), (16, 15), (18, 19)], 18: [(12, 6), (13, 8), (17, 16)], 19: [(14, 9), (18, 17)], 20: [(15, 10), (16, 12), (21, 22)], 21: [(16, 11), (22, 23)],
+                     22: [(16, 10), (17, 12), (18, 14), (21, 20), (23, 24)], 23: [(18, 13), (22, 21)], 24: [(18, 12), (19, 14), (23, 22)]}
 
-    @classmethod
-    def set_heuristic_params(cls, params: HeuristicParams):
-        """Set the heuristic parameters for all GameState instances"""
-        cls.heuristic_params = params
+    # Numpy
+    graph_np = [np.array(neighbors) for neighbors in graph.values()]
 
-    @staticmethod
-    def find_inaccessible_positions(game_state):
-        visited = set()
-        pos_tiger = [i for i, cell in enumerate(
-            game_state.board) if cell == Piece.TIGER]
-        pos_goat = {i for i, cell in enumerate(
-            game_state.board) if cell == Piece.GOAT}
-        queue = deque(pos_tiger)
+    # positions tiger can jump to
+    capture_map_np = [
+        np.array([landing for _, landing in edges])
+        for _, edges in capture_edges.items()
+    ]
+    # And the midpoint of that jump
+    capture_mid_map_np = {
+        (src, landing): mid for src, edges in capture_edges.items() for mid, landing in edges
+    }
 
-        while queue:
-            pos = queue.popleft()
+    __slots__ = ['board', 'turn', 'goat_count', 'eaten_goat_count', 'tiger_positions',
+                 'goat_positions', 'empty_positions', 'history']
 
-            if pos in visited:
-                continue
-            visited.add(pos)
+    def __init__(self, board=None, turn=Piece_GOAT, goat_count=20, eaten_goat_count=0):
 
-            for adj in GameState.graph[pos]:
-                if game_state.board[adj] == Piece.EMPTY and adj not in visited:  # empty
-                    queue.append(adj)
+        if board is None:
+            self.board = np.array([Piece_EMPTY] * 25, dtype=np.int8)
+        else:
+            self.board = board
 
-            for adj in GameState.graph[pos]:
-                if game_state.board[adj] == Piece.GOAT:  # goat adjacent
-                    dx = adj - pos
-                    landing = adj + dx  # capture position
-                    # must be valid neighbor
-                    if 0 <= landing < 25 and landing in GameState.graph[adj]:
-                        if game_state.board[landing] == Piece.EMPTY and landing not in visited:
-                            queue.append(landing)
-
-        all_positions = set(range(25))
-        inaccessible = all_positions - visited - pos_goat  # subtract pos_goat
-        return sorted(list(inaccessible))
-
-    def __init__(self, board, turn, goat_count, eaten_goat_count):
-        self.board = board
         self.turn = turn
         self.goat_count = goat_count
         self.eaten_goat_count = eaten_goat_count
-        self.trapped_tiger_count = 0
 
-    @override
+        # 25 len boolean array
+        # True = Piece at that index
+        self.tiger_positions = self.board == Piece_TIGER
+        self.goat_positions = self.board == Piece_GOAT
+        self.empty_positions = self.board == Piece_EMPTY
+
+        self.history = []
+
     def __repr__(self) -> str:
         return f"Turn: {self.piece[self.turn]}, Goat Left: {self.goat_count}, Eaten Goat: {self.eaten_goat_count}, Trapped Tiger: {self.trapped_tiger_count}"
 
-    def stringify(self):
-        string_rep = ""
-        for p in self.board:
-            string_rep += self.piece[p]
-        return string_rep
-
+    @property
     def key(self):
         return (
-            self.stringify(),
-            self.turn,
-            self.eaten_goat_count,
-            self.goat_count,
-            self.trapped_tiger_count
+            tuple(self.board), self.turn, self.eaten_goat_count, self.goat_count
         )
 
-    def update_trapped_tiger(self):
+    @property
+    def trapped_tiger_count(self):
         count = 0
-        pos_tiger = [i for i, cell in enumerate(
-            self.board) if cell == Piece.TIGER]
-        for tiger in pos_tiger:
-            if (self.is_trapped(tiger)):
+        tiger_indices = self.all_positions[self.tiger_positions]
+        for src in tiger_indices:
+            if self.is_trapped(src):
                 count += 1
-        self.trapped_tiger_count = count
+        return count
 
+    def is_trapped(self, tiger):
+        for adj in self.graph_np[tiger]:
+            if self.board[adj] == Piece_EMPTY:
+                return False
+            landing = 2 * adj - tiger  # adj + (adj - tiger)
+            if self.board[adj] == Piece_GOAT and landing in self.graph_np[adj] and self.board[landing] == Piece_EMPTY:
+                return False
+        return True
+
+    @property
     def get_result(self):
+        # returns the winner in the current game_state
+        # if there's no winner returns None
         if self.trapped_tiger_count == 4:
-            return Piece.GOAT
-        if self.eaten_goat_count > 4:  # Thapa et. al showed more than 4 goats captured leads to a win rate of 87% for tiger
-            return Piece.TIGER
-        # general logic for trapping
-        # trapped = no legal moves
-        # legal_moves = self.get_legal_moves, turn
-        # len(legal_moves) == 0 => Trapped
-        # who won? -turn
-        legal_moves = self.get_legal_moves()
+            return Piece_GOAT
+        if self.eaten_goat_count > 4:
+            return Piece_TIGER
+        legal_moves = self.get_legal_moves_np()
         if (len(legal_moves)) == 0:  # if no legal moves remain, then the that player is trapped
             return self.turn * -1
         return None
 
+    @property
     def is_game_over(self):
-        return self.get_result() is not None
+        return self.get_result is not None
 
-    def is_trapped(self, tiger):
-        # check adjacent nodes of tiger
-        # return false if at least one node is empty
-        # if the adjacent node has a goat
-        # check if that can be "eaten"
-        # return false
-        # otherwise return true
-        for adj in self.graph[tiger]:
-            if self.board[adj] == Piece.EMPTY:
-                return False
-            elif self.board[adj] == Piece.GOAT:
-                capture_pos = adj - (tiger - adj)
-                if capture_pos in self.graph[adj] and self.board[capture_pos] == Piece.EMPTY:
-                    return False
-        return True
+    def make_move(self, move):
 
-    def change_turn(self):
+        src, dst = move
+
+        captured_piece_position = -1
+
+        if self.turn == Piece_GOAT and self.goat_count > 0:
+            # Placement
+            assert self.board[dst] == Piece_EMPTY
+
+            self.board[dst] = Piece_GOAT
+            self.goat_positions[dst] = True
+            self.empty_positions[dst] = False
+            self.goat_count -= 1
+
+        elif self.turn == Piece_TIGER and dst not in self.graph_np[src]:
+            # Capture
+            # mid = (src + dst) // 2
+            mid = self.capture_mid_map_np[(src, dst)]
+            assert self.board[src] == Piece_TIGER
+            assert self.board[mid] == Piece_GOAT
+            assert self.board[dst] == Piece_EMPTY
+
+            self.board[src] = Piece_EMPTY
+            self.board[mid] = Piece_EMPTY
+            self.board[dst] = Piece_TIGER
+
+            self.eaten_goat_count += 1
+
+            self.tiger_positions[src] = False
+            self.goat_positions[mid] = False
+            self.tiger_positions[dst] = True
+
+            self.empty_positions[src] = True
+            self.empty_positions[mid] = True
+            self.empty_positions[dst] = False
+
+            captured_piece_position = mid
+        else:
+            # Standard Movement
+            moving_piece = self.board[src]
+            assert moving_piece == self.turn
+            assert self.board[dst] == Piece_EMPTY
+
+            self.board[src] = Piece_EMPTY
+            self.board[dst] = moving_piece
+
+            piece_list_to_update = self.tiger_positions if moving_piece == Piece_TIGER else self.goat_positions
+            piece_list_to_update[src] = False
+            piece_list_to_update[dst] = True
+
+            self.empty_positions[src] = True
+            self.empty_positions[dst] = False
+
+        self.history.append((move, captured_piece_position))
         self.turn *= -1
 
-    def apply_move(self, move):
-        src, dst = move
-        if src == dst:
-            # Placement
-            if self.turn == Piece.GOAT and self.goat_count > 0 and self.board[src] == Piece.EMPTY:
-                self.board[src] = Piece.GOAT
-                self.goat_count -= 1
-                self.change_turn()
+    def unmake_move(self):
+        if not self.history:
             return
 
-        if self.board[src] != self.turn or self.board[dst] != Piece.EMPTY:
-            return
+        last_move, captured_piece_position = self.history.pop()
 
-        # Movement
-        if dst in self.graph[src]:
-            self.board[src] = Piece.EMPTY
-            self.board[dst] = Piece.TIGER if Piece.TIGER == self.turn else Piece.GOAT
-            self.change_turn()
-            return
+        src, dst = last_move
+        self.turn *= -1
 
-        # Capture
-        if self.board[src] == Piece.TIGER:
-            mid = (src + dst) // 2
-            if self.board[mid] == Piece.GOAT and mid in self.graph[src] and dst in self.graph[mid]:
-                self.board[mid] = Piece.EMPTY
-                self.board[src] = Piece.EMPTY
-                self.board[dst] = Piece.TIGER
-                self.eaten_goat_count += 1
-                self.change_turn()
+        if self.turn == Piece_GOAT and src == dst and captured_piece_position == -1 and self.goat_count < 20:
+            self.board[dst] = Piece_EMPTY
+            self.goat_positions[dst] = False
+            self.goat_count += 1
 
-    def make_move(self, move, simulate=False):
-        new_board = self.board.copy()
-        new_state = GameState(
-            new_board, self.turn, self.goat_count, self.eaten_goat_count)
-        new_state.apply_move(move)
-        new_state.update_trapped_tiger()
-        if not simulate:  # otherwise there is infinite recursion
-            new_state.init_prioritization()
-        return new_state
+            self.empty_positions[dst] = True
 
-    def init_prioritization(self):
-        self.prioritized_moves_with_scores = self.prioritize_moves()
-        self.prioritized_moves = [move for move,
-                                  _ in self.prioritized_moves_with_scores]
-        self.prioritized_scores = [score for _,
-                                   score in self.prioritized_moves_with_scores]
-        self.calculate_prior_prob_dist()
+        elif self.turn == Piece_TIGER and captured_piece_position != -1:
+            mid = captured_piece_position
 
-    def prioritize_moves(self):
-        state_key = self.key()
-        if state_key in GameState.transposition_table_with_scores:
-            return list(GameState.transposition_table_with_scores[state_key])
+            self.board[dst] = Piece_EMPTY
+            self.board[mid] = Piece_GOAT
+            self.board[src] = Piece_TIGER
 
-        # implement move ordering
-        moves = self.get_legal_moves()
-        if self.turn == Piece.TIGER:
-            scored_moves = [(move, self.tiger_priority(move))
-                            for move in moves]
+            self.eaten_goat_count -= 1
+
+            self.tiger_positions[dst] = False
+            self.goat_positions[mid] = True
+            self.tiger_positions[src] = True
+
+            self.empty_positions[dst] = True
+            self.empty_positions[mid] = False
+            self.empty_positions[src] = False
         else:
-            scored_moves = [(move, self.goat_priority(move)) for move in moves]
+            moving_piece = self.board[dst]
+            self.board[dst] = Piece_EMPTY
+            self.board[src] = moving_piece
 
-        # order scored moves by their priority (asc)
-        scored_moves.sort(key=lambda m: m[1])
-        GameState.transposition_table_with_scores[state_key] = tuple(
-            scored_moves)
+            piece_list_to_update = self.tiger_positions if moving_piece == Piece_TIGER else self.goat_positions
+            piece_list_to_update[dst] = False
+            piece_list_to_update[src] = True
 
-        if len(GameState.transposition_table_with_scores) > 100_000:
-            GameState.transposition_table_with_scores.clear()
+            self.empty_positions[dst] = True
+            self.empty_positions[src] = False
 
-        return scored_moves
-
-    def get_legal_moves(self, turn=None):
-        moves = []
-
+    # vectorized get_legal_moves
+    def get_legal_moves_np(self, turn=None):
         if not turn:
             turn = self.turn
+        moves = []
 
-        if turn == Piece.GOAT:
+        if turn == Piece_GOAT:
             if self.goat_count > 0:
-                # Goat placement phase: place on any empty cell
-                for i in range(25):
-                    if self.board[i] == Piece.EMPTY:
-                        moves.append((i, i))  # placement represented as (i, i)
+                # Get all empty squares in one operation
+                empty_indices = self.all_positions[self.empty_positions]
+                moves.extend([(i, i) for i in empty_indices])
             else:
-                # Move goats to adjacent empty positions
-                for i in range(25):
-                    if self.board[i] == Piece.GOAT:
-                        for adj in self.graph[i]:
-                            if self.board[adj] == Piece.EMPTY:
-                                moves.append((i, adj))
+                # For every goat, find its empty neighbors
+                goat_indices = self.all_positions[self.goat_positions]
+                for src in goat_indices:
+                    neighbors = self.graph_np[src]
+                    # Vectorized check: which of my neighbors are empty?
+                    empty_neighbors = neighbors[self.empty_positions[neighbors]]
+                    moves.extend([(src, dst) for dst in empty_neighbors])
+        else:  # TIGER
+            tiger_indices = self.all_positions[self.tiger_positions]
+            for src in tiger_indices:
+                # 1. Standard Moves
+                neighbors = self.graph_np[src]
+                empty_neighbors = neighbors[self.empty_positions[neighbors]]
+                moves.extend([(src, dst) for dst in empty_neighbors])
 
-        elif turn == Piece.TIGER:
-            for i in range(25):
-                if self.board[i] == Piece.TIGER:
-                    for adj in self.graph[i]:
-                        if self.board[adj] == Piece.EMPTY:
-                            moves.append((i, adj))
-                        elif self.board[adj] == Piece.GOAT:
-                            capture_pos = adj - (i - adj)
-                            if (capture_pos in self.graph[adj] and
-                                    self.board[capture_pos] == Piece.EMPTY):
-                                moves.append((i, capture_pos))
+                # 2. Capture Moves
+                possible_landings = self.capture_map_np[src]
+                # Vectorized check: which of my landing spots are empty?
+                valid_landings = possible_landings[self.empty_positions[possible_landings]]
 
+                # Vectorized check: for these valid landings, is the midpoint a goat?
+                for dst in valid_landings:
+                    mid = self.capture_mid_map_np[(src, dst)]
+                    if self.goat_positions[mid]:
+                        moves.append((src, dst))
         return moves
 
-    def reset(self):
-        for i, _ in enumerate(self.board):
-            self.board[i] = Piece.EMPTY
+    # non vectorized get legal moves
+    # def get_legal_moves(self, turn=None):
+    #     moves = []
+    #
+    #     if not turn:
+    #         turn = self.turn
+    #
+    #     if turn == Piece_GOAT:
+    #         if self.goat_count > 0:
+    #             # Placement
+    #             empty_indices = self.all_positions[self.empty_positions]
+    #             for i in empty_indices:
+    #                 moves.append((i, i))
+    #         else:
+    #             # Movement
+    #             goat_indices = self.all_positions[self.goat_positions]
+    #
+    #             for src in goat_indices:
+    #                 for dst in self.graph_np[src]:
+    #                     if self.board[dst] == Piece_EMPTY:
+    #                         moves.append((src, dst))
+    #     else:
+    #         tiger_indices = self.all_positions[self.tiger_positions]
+    #         for src in tiger_indices:
+    #             for adj in self.graph_np[src]:
+    #                 # Movement
+    #                 landing = 2 * adj - src  # adj + (adj - src)
+    #                 if self.board[adj] == Piece_EMPTY:
+    #                     moves.append((src, adj))
+    #                 # Capture
+    #                 elif self.board[adj] == Piece_GOAT and landing in self.graph_np[adj] and self.board[landing] == Piece_EMPTY:
+    #                     moves.append((src, landing))
+    #
+    #     return moves
 
-        tiger_init_pos = [0, 4, 20, 24]
+    def copy(self):
+        board = np.copy(self.board)
+        turn = self.turn
+        goat_count = self.goat_count
+        eaten_goat_count = self.eaten_goat_count
+        copy_state = GameState(board, turn, goat_count, eaten_goat_count)
+        return copy_state
 
-        for pos in tiger_init_pos:
-            self.board[pos] = Piece.TIGER
+    @staticmethod
+    def tiger_board_accessibility(game_state):
+        visited = np.zeros(25, dtype=np.bool_)
+        tiger_positions = GameState.all_positions[game_state.tiger_positions]
+        queue = deque(tiger_positions)
 
-        self.turn = Piece.GOAT
+        board = game_state.board
+        graph = GameState.graph_np
+        capture_edges = GameState.capture_edges
+        goats_on_board = 20 - \
+            (game_state.eaten_goat_count + game_state.goat_count)
 
-        self.goat_count = 20
-        self.eaten_goat_count = 0
-        self.trapped_tiger_count = 0
-        self.init_prioritization()
+        while queue:
+            pos = queue.popleft()
 
-    def tiger_priority(self, move):
-        params = self.heuristic_params
-        priority_score = 10
-        next_state = self.make_move(move, simulate=True)
-        if next_state.eaten_goat_count == 5:
-            # immediate win
-            return 50
-        if next_state.eaten_goat_count > self.eaten_goat_count:
-            # this move leads to capture
-            priority_score += params.tiger_capture_bonus
+            if visited[pos]:
+                continue
+            visited[pos] = True
 
-        src, dst = move
-        # potential capture
-        for adj in GameState.graph[dst]:
-            if self.board[adj] == Piece.GOAT:
-                capture_pos = adj - (dst - adj)
-                if capture_pos in GameState.graph[adj] and self.board[capture_pos] == Piece.EMPTY:
-                    priority_score += params.tiger_potential_capture_bonus
+            for adj in graph[pos]:
+                if board[adj] == Piece_EMPTY and not visited[adj]:
+                    queue.append(adj)
 
-        pos_tiger = [i for i, p in enumerate(
-            self.board) if p == Piece.TIGER]
+            for adj, landing in capture_edges[pos]:
+                # must be valid neighbor
+                if board[adj] == Piece_GOAT and board[landing] == Piece_EMPTY and not visited[landing]:
+                    queue.append(landing)
 
-        for tiger in pos_tiger:
-            if tiger != src:
-                for adj in GameState.graph[tiger]:
-                    if self.board[adj] == Piece.GOAT:
-                        capture_pos = adj - (tiger - adj)
-                        if capture_pos in GameState.graph[adj]:
-                            # a capture is possible but it's blocked by the tiger at src
-                            # so we encourage moving away
-                            if capture_pos == src:
-                                priority_score += params.tiger_unblock_bonus
-                            # but if moving away blocks capture for another tiger,
-                            # we discourage that move
-                            elif capture_pos == dst:
-                                priority_score -= params.tiger_block_penalty
+        visited_count = np.sum(visited)
+        inaccessible_count = 25 - visited_count - goats_on_board
+        return visited_count, inaccessible_count
 
-        strong_positions = [6, 8, 12, 16, 18]
-        if dst in strong_positions:
-            priority_score += params.tiger_strategic_position_bonus
-        if src == 12:
-            priority_score -= params.tiger_center_penalty
 
-        return priority_score + np.random.random()  # some noise
+if __name__ == "__main__":
+    capture_edges = {
+        pos: [(adj, landing) for adj in GameState.graph[pos]
+              for landing in [2*adj - pos] if landing in GameState.graph[adj]] for pos in range(25)
+    }
+    # print(capture_edges)
 
-    def goat_priority(self, move):
-        params = self.heuristic_params  # Use class-level parameters
-        src, dst = move
-        is_placement_phase = src == dst
-        priority_score = 5
-        next_state = self.make_move(move, simulate=True)
-        if next_state.trapped_tiger_count == 4:
-            # immediate win -> high reward
-            return 50
-        # more the tigers trapped, greater the reward
-        # if a move untraps a tiger, punish it
-        untraps = False
-        traps = False
-        diff = next_state.trapped_tiger_count - self.trapped_tiger_count
-        if diff < 0:
-            untraps = True
-        else:
-            traps = True
+    graph_np = [np.array(neighbors) for neighbors in GameState.graph.values()]
 
-        priority_score += params.goat_trap_bonus * diff  # TODO fine tune this
-
-        pos_tiger = [i for i, p in enumerate(
-            self.board) if p == Piece.TIGER]
-
-        # encourage clustering
-        for adj in GameState.graph[dst]:
-            if self.board[adj] == Piece.GOAT and adj != src:
-                priority_score += params.goat_clustering_bonus
-            elif self.board[adj] == Piece.TIGER:
-                priority_score -= params.goat_tiger_clustering_penalty
-
-        strategic_positions = [2, 10, 14, 22]
-        outer_edge = [0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19]
-        if is_placement_phase and dst in strategic_positions:
-            priority_score += params.goat_strategic_position_bonus
-        if dst in outer_edge:
-            priority_score += params.goat_outer_edge_bonus
-
-        # punish filling cantonments
-
-        # reward moves that block captures
-        # the more it blocks captures, the greater the reward
-        for tiger in pos_tiger:
-            for adj in GameState.graph[tiger]:
-                if self.board[adj] == Piece.GOAT:
-                    capture_pos = adj - (tiger - adj)
-                    if capture_pos in GameState.graph[adj]:
-                        # and capture_pos in GameState.graph[adj]:
-                        if self.board[capture_pos] == Piece.EMPTY:
-                            # this move blocks capture by placing(or moving) a piece at the capture_position
-                            # blocking a capture can also mean moving the threatened piece to capture_position
-                            if dst == capture_pos:
-                                if untraps:  # prioritize blocking more than untrapping
-                                    priority_score -= params.goat_trap_bonus * diff
-                                priority_score += params.goat_block_capture_bonus
-                            # how to allow escaping by moving away from the threatening position
-                            # we know that a capture is possible here
-                            # we check if src == adj (it means that the piece at src is capturable)
-                            # moving it will help avoid a capture, so we reward that
-                            elif src == adj:
-                                if untraps:  # prioritize blocking more than untrapping
-                                    priority_score -= params.goat_trap_bonus * diff
-                                priority_score += params.goat_escape_bonus
-
-                        elif not is_placement_phase and src == capture_pos:
-                            # here, there is already a piece on the capture position
-                            # thus we check if making this move allows another piece to be captured
-                            # i.e. if the piece blocks a capture currently, and moving it will threaten
-                            # another piece
-                            priority_score -= params.goat_block_capture_bonus  # TODO fine tune this
-
-        # if placing(or moving) a piece leads to immediate capture assign it
-        # a very low priority
-        for tiger in pos_tiger:
-            threatened = False
-            for adj in GameState.graph[tiger]:
-                if adj == dst:  # dst is adjacent to tiger
-                    capture_pos = dst - (tiger - dst)
-                    # a piece can move into threat either from a different position or capture_position
-                    if capture_pos in GameState.graph[dst] and (self.board[capture_pos] == Piece.EMPTY or capture_pos == src):
-                        threatened = True
-                        priority_score -= params.goat_sacrifice_penalty
-                        if traps:  # don't sacrifice even if trap is possible
-                            priority_score -= params.goat_trap_bonus * diff
-                        break
-            if threatened:
-                break
-
-        # return priority_score + np.random.random()  # some noise
-        return priority_score
-
-    def calculate_prior_prob_dist(self, temp=1):
-        if self.is_game_over():
-            return
-
-        # softmax for move probabilites based on their priority scores
-        prioritized_scores = np.array(
-            self.prioritized_scores, dtype=np.float64)
-        prioritized_scores = prioritized_scores / temp
-        stabilized_scores = prioritized_scores - np.max(prioritized_scores)
-        e_prioritized_moves = np.exp(stabilized_scores)
-        e_prioritized_moves_sum = e_prioritized_moves.sum()
-        # reversed because Node.children stores moves in descending order
-        # of priority score
-        self.prior_prob_dist = e_prioritized_moves / e_prioritized_moves_sum
+    capture_map_np = {
+        src: np.array([landing for _, landing in edges])
+        for src, edges in capture_edges.items()
+    }
+    capture_mid_map_np = {
+        (src, landing): mid for src, edges in capture_edges.items() for mid, landing in edges
+    }
+    # print(capture_map_np.keys())

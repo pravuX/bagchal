@@ -1,11 +1,10 @@
 from collections import defaultdict
 from os import system
-from bagchal import GameState, Piece
+from bagchal import *
 from game import Game
 from alphabeta import MinimaxAgent
 import pprint
 from mcts import MCTS
-# from pw_mcts import MCTS
 import time
 import numpy as np
 
@@ -15,28 +14,28 @@ from pstats import SortKey, Stats
 
 
 def run_game():
-    board = [Piece.EMPTY] * 25
+    board = np.array([Piece_EMPTY] * 25, dtype=np.int8)
     pos_tiger = [0, 4, 20, 24]
-    board[pos_tiger[0]] = Piece.TIGER
-    board[pos_tiger[1]] = Piece.TIGER
-    board[pos_tiger[2]] = Piece.TIGER
-    board[pos_tiger[3]] = Piece.TIGER
+    board[pos_tiger[0]] = Piece_TIGER
+    board[pos_tiger[1]] = Piece_TIGER
+    board[pos_tiger[2]] = Piece_TIGER
+    board[pos_tiger[3]] = Piece_TIGER
 
-    game_state = GameState(board, turn=Piece.GOAT,
+    game_state = GameState(board, turn=Piece_GOAT,
                            goat_count=20, eaten_goat_count=0)
-    game_state.update_trapped_tiger()
-    game_state.init_prioritization()
+    # game_state.update_trapped_tiger()
+    # game_state.init_prioritization()
     game = Game(game_state=game_state)
     game.run()
 
 
 def debug_mcts():
     # check get_legal_moves
-    board = [Piece.TIGER, Piece.GOAT, Piece.GOAT, Piece.TIGER, Piece.EMPTY, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.TIGER, Piece.TIGER, Piece.GOAT, Piece.GOAT,
-             Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT]
+    board = [Piece_TIGER, Piece_GOAT, Piece_GOAT, Piece_TIGER, Piece_EMPTY, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_TIGER, Piece_TIGER, Piece_GOAT, Piece_GOAT,
+             Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT]
     goat_count = 0
     eaten_goat_count = 0
-    turn = Piece.GOAT
+    turn = Piece_GOAT
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
     game_state.update_tiger_pos()
@@ -44,11 +43,11 @@ def debug_mcts():
 
 
 def debug_minimax():
-    board = [Piece.TIGER, Piece.GOAT, Piece.GOAT, Piece.EMPTY, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.TIGER, Piece.GOAT, Piece.TIGER,
-             Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.EMPTY, Piece.TIGER, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.GOAT, Piece.EMPTY, Piece.GOAT]
+    board = [Piece_TIGER, Piece_GOAT, Piece_GOAT, Piece_EMPTY, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_TIGER, Piece_GOAT, Piece_TIGER,
+             Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_EMPTY, Piece_TIGER, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_GOAT, Piece_EMPTY, Piece_GOAT]
     goat_count = 0
     eaten_goat_count = 2
-    turn = Piece.TIGER
+    turn = Piece_TIGER
     game_state = GameState(board, turn=turn,
                            goat_count=goat_count, eaten_goat_count=eaten_goat_count)
     game_state.update_trapped_tiger()
@@ -60,56 +59,68 @@ def debug_minimax():
 
 
 def scratch():
-    # pos_tiger = [0, 9, 12, 24]
-    # pos_goat = [10, 11, 15, 16, 17, 18, 20, 21, 22, 23]
+    board = np.array([Piece_EMPTY] * 25, dtype=np.int8)
 
-    # pos_tiger = [1, 2, 13, 21]
-    # empty = set([9, 15, 22])
+    # early movement
+    # pos_tiger = [0, 6, 13, 19]
+    # empty = set([5])
     # pos_goat = list(set(range(25)) - empty - set(pos_tiger))
     # for pos in pos_tiger:
-    #     board[pos] = Piece.TIGER
+    #     board[pos] = Piece_TIGER
     # for pos in pos_goat:
-    #     board[pos] = Piece.GOAT
+    #     board[pos] = Piece_GOAT
     # goat_count = 20 - len(pos_goat)
     # eaten_goat_count = 0
-    # turn = Piece.GOAT
+    # turn = Piece_GOAT
     # game_state = GameState(board, turn=turn,
     #                        goat_count=goat_count, eaten_goat_count=eaten_goat_count)
 
-    board = [Piece.EMPTY] * 25
+    # late placement
+    # pos_tiger = [0, 9, 12, 24]
+    # pos_goat = [11]
+    # for pos in pos_tiger:
+    #     board[pos] = Piece_TIGER
+    # for pos in pos_goat:
+    #     board[pos] = Piece_GOAT
+    # eaten_goat_count = 4
+    # goat_count = 20 - len(pos_goat) - eaten_goat_count
+    # turn = Piece_TIGER
+    # game_state = GameState(board, turn=turn,
+    #                        goat_count=goat_count, eaten_goat_count=eaten_goat_count)
+
+    # initial configuration
     pos_tiger = [0, 4, 20, 24]
-    board[pos_tiger[0]] = Piece.TIGER
-    board[pos_tiger[1]] = Piece.TIGER
-    board[pos_tiger[2]] = Piece.TIGER
-    board[pos_tiger[3]] = Piece.TIGER
-
-    game_state = GameState(board, turn=Piece.GOAT,
-                           goat_count=20, eaten_goat_count=0)
-
-    game_state.update_trapped_tiger()
-    game_state.init_prioritization()
-    display_board(game_state)
-    print(game_state)
-    print(game_state.prioritized_moves)
+    board[pos_tiger[0]] = Piece_TIGER
+    board[pos_tiger[1]] = Piece_TIGER
+    board[pos_tiger[2]] = Piece_TIGER
+    board[pos_tiger[3]] = Piece_TIGER
+    game_state = GameState(board)
 
     # for minimax agent
-    # minimax_agent = MinimaxAgent()
-    # move = minimax_agent.get_best_move(game_state, time_limit=1)
-    # print(move)
+    display_board(game_state)
+    print(game_state)
+
+    minimax_agent = MinimaxAgent()
+    move = minimax_agent.get_best_move(game_state, time_limit=10)
+    print(move)
+
     #
+    # game_state.unmake_move()
+    # display_board(game_state)
+    # print(game_state)
     # print(minimax_agent.evaluate_state(game_state))
-    # print(minimax_agent.evaluate_state(game_state.make_move(move)))
 
     # for mcts agent
-    mcts = MCTS(initial_state=game_state,
-                time_limit=5)
-    move = mcts.search()
-    mcts.visualize_tree(max_depth=1)
-    print(move)
-    print(f"Total Simulations: {mcts.simulations_run}")
-    print(f"Goat Wins: {mcts.goat_wins}",
-          f"Tiger Wins: {mcts.tiger_wins}",
-          f"Draws: {mcts.draws}")
+    # mcts = MCTS()
+    # move = mcts.search(initial_state=game_state,
+    #                    time_limit=1)
+    # display_board(game_state)
+    # # mcts.visualize_tree(max_depth=1)
+    # print(move)
+    # print(f"Total Simulations: {mcts.simulations_run}")
+    # print(f"Goat Wins: {mcts.goat_wins}",
+    #       f"Tiger Wins: {mcts.tiger_wins}",
+    #       f"Draws: {mcts.draws}")
 
 
 def display_board(game_state):
@@ -127,24 +138,22 @@ def display_board(game_state):
 
 def test_alphabeta():
     """Enhanced testing with performance metrics"""
-    board = [Piece.EMPTY] * 25
+    board = np.array([Piece_EMPTY] * 25, dtype=np.int8)
     pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
-        board[pos] = Piece.TIGER
+        board[pos] = Piece_TIGER
     pos_goat = []
     for pos in pos_goat:
-        board[pos] = Piece.GOAT
+        board[pos] = Piece_GOAT
 
-    game_state = GameState(board, turn=Piece.GOAT,
+    game_state = GameState(board, turn=Piece_GOAT,
                            goat_count=20, eaten_goat_count=0)
-    game_state.update_trapped_tiger()
-    game_state.init_prioritization()
 
     state_hash = defaultdict(int)
 
     minimax_agent = MinimaxAgent()
-    while not game_state.is_game_over():
-        state_key = game_state.key()
+    while not game_state.is_game_over:
+        state_key = game_state.key
         state_hash[state_key] += 1
 
         if state_hash[state_key] > 3:
@@ -153,16 +162,7 @@ def test_alphabeta():
 
         start_time = time.time()
 
-        # if game_state.goat_count >= 10:  # Early Placement
-        #     depth = 3
-        # elif game_state.goat_count >= 5:  # Mid Placement
-        #     depth = 4
-        # elif game_state.goat_count >= 2:
-        #     depth = 5
-        # elif game_state.goat_count >= 0:
-        #     depth = 6
-        # minimax_agent = MinimaxAgent(depth=depth)
-        move = minimax_agent.get_best_move(game_state, time_limit=1)
+        move = minimax_agent.get_best_move(game_state, time_limit=1.5)
 
         move_time = time.time() - start_time
 
@@ -170,19 +170,19 @@ def test_alphabeta():
         system('clear')
         display_board(game_state)
         print(game_state)
-        print(f"Took {move_time:.2f}s. Move Selected{move}")
+        print(f"Took {move_time:.2f}s. Move Selected {move}")
 
-        game_state = game_state.make_move(move)
+        game_state.make_move(move)
         input("Press Enter to continue...")  # Remove for automated testing
 
     # Final results
     system('clear')
     display_board(game_state)
     print(game_state)
-    print(len(game_state.transposition_table_with_scores),
-          "unique states encountered.")
+    # print(len(game_state.transposition_table_with_scores),
+    #       "unique states encountered.")
 
-    result = game_state.get_result()
+    result = game_state.get_result
     if result:
         print(f"Winner: {game_state.piece[result]}")
     else:
@@ -191,18 +191,18 @@ def test_alphabeta():
 
 def test_mcts():
     """Enhanced testing with performance metrics"""
-    board = [Piece.EMPTY] * 25
+    board = np.array([Piece_EMPTY] * 25, dtype=np.int8)
     pos_tiger = [0, 4, 20, 24]
     for pos in pos_tiger:
-        board[pos] = Piece.TIGER
+        board[pos] = Piece_TIGER
     pos_goat = []
     for pos in pos_goat:
-        board[pos] = Piece.GOAT
+        board[pos] = Piece_GOAT
 
-    game_state = GameState(board, turn=Piece.GOAT,
+    game_state = GameState(board, turn=Piece_GOAT,
                            goat_count=20, eaten_goat_count=0)
-    game_state.update_trapped_tiger()
-    game_state.init_prioritization()
+    # game_state.update_trapped_tiger()
+    # game_state.init_prioritization()
 
     # Performance tracking
     move_times = []
@@ -213,8 +213,9 @@ def test_mcts():
 
     time_limit = 1.5
     # mcts = MCTS(initial_state=game_state, time_limit=time_limit)
-    while not game_state.is_game_over():
-        state_key = game_state.key()
+    mcts = MCTS()
+    while not game_state.is_game_over:
+        state_key = game_state.key
         state_hash[state_key] += 1
 
         if state_hash[state_key] > 3:
@@ -233,9 +234,7 @@ def test_mcts():
         #     time_limit = 1.5
         # else:  # Late Placement and Movement Movement
         #     time_limit = 1.8
-        mcts = MCTS(initial_state=game_state,
-                    time_limit=time_limit)
-        move = mcts.search()
+        move = mcts.search(game_state, time_limit=1)
 
         move_time = time.time() - start_time
         move_times.append(move_time)
@@ -243,15 +242,15 @@ def test_mcts():
         simulations_per_move.append(mcts.simulations_run)
 
         # Store game history
-        game_history.append({
-            'move': move,
-            'player': game_state.turn,
-            'board_state': game_state.stringify(),
-            'goats_remaining': game_state.goat_count,
-            'goats_eaten': game_state.eaten_goat_count,
-            'move_time': move_time,
-            'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
-        })
+        # game_history.append({
+        #     'move': move,
+        #     'player': game_state.turn,
+        #     'board_state': game_state.stringify(),
+        #     'goats_remaining': game_state.goat_count,
+        #     'goats_eaten': game_state.eaten_goat_count,
+        #     'move_time': move_time,
+        #     'simulations_per_second': getattr(mcts, 'simulations_run', 0) / move_time if move_time > 0 else 0
+        # })
 
         # Display current state
         system('clear')
@@ -267,7 +266,7 @@ def test_mcts():
         print(f"Goat Wins: {mcts.goat_wins/mcts.simulations_run * 100:.2f}",
               f"Tiger Wins: {mcts.tiger_wins/mcts.simulations_run * 100:.2f}")
 
-        game_state = game_state.make_move(move)
+        game_state.make_move(move)
         # mcts.re_reoot(game_state, time_limit=time_limit)
         move_count += 1
         # input("Press Enter to continue...")  # Remove for automated testing
@@ -276,10 +275,10 @@ def test_mcts():
     system('clear')
     display_board(game_state)
     print(game_state)
-    print(len(game_state.transposition_table_with_scores),
-          "unique states encountered.")
+    # print(len(game_state.transposition_table_with_scores),
+    #       "unique states encountered.")
 
-    result = game_state.get_result()
+    result = game_state.get_result
     if result:
         print(f"Winner: {game_state.piece[result]}")
     else:
@@ -294,13 +293,13 @@ def test_mcts():
     print(f"Max no of simulations: {max(simulations_per_move)}")
     print(f"Min no of simulations: {min(simulations_per_move)}")
 
-    return game_history
+    # return game_history
 
 
 def analyze_game_performance(game_history):
     """Analyze the performance of MCTS across the game"""
-    goat_moves = [h for h in game_history if h['player'] == Piece.GOAT]
-    tiger_moves = [h for h in game_history if h['player'] == Piece.TIGER]
+    goat_moves = [h for h in game_history if h['player'] == Piece_GOAT]
+    tiger_moves = [h for h in game_history if h['player'] == Piece_TIGER]
 
     print(f"\nPerformance Analysis:")
     print(
@@ -322,13 +321,13 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    # history = test_mcts()
+    history = test_mcts()
     # analyze_game_performance(history)
     # run_game()
-    scratch()
+    # scratch()
     # debug_minimax()
     # test_alphabeta()
-
+    #
     # with Profile() as profile:
     #     scratch()
     #     # test_mcts()
