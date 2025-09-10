@@ -97,12 +97,12 @@ def scratch():
     game_state = GameState(board)
 
     # for minimax agent
-    display_board(game_state)
-    print(game_state)
-
-    minimax_agent = MinimaxAgent()
-    move = minimax_agent.get_best_move(game_state, time_limit=10)
-    print(move)
+    # display_board(game_state)
+    # print(game_state)
+    #
+    # minimax_agent = MinimaxAgent()
+    # move = minimax_agent.get_best_move(game_state, time_limit=10)
+    # print(move)
 
     #
     # game_state.unmake_move()
@@ -111,16 +111,17 @@ def scratch():
     # print(minimax_agent.evaluate_state(game_state))
 
     # for mcts agent
-    # mcts = MCTS()
-    # move = mcts.search(initial_state=game_state,
-    #                    time_limit=1)
-    # display_board(game_state)
-    # # mcts.visualize_tree(max_depth=1)
-    # print(move)
-    # print(f"Total Simulations: {mcts.simulations_run}")
-    # print(f"Goat Wins: {mcts.goat_wins}",
-    #       f"Tiger Wins: {mcts.tiger_wins}",
-    #       f"Draws: {mcts.draws}")
+    mcts = MCTS()
+    move = mcts.search(initial_state=game_state,
+                       time_limit=300)
+    display_board(game_state)
+    # mcts.visualize_tree(max_depth=1)
+    print(move)
+    # print(mcts.get_prioritized_moves())
+    print(f"Total Simulations: {mcts.simulations_run}")
+    print(f"Goat Wins: {mcts.goat_wins}",
+          f"Tiger Wins: {mcts.tiger_wins}",
+          f"Draws: {mcts.draws}")
 
 
 def display_board(game_state):
@@ -234,7 +235,7 @@ def test_mcts():
         #     time_limit = 1.5
         # else:  # Late Placement and Movement Movement
         #     time_limit = 1.8
-        move = mcts.search(game_state, time_limit=1)
+        move = mcts.search(game_state, time_limit=1.5)
 
         move_time = time.time() - start_time
         move_times.append(move_time)
@@ -269,7 +270,7 @@ def test_mcts():
         game_state.make_move(move)
         # mcts.re_reoot(game_state, time_limit=time_limit)
         move_count += 1
-        # input("Press Enter to continue...")  # Remove for automated testing
+        input("Press Enter to continue...")  # Remove for automated testing
 
     # Final results
     system('clear')
@@ -321,19 +322,19 @@ def analyze_game_performance(game_history):
 
 # Example usage
 if __name__ == "__main__":
-    history = test_mcts()
+    # history = test_mcts()
     # analyze_game_performance(history)
     # run_game()
     # scratch()
     # debug_minimax()
     # test_alphabeta()
     #
-    # with Profile() as profile:
-    #     scratch()
-    #     # test_mcts()
-    #     (
-    #         Stats(profile)
-    #         .strip_dirs()
-    #         .sort_stats(SortKey.TIME)
-    #         .print_stats()
-    #     )
+    with Profile() as profile:
+        scratch()
+        # test_mcts()
+        (
+            Stats(profile)
+            .strip_dirs()
+            .sort_stats(SortKey.TIME)
+            .print_stats(20)
+        )

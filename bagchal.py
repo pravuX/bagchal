@@ -11,23 +11,23 @@ Piece_TIGER = 1
 class HeuristicParams:
     """Learnable parameters for move evaluation and state evaluation"""
     # Tiger parameters
-    tiger_capture_bonus: float = 30
-    tiger_potential_capture_bonus: float = 20
-    tiger_block_penalty: float = 30
+    tiger_capture_bonus: float = 3.0
+    tiger_potential_capture_bonus: float = 2.0
+    tiger_block_penalty: float = 3.0
 
     # Goat parameters
-    goat_sacrifice_penalty: float = 30
-    goat_clustering_bonus: float = 5
-    goat_strategic_position_bonus: float = 5
-    goat_outer_edge_bonus: float = 5
+    goat_sacrifice_penalty: float = 3.0
+    goat_clustering_bonus: float = 0.5
+    goat_strategic_position_bonus: float = 0.5
+    goat_outer_edge_bonus: float = 0.5
 
     # State evaluation
-    w_eat: float = 1.2322
-    w_potcap: float = 1.8946
-    w_mobility: float = 0.5699
-    w_trap: float = 0.5001
-    w_presence: float = 0.8651
-    w_inacc: float = 0.5730
+    w_eat: float = 1.5
+    w_potcap: float = 1.5
+    w_mobility: float = 1
+    w_trap: float = 1.5
+    w_presence: float = 1
+    w_inacc: float = 1.5
 
 
 class GameState:

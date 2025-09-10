@@ -58,11 +58,11 @@ class Game:
         self.minimax_agent = MinimaxAgent()
         self.mcts_agent = MCTS()
 
-        self.using_agent = minimax_flag
+        self.using_agent = mcts_flag
 
         self.ai_thread = None
         # ai thinking time in seconds
-        self.time_limit = 1.5
+        self.time_limit = 1
         self.ai_is_thinking = False
         self.ai_result_move = None
 
@@ -273,6 +273,7 @@ class Game:
                 print(f"Goat Wins: {agent.goat_wins}",
                       f"Tiger Wins: {agent.tiger_wins}",
                       f"Draws: {agent.draws}")
+                agent.visualize_tree(max_depth=1)
             else:  # Minimax
                 move = agent.get_best_move(
                     game_state, time_limit=self.time_limit)
