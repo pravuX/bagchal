@@ -39,7 +39,7 @@ class MCTS:
         # a more stable evaluation of the state
         self.rollout_depth = 5
 
-    def search(self, initial_state: GameState, max_simulations=1000, time_limit=None):
+    def search(self, initial_state: BitboardGameState, max_simulations=1000, time_limit=None):
         print("Searching move...")
 
         self.game_state = initial_state.copy()
@@ -126,9 +126,12 @@ class MCTS:
                 # this injects a virtual win rate
                 # hopefully will help overcome the cold start problem
                 if current_node.player_to_move == Piece_TIGER:
-                    p_score = self._tiger_priority(self.game_state, move)
+                    p_score = tiger_priority(
+                        self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
+
                 else:
-                    p_score = self._goat_priority(self.game_state, move)
+                    p_score = goat_priority(
+                        self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
 
                 priority_score_norm = -1 * np.tanh(0.1 * p_score)
 
@@ -170,11 +173,12 @@ class MCTS:
         return max(node.children, key=uct)
 
     # Move Prioritization
-    def _score_move(self, move):
+
+    def _score_move(self,  move):
         if self.game_state.turn == Piece_TIGER:
-            return self._tiger_priority(self.game_state, move)
+            return tiger_priority(self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
         else:
-            return self._goat_priority(self.game_state, move)
+            return goat_priority(self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
 
     def get_prioritized_moves(self):
 
@@ -182,7 +186,7 @@ class MCTS:
         if state_key in self.legal_moves_cache:
             moves = self.legal_moves_cache[state_key]
         else:
-            moves = self.game_state.get_legal_moves_np()
+            moves = self.game_state.get_legal_moves()
             self.legal_moves_cache[state_key] = moves
 
         scored_moves = [(move, self._score_move(move))
@@ -240,76 +244,74 @@ class MCTS:
         while self.game_state.history:
             self.game_state.unmake_move()
 
-    def _get_potential_captures(self, state: GameState, state_key):
+    def _get_potential_captures(self, state: BitboardGameState, state_key, empty_bb):
         if state_key in self.potential_captures_cache:
             return self.potential_captures_cache[state_key]
 
         capture_opportunities = 0
-        tiger_indices = state.all_positions[state.tiger_positions]
-        for src in tiger_indices:
-            possible_landings = state.capture_map_np[src]
-            valid_landings = possible_landings[state.empty_positions[possible_landings]]
+        # for tiger in extract_indices_fast(state.tigers_bb):
+        #     for j in range(CAPTURE_COUNTS[tiger]):
+        #         mid_mask = CAPTURE_MASKS_NP[tiger, j, 0]
+        #         land_mask = CAPTURE_MASKS_NP[tiger, j, 1]
+        #         if (state.goats_bb & mid_mask) and (empty_bb & land_mask):
+        #             capture_opportunities += 1
 
-            for dst in valid_landings:
-                mid = state.capture_mid_map_np[(src, dst)]
-                if state.goat_positions[mid]:
+        for tiger in extract_indices_fast(state.tigers_bb):
+            for mid_mask, land_mask in CAPTURE_MASKS[tiger]:
+                if (state.goats_bb & mid_mask) and (empty_bb & land_mask):
                     capture_opportunities += 1
 
         self.potential_captures_cache[state_key] = capture_opportunities
         return capture_opportunities
 
-    def _get_tiger_accessibility(self, state: GameState, state_key):
+    def _get_tiger_accessibility(self, state: BitboardGameState, state_key):
         if state_key in self.accessibility_cache:
             return self.accessibility_cache[state_key]
 
-        accessible, inaccessible = GameState.tiger_board_accessibility(state)
+        accessible, inaccessible = tiger_board_accessibility(
+            state.tigers_bb, state.goats_bb,
+            MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
         self.accessibility_cache[state_key] = (accessible, inaccessible)
         return accessible, inaccessible
 
-    def evaluate_state(self, state: GameState, state_key):
+    def evaluate_state(self, state: BitboardGameState, state_key):
         """
         Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
+        occupied_bb = state.tigers_bb | state.goats_bb
+        empty_bb = ~occupied_bb & BOARD_MASK
 
         assert state_key
 
         if state_key in self.previous_evaluations:
             return self.previous_evaluations[state_key]
 
-        is_placement = state.goat_count > 0
+        is_placement = state.goats_to_place > 0
 
-        eat_max = 4
-        potential_capture_max = 4  # practically
-        inaccessible_max = 3  # practically
+        eat_max = 4  # before win
+        potential_capture_max = 11
+        inaccessible_max = 10
 
-        trap_max = 3
+        trap_max = 3  # before win
         goat_presence_max = 20
-        tiger_mobility_max = 8
+        tiger_mobility_max = 25
 
-        w_eat = HeuristicParams.w_eat
-        w_potcap = HeuristicParams.w_potcap
-        w_mobility = 0 if is_placement else HeuristicParams.w_mobility
-        w_mobility = HeuristicParams.w_mobility
-
-        w_trap = HeuristicParams.w_trap
-        w_presence = HeuristicParams.w_presence
-        w_inacc = HeuristicParams.w_inacc
+        p_mobility = 0 if is_placement else w_mobility
 
         if state.is_game_over:
             result = state.get_result
             return 1000 if result == Piece_TIGER else -1000
 
         trapped = state.trapped_tiger_count
-        eaten = state.eaten_goat_count
-        goat_left = state.goat_count
+        eaten = state.goats_eaten
+        goat_left = state.goats_to_place
         goats_on_board = 20 - (eaten + goat_left)
 
         eaten_score = eaten / eat_max
 
-        potential_captures = self._get_potential_captures(state, state_key)
+        potential_captures = self._get_potential_captures(
+            state, state_key, empty_bb)
         potential_capture_score = potential_captures / potential_capture_max
-
-        potential_capture_score = min(potential_capture_score, 1.0)
 
         trap_score = trapped / trap_max
         goat_presence_score = goats_on_board / goat_presence_max
@@ -317,95 +319,19 @@ class MCTS:
             state, state_key)
 
         inaccessibility_score = no_of_inaccessible_positions / inaccessible_max
-        inaccessibility_score = min(inaccessibility_score, 1.0)
         tiger_mobility_score = no_of_accessible_positions / tiger_mobility_max
 
         tiger_score = (eaten_score * w_eat +
                        potential_capture_score * w_potcap +
-                       tiger_mobility_score * w_mobility)
+                       tiger_mobility_score * p_mobility)
 
         goat_score = (trap_score * w_trap +
                       goat_presence_score * w_presence +
                       inaccessibility_score * w_inacc)
 
-        final_evaluation = tiger_score - goat_score
+        final_evaluation = tiger_score - goat_score  # [-3.0, 3.5]
         self.previous_evaluations[state_key] = final_evaluation
         return final_evaluation
-
-    @staticmethod
-    def _tiger_priority(game_state, move):
-        params = HeuristicParams
-        priority_score = 0
-        src, dst = move
-
-        # Capture
-        if dst not in game_state.graph_np[src]:
-            priority_score += params.tiger_capture_bonus
-
-        # Potential Capture
-        possible_landings = game_state.capture_map_np[dst]
-        valid_landings = possible_landings[game_state.empty_positions[possible_landings]]
-        for landing in valid_landings:
-            mid = game_state.capture_mid_map_np[(dst, landing)]
-            if game_state.goat_positions[mid]:
-                priority_score += params.tiger_potential_capture_bonus
-
-        # Blocking Capture
-        tiger_indices = game_state.all_positions[game_state.tiger_positions]
-        for tiger in tiger_indices:
-            if tiger == src:
-                continue
-            possible_landings = game_state.capture_map_np[tiger]
-            valid_landings = possible_landings[game_state.empty_positions[possible_landings]]
-            for landing in valid_landings:
-                mid = game_state.capture_mid_map_np[(tiger, landing)]
-                if game_state.goat_positions[mid]:
-                    # Capture is possible for `tiger`
-                    # and this move blocks capture
-                    # we discourage it
-                    if landing == dst:
-                        priority_score -= params.tiger_block_penalty
-                        break
-
-        return priority_score + np.random.random()/2
-
-    @staticmethod
-    def _goat_priority(game_state, move):
-        # print(move)
-        params = HeuristicParams
-        src, dst = move
-        is_placement_phase = src == dst
-        priority_score = 0
-
-        neighbors = game_state.graph_np[dst]
-
-        # Avoid captures
-        neighboring_tigers = game_state.tiger_positions[neighbors]
-        for tiger in neighbors[neighboring_tigers]:
-            possible_landings = game_state.capture_map_np[tiger]
-            valid_landings = possible_landings[game_state.empty_positions[possible_landings]]
-            for landing in valid_landings:
-                mid = game_state.capture_mid_map_np[(tiger, landing)]
-                if mid == dst:
-                    priority_score -= params.goat_sacrifice_penalty
-                    break
-
-        # Clustering
-        neighboring_goats = game_state.goat_positions[neighbors]
-        no_of_neighboring_goats = np.sum(neighboring_goats)
-        # print(no_of_neighboring_goats) # shouldn't this be just zero always?
-        priority_score += no_of_neighboring_goats * params.goat_clustering_bonus
-        # print("neighboring goats: ", no_of_neighboring_goats)
-
-        # useful when there's nothing much going on the board
-        strategic_positions = {2, 10, 14, 22}
-        outer_eddge = {0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19}
-        if is_placement_phase and dst in strategic_positions:
-            priority_score += params.goat_strategic_position_bonus
-        elif dst in outer_eddge:
-            priority_score += params.goat_outer_edge_bonus
-
-        return priority_score + np.random.random()/2
 
     def visualize_tree(self, node=None, prefix="", is_last=True, max_depth=3, current_depth=0):
         if node is None:
@@ -421,7 +347,7 @@ class MCTS:
         wins = node.total_value
         avg_value = wins / node.visit_count if node.visit_count > 0 else 0
         print(
-            f"{prefix}{connector}{move_str} | Q: {wins:.3f}, N: {node.visit_count}, Q/N: {avg_value:.3f}, Turn: {GameState.piece[node.player_to_move]}")
+            f"{prefix}{connector}{move_str} | Q: {wins:.3f}, N: {node.visit_count}, Q/N: {avg_value:.3f}, Turn: {BitboardGameState.piece[node.player_to_move]}")
 
         prefix += "    " if is_last else "│   "
         children = sorted(
