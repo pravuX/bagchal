@@ -5,7 +5,6 @@ import pygame
 from bagchal import *
 from alphabeta import MinimaxAgent
 from mcts import MCTS
-import numpy as np
 
 mcts_flag, minimax_flag = 0, 1
 
@@ -47,7 +46,7 @@ class Game:
         pygame.init()
         pygame.display.set_caption(caption)
 
-        self.game_state: GameState = game_state
+        self.game_state: BitboardGameState = game_state
         self.cell_size = cell_size
 
         self.current_state = UIState.MAIN_MENU
@@ -58,11 +57,11 @@ class Game:
         self.minimax_agent = MinimaxAgent()
         self.mcts_agent = MCTS()
 
-        self.using_agent = minimax_flag
+        self.using_agent = mcts_flag
 
         self.ai_thread = None
         # ai thinking time in seconds
-        self.time_limit = 1.5
+        self.time_limit = 1
         self.ai_is_thinking = False
         self.ai_result_move = None
 
@@ -133,15 +132,7 @@ class Game:
     def reset_game(self):
         self.cleanup_ai_thread()
 
-        board = np.array([Piece_EMPTY] * 25, dtype=np.int8)
-        pos_tiger = [0, 4, 20, 24]
-        board[pos_tiger[0]] = Piece_TIGER
-        board[pos_tiger[1]] = Piece_TIGER
-        board[pos_tiger[2]] = Piece_TIGER
-        board[pos_tiger[3]] = Piece_TIGER
-
-        game_state = GameState(board, turn=Piece_GOAT,
-                               goat_count=20, eaten_goat_count=0)
+        game_state = BitboardGameState()
         self.game_state = game_state
         self.selected_cell = None
         self.state_hash.clear()
@@ -273,6 +264,7 @@ class Game:
                 print(f"Goat Wins: {agent.goat_wins}",
                       f"Tiger Wins: {agent.tiger_wins}",
                       f"Draws: {agent.draws}")
+                agent.visualize_tree(max_depth=1)
             else:  # Minimax
                 move = agent.get_best_move(
                     game_state, time_limit=self.time_limit)
@@ -346,7 +338,7 @@ class Game:
                 self.game_over_timer = pygame.time.get_ticks()
                 print("Game Over")
                 print(self.game_state)
-                result = GameState.piece[self.game_state.get_result] + \
+                result = BitboardGameState.piece[self.game_state.get_result] + \
                     " Won" if self.game_state.get_result else "Draw"
                 print("Result:", result)
             elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
@@ -395,17 +387,21 @@ class Game:
                     self.screen, COLORS["board"], sqr, 1)  # border
 
     def draw_pieces(self):
-        for i, piece in enumerate(self.game_state.board):
+        tiger_positions = extract_indices_fast(self.game_state.tigers_bb)
+        goat_positions = extract_indices_fast(self.game_state.goats_bb)
+        for i in tiger_positions:
             row, col = divmod(i, 5)
             x, y = self.cell_to_pixel(col, row)
             x, y = x+self.offset//2, y+self.offset//2
+            img = self.bagh_selected if i == self.selected_cell else self.bagh_img
+            self.screen.blit(img, (x, y))
 
-            if piece == Piece_GOAT:
-                img = self.goat_selected if i == self.selected_cell else self.goat_img
-                self.screen.blit(img, (x, y))
-            elif piece == Piece_TIGER:
-                img = self.bagh_selected if i == self.selected_cell else self.bagh_img
-                self.screen.blit(img, (x, y))
+        for i in goat_positions:
+            row, col = divmod(i, 5)
+            x, y = self.cell_to_pixel(col, row)
+            x, y = x+self.offset//2, y+self.offset//2
+            img = self.goat_selected if i == self.selected_cell else self.goat_img
+            self.screen.blit(img, (x, y))
 
     def place_piece(self, pos):
 
@@ -424,22 +420,30 @@ class Game:
             return
 
         idx = col + row * self.grid_cols
-        piece = self.game_state.board[idx]
+        piece = None
+
+        if self.game_state.turn == Piece_TIGER:
+            if self.game_state.tigers_bb & (1 << idx):
+                piece = Piece_TIGER
+        else:
+            if self.game_state.goats_bb & (1 << idx):
+                piece = Piece_GOAT
 
         move = None
 
         if self.selected_cell is None:
-            if self.game_state.turn == Piece_GOAT and self.game_state.goat_count > 0:
+            if self.game_state.turn == Piece_GOAT and self.game_state.goats_to_place > 0:
                 # Placement
-                if piece == Piece_EMPTY:
-                    move = (idx, idx)
+                move = (idx, idx)
+                # how to reduce calls to this method?
+                if move in self.game_state.get_legal_moves():
                     self.pending_player_move = move
                     return
             elif piece == self.game_state.turn:
                 self.selected_cell = idx
         else:
             move = (self.selected_cell, idx)
-            if move in self.game_state.get_legal_moves_np():
+            if move in self.game_state.get_legal_moves():
                 self.pending_player_move = move
             self.selected_cell = None
 
@@ -474,9 +478,9 @@ class Game:
     def draw_status(self):
         font = pygame.font.SysFont(None, 48)
         goat_text = font.render(
-            f"Goats Left: {self.game_state.goat_count}", True, "black")
+            f"Goats Left: {self.game_state.goats_to_place}", True, "black")
         eaten_text = font.render(
-            f"Goats Eaten: {self.game_state.eaten_goat_count}", True, "black")
+            f"Goats Eaten: {self.game_state.goats_eaten}", True, "black")
         trapped_text = font.render(
             f"Tigers Trapped: {self.game_state.trapped_tiger_count}", True, "black")
 
