@@ -34,7 +34,7 @@ class MinimaxAgent:
         if game_state.turn == Piece_TIGER:
             return tiger_priority(game_state.tigers_bb, game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
         else:
-            return goat_priority(game_state.tigers_bb, game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
+            return goat_priority(game_state.tigers_bb, game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP, OUTER_EDGE_MASK, STRATEGIC_MASK)
 
     def get_ordered_moves(self, game_state):
 
@@ -62,7 +62,6 @@ class MinimaxAgent:
         return moves
 
     def get_best_move(self, gs, time_limit=1.5):
-        self.no_of_nodes = 0
         self.transposition_table.clear()
 
         if len(self.accessibility_cache) > 10_000:
@@ -81,6 +80,7 @@ class MinimaxAgent:
 
         for depth in range(1, 100):
             try:
+                self.no_of_nodes = 0
                 print(f"Searching at depth {depth}")
 
                 best_move_for_this_depth = self._search_root_at_depth(
@@ -90,14 +90,14 @@ class MinimaxAgent:
                     best_move_so_far = best_move_for_this_depth
                 elapsed_time = time.time() - start_time
                 print(
-                    f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s")
+                    f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s. Total nodes: {self.no_of_nodes}")
             except TimeoutError:
                 print(
-                    f"  > Timeout occurred at depth {depth}. Using best move from depth {depth-1}.")
+                    f"  > Timeout occurred at depth {depth}. Total nodes: {self.no_of_nodes}. Using best move from depth {depth-1}")
                 break  # Exit the loop if time runs out
 
         print(
-            f"Final best move: {best_move_so_far}. Total nodes: {self.no_of_nodes}")
+            f"Final best move: {best_move_so_far}.")
         return best_move_so_far
 
     def _search_root_at_depth(self, game_state, depth, start_time, time_limit):
@@ -165,7 +165,7 @@ class MinimaxAgent:
     def minimax(self, game_state: BitboardGameState, depth, alpha, beta, start_time, time_limit, history):
         if self.no_of_nodes & 1023 == 0:
             if time.time() - start_time > time_limit:
-                raise TimeoutError
+                raise TimeoutError()
 
         original_alpha = alpha
 

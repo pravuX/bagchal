@@ -1,4 +1,5 @@
 import math
+from os import urandom
 from numba import njit
 import numpy as np
 
@@ -36,47 +37,99 @@ Piece_TIGER = 1
 
 BOARD_MASK = (1 << 25) - 1
 
-graph = {0:  [1, 5, 6], 1:  [0, 2, 6], 2:  [1, 3, 6, 7, 8], 3:  [2, 4, 8], 4:  [3, 8, 9],
-         5:  [0, 6, 10], 6:  [0, 1, 2, 5, 7, 10, 11, 12], 7:  [2, 6, 8, 12], 8:  [2, 3, 4, 7, 9, 12, 13, 14], 9:  [4, 8, 14],
-         10: [5, 6, 11, 15, 16], 11: [6, 10, 12, 16], 12: [6, 7, 8, 11, 13, 16, 17, 18], 13: [8, 12, 14, 18], 14: [8, 9, 13, 18, 19],
-         15: [10, 16, 20], 16: [10, 11, 12, 15, 17, 20, 21, 22], 17: [12, 16, 18, 22], 18: [12, 13, 14, 17, 19, 22, 23, 24], 19: [14, 18, 24],
-         20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
+_graph = {0:  [1, 5, 6], 1:  [0, 2, 6], 2:  [1, 3, 6, 7, 8], 3:  [2, 4, 8], 4:  [3, 8, 9],
+          5:  [0, 6, 10], 6:  [0, 1, 2, 5, 7, 10, 11, 12], 7:  [2, 6, 8, 12], 8:  [2, 3, 4, 7, 9, 12, 13, 14], 9:  [4, 8, 14],
+          10: [5, 6, 11, 15, 16], 11: [6, 10, 12, 16], 12: [6, 7, 8, 11, 13, 16, 17, 18], 13: [8, 12, 14, 18], 14: [8, 9, 13, 18, 19],
+          15: [10, 16, 20], 16: [10, 11, 12, 15, 17, 20, 21, 22], 17: [12, 16, 18, 22], 18: [12, 13, 14, 17, 19, 22, 23, 24], 19: [14, 18, 24],
+          20: [15, 16, 21], 21: [16, 20, 22], 22: [16, 17, 18, 21, 23], 23: [18, 22, 24], 24: [18, 19, 23]}
 
-capture_edges = {0: [(1, 2), (5, 10), (6, 12)], 1: [(2, 3), (6, 11)], 2: [(1, 0), (3, 4), (6, 10), (7, 12), (8, 14)], 3: [(2, 1), (8, 13)], 4: [(3, 2), (8, 12), (9, 14)],
-                 5: [(6, 7), (10, 15)], 6: [(7, 8), (11, 16), (12, 18)], 7: [(6, 5), (8, 9), (12, 17)], 8: [(7, 6), (12, 16), (13, 18)], 9: [(8, 7), (14, 19)],
-                 10: [(5, 0), (6, 2), (11, 12), (15, 20), (16, 22)], 11: [(6, 1), (12, 13), (16, 21)], 12: [(6, 0), (7, 2), (8, 4), (11, 10), (13, 14), (16, 20), (17, 22), (18, 24)],
-                 13: [(8, 3), (12, 11), (18, 23)], 14: [(8, 2), (9, 4), (13, 12), (18, 22), (19, 24)], 15: [(10, 5), (16, 17)], 16: [(11, 6), (12, 8), (17, 18)],
-                 17: [(12, 7), (16, 15), (18, 19)], 18: [(12, 6), (13, 8), (17, 16)], 19: [(14, 9), (18, 17)], 20: [(15, 10), (16, 12), (21, 22)], 21: [(16, 11), (22, 23)],
-                 22: [(16, 10), (17, 12), (18, 14), (21, 20), (23, 24)], 23: [(18, 13), (22, 21)], 24: [(18, 12), (19, 14), (23, 22)]}
+_capture_edges = {0: [(1, 2), (5, 10), (6, 12)], 1: [(2, 3), (6, 11)], 2: [(1, 0), (3, 4), (6, 10), (7, 12), (8, 14)], 3: [(2, 1), (8, 13)], 4: [(3, 2), (8, 12), (9, 14)],
+                  5: [(6, 7), (10, 15)], 6: [(7, 8), (11, 16), (12, 18)], 7: [(6, 5), (8, 9), (12, 17)], 8: [(7, 6), (12, 16), (13, 18)], 9: [(8, 7), (14, 19)],
+                  10: [(5, 0), (6, 2), (11, 12), (15, 20), (16, 22)], 11: [(6, 1), (12, 13), (16, 21)], 12: [(6, 0), (7, 2), (8, 4), (11, 10), (13, 14), (16, 20), (17, 22), (18, 24)],
+                  13: [(8, 3), (12, 11), (18, 23)], 14: [(8, 2), (9, 4), (13, 12), (18, 22), (19, 24)], 15: [(10, 5), (16, 17)], 16: [(11, 6), (12, 8), (17, 18)],
+                  17: [(12, 7), (16, 15), (18, 19)], 18: [(12, 6), (13, 8), (17, 16)], 19: [(14, 9), (18, 17)], 20: [(15, 10), (16, 12), (21, 22)], 21: [(16, 11), (22, 23)],
+                  22: [(16, 10), (17, 12), (18, 14), (21, 20), (23, 24)], 23: [(18, 13), (22, 21)], 24: [(18, 12), (19, 14), (23, 22)]}
 
 
 MOVE_MASKS = [0] * 25
-for src, dsts in graph.items():
+for src, dsts in _graph.items():
     for dst in dsts:
         MOVE_MASKS[src] |= (1 << dst)
 
 CAPTURE_MASKS = [[] for _ in range(25)]
-for src, edges in capture_edges.items():
+for src, edges in _capture_edges.items():
     for mid, land in edges:
         CAPTURE_MASKS[src].append((1 << mid, 1 << land))
 
 
 # numpy ones for numba
 MOVE_MASKS_NP = np.zeros(25, dtype=np.int64)
-for src, dsts in graph.items():
+for src, dsts in _graph.items():
     mask = 0
     for dst in dsts:
         mask |= (1 << dst)
     MOVE_MASKS_NP[src] = mask
 
-MAX_CAPTURES = max(len(edges) for edges in capture_edges.values())
+MAX_CAPTURES = max(len(edges) for edges in _capture_edges.values())
 CAPTURE_MASKS_NP = np.zeros((25, MAX_CAPTURES, 2), dtype=np.int64)
 CAPTURE_COUNTS = np.zeros(25, dtype=np.int64)
-for src, edges in capture_edges.items():
+for src, edges in _capture_edges.items():
     CAPTURE_COUNTS[src] = len(edges)
     for j, (mid, land) in enumerate(edges):
         CAPTURE_MASKS_NP[src, j, 0] = 1 << mid  # mid mask for the src
         CAPTURE_MASKS_NP[src, j, 1] = 1 << land  # land mask for the src
+
+_outer_eddge = (0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19)
+OUTER_EDGE_MASK = np.int64(0)
+for pos in _outer_eddge:
+    OUTER_EDGE_MASK |= (1 << pos)
+
+_strategic_positions = (2, 10, 14, 22)
+STRATEGIC_MASK = np.int64(0)
+for pos in _strategic_positions:
+    STRATEGIC_MASK |= (1 << pos)
+
+
+def random_u64():
+    return np.int64(int.from_bytes(urandom(8)) & ((1 << 63)-1))
+
+
+# uniq random numbers for 2 types of pieces and 25 positions they can occupy
+ZOBRIST_PIECE = np.zeros((2, 25), dtype=np.int64)
+for piece in range(2):
+    for pos in range(25):
+        ZOBRIST_PIECE[piece, pos] = random_u64()
+
+# random number for side to move
+ZOBRIST_SIDE = random_u64()
+# goats_to_place = 0 to 20
+# this is relevant because, we're gonna be using transposition table
+# to store the best move for the bound as well and moves are different
+# for goats during placement_phase and movement_phase
+ZOBRIST_TO_PLACE = np.array([random_u64()for _ in range(21)], dtype=np.int64)
+ZOBRIST_EATEN = np.array([random_u64() for _ in range(6)], dtype=np.int64)
+
+
+@njit
+def compute_zobrist(tigers_bb: int, goats_bb: int, side: int, goats_eaten: int, goats_to_place: int) -> int:
+    h = np.int64(0)
+    while tigers_bb:
+        lsb = tigers_bb & -tigers_bb
+        tiger = math.frexp(lsb)[1] - 1
+        h ^= ZOBRIST_PIECE[0, tiger]
+        tigers_bb &= tigers_bb - 1
+
+    while goats_bb:
+        lsb = goats_bb & -goats_bb
+        goat = math.frexp(lsb)[1] - 1
+        h ^= ZOBRIST_PIECE[1, goat]
+        goats_bb &= goats_bb - 1
+
+    h ^= ZOBRIST_TO_PLACE[goats_to_place]
+    h ^= ZOBRIST_EATEN[goats_eaten]
+    if side == Piece_TIGER:
+        h ^= ZOBRIST_SIDE
+    return h
 
 
 @njit
@@ -101,7 +154,7 @@ def popcount(x: int) -> int:
 
 class BitboardGameState:
     __slots__ = ['tigers_bb', 'goats_bb', 'turn',
-                 'goats_to_place', 'goats_eaten', 'history']
+                 'goats_to_place', 'goats_eaten', 'history', 'zob_hash']
     piece = {
         -1: "🐐", 0: '  ', 1: "🐅"
     }
@@ -120,15 +173,15 @@ class BitboardGameState:
         self.goats_to_place = goats_to_place
         self.goats_eaten = goats_eaten
         self.history = []
+        self.zob_hash = compute_zobrist(
+            self.tigers_bb, self.goats_bb, self.turn, self.goats_eaten, self.goats_to_place)
 
     def __repr__(self) -> str:
         return f"Turn: {self.piece[self.turn]}, Goat Left: {self.goats_to_place}, Eaten Goat: {self.goats_eaten}, Trapped Tiger: {self.trapped_tiger_count}"
 
     @property
     def key(self):
-        return (
-            self.tigers_bb, self.goats_bb, self.turn, self.goats_eaten, self.goats_to_place
-        )
+        return self.zob_hash
 
     @property
     def get_result(self):
@@ -177,7 +230,7 @@ class BitboardGameState:
         occupied_bb = self.tigers_bb | self.goats_bb
         empty_bb = ~occupied_bb & BOARD_MASK
 
-        if self.turn == -1:
+        if self.turn == Piece_GOAT:
             if self.goats_to_place > 0:
                 # Placement
                 for dst in extract_indices_fast(empty_bb):
@@ -191,10 +244,10 @@ class BitboardGameState:
 
         else:
             for src in extract_indices_fast(self.tigers_bb):
+                moves.extend((self._get_capture_moves(src, empty_bb)))
+
                 moves.extend(self._get_standard_moves(src, empty_bb))
 
-                # Capture moves
-                moves.extend((self._get_capture_moves(src, empty_bb)))
             return moves
 
     def _get_standard_moves(self, src, empty_bb):
@@ -225,12 +278,20 @@ class BitboardGameState:
         src, dst = move
         captured_piece_position = -1
 
+        self.zob_hash ^= ZOBRIST_SIDE
+
         occupied_bb = (self.tigers_bb | self.goats_bb)
 
         if self.turn == Piece_GOAT and self.goats_to_place > 0:
             # Placement
             assert not occupied_bb & (1 << dst)
 
+            # update hash
+            self.zob_hash ^= ZOBRIST_TO_PLACE[self.goats_to_place]
+            self.zob_hash ^= ZOBRIST_TO_PLACE[self.goats_to_place-1]
+            self.zob_hash ^= ZOBRIST_PIECE[1, dst]
+
+            # make move
             self.goats_bb |= (1 << dst)
             self.goats_to_place -= 1
 
@@ -243,9 +304,17 @@ class BitboardGameState:
 
             if self.turn == Piece_TIGER:
                 assert self.tigers_bb & (1 << src)
+                # update hash
+                self.zob_hash ^= ZOBRIST_PIECE[0, src]
+                self.zob_hash ^= ZOBRIST_PIECE[0, dst]
+
+                # make move
                 self.tigers_bb ^= move_mask
             elif self.turn == Piece_GOAT:
                 assert self.goats_bb & (1 << src)
+                self.zob_hash ^= ZOBRIST_PIECE[1, src]
+                self.zob_hash ^= ZOBRIST_PIECE[1, dst]
+
                 self.goats_bb ^= move_mask
 
         else:
@@ -259,6 +328,14 @@ class BitboardGameState:
 
             move_mask = (1 << src) | (1 << dst)
 
+            # update hash
+            self.zob_hash ^= ZOBRIST_PIECE[0, src]
+            self.zob_hash ^= ZOBRIST_PIECE[1, mid]
+            self.zob_hash ^= ZOBRIST_PIECE[0, dst]
+            self.zob_hash ^= ZOBRIST_EATEN[self.goats_eaten]
+            self.zob_hash ^= ZOBRIST_EATEN[self.goats_eaten+1]
+
+            # make move
             self.tigers_bb ^= move_mask
             self.goats_bb &= ~(1 << mid)
 
@@ -275,16 +352,31 @@ class BitboardGameState:
         last_move, captured_piece_position = self.history.pop()
 
         src, dst = last_move
+
+        self.zob_hash ^= ZOBRIST_SIDE
         self.turn *= -1
 
         if (self.turn == Piece_GOAT and src == dst
                 and captured_piece_position == -1 and self.goats_to_place < 20):
+            # update hash
+            self.zob_hash ^= ZOBRIST_TO_PLACE[self.goats_to_place]
+            self.zob_hash ^= ZOBRIST_TO_PLACE[self.goats_to_place+1]
+            self.zob_hash ^= ZOBRIST_PIECE[1, dst]
+
             # remove goat from dst
             self.goats_bb &= ~(1 << dst)
             self.goats_to_place += 1
 
         elif self.turn == Piece_TIGER and captured_piece_position != -1:
             mid = captured_piece_position
+
+            # update hash
+            self.zob_hash ^= ZOBRIST_PIECE[0, dst]
+            self.zob_hash ^= ZOBRIST_PIECE[1, mid]
+            self.zob_hash ^= ZOBRIST_PIECE[0, src]
+            self.zob_hash ^= ZOBRIST_EATEN[self.goats_eaten]
+            self.zob_hash ^= ZOBRIST_EATEN[self.goats_eaten-1]
+
             # move from dst to src
             self.tigers_bb ^= (1 << dst) | (1 << src)
             # replace goat at mid
@@ -293,9 +385,17 @@ class BitboardGameState:
         else:
             move_mask = (1 << dst) | (1 << src)
             if self.turn == Piece_TIGER:
+                # update hash
+                self.zob_hash ^= ZOBRIST_PIECE[0, dst]
+                self.zob_hash ^= ZOBRIST_PIECE[0, src]
+
                 # move from dst to src
                 self.tigers_bb ^= move_mask
             else:
+                # update hash
+                self.zob_hash ^= ZOBRIST_PIECE[1, dst]
+                self.zob_hash ^= ZOBRIST_PIECE[1, src]
+
                 # move from dst to src
                 self.goats_bb ^= move_mask
 
@@ -376,25 +476,25 @@ def tiger_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUN
         if (goats_bb & mid_mask) and (empty_bb & land_mask):
             priority_score += tiger_potential_capture_bonus
 
-    fb = tigers_bb & ~(1 << src)
-    blocked = False
-    while fb != 0 and not blocked:
-        lsb = fb & -fb
-        tiger = math.frexp(lsb)[1] - 1  # extracting the index of tiger
-        fb &= fb - 1
-        for j in range(CAPTURE_COUNTS[tiger]):
-            mid_mask = CAPTURE_MASKS[tiger, j, 0]
-            land_mask = CAPTURE_MASKS[tiger, j, 1]
-            if (goats_bb & mid_mask) and ((1 << dst) & land_mask):
-                priority_score -= tiger_block_penalty
-                blocked = True
-                break
+    # fb = tigers_bb & ~(1 << src)
+    # blocked = False
+    # while fb != 0 and not blocked:
+    #     lsb = fb & -fb
+    #     tiger = math.frexp(lsb)[1] - 1  # extracting the index of tiger
+    #     fb &= fb - 1
+    #     for j in range(CAPTURE_COUNTS[tiger]):
+    #         mid_mask = CAPTURE_MASKS[tiger, j, 0]
+    #         land_mask = CAPTURE_MASKS[tiger, j, 1]
+    #         if (goats_bb & mid_mask) and ((1 << dst) & land_mask):
+    #             priority_score -= tiger_block_penalty
+    #             blocked = True
+    #             break
 
     return priority_score + np.random.random()/2
 
 
 @njit
-def goat_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNTS, CAPTURE_MASKS):
+def goat_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNTS, CAPTURE_MASKS, OUTER_EDGE_MASK, STRATEGIC_MASK):
     src, dst = move
     is_placement_phase = src == dst
     priority_score: int = 0
@@ -424,18 +524,31 @@ def goat_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNT
                 priority_score -= goat_sacrifice_penalty
                 attacked = True
                 break
+        if attacked:
+            break
+    return priority_score
 
     # Clustering
-    no_of_neighboring_goats = popcount(neighboring_goats) - 1
+    no_of_neighboring_goats = popcount(neighboring_goats)
+    if not is_placement_phase:
+        no_of_neighboring_goats -= 1
+
     priority_score += no_of_neighboring_goats * \
         goat_clustering_bonus
 
     # useful when there's nothing much going on the board
-    strategic_positions = {2, 10, 14, 22}
-    outer_eddge = {0, 1, 2, 3, 4, 5, 10, 15, 20, 21, 22, 23, 24, 9, 14, 19}
-    if is_placement_phase and dst in strategic_positions:
+    if is_placement_phase and ((1 << dst) & STRATEGIC_MASK) != 0:
         priority_score += goat_strategic_position_bonus
-    elif dst in outer_eddge:
+    elif ((1 << dst) & OUTER_EDGE_MASK) != 0:
         priority_score += goat_outer_edge_bonus
 
     return priority_score + np.random.random()/2
+
+#
+# if __name__ == "__main__":
+#     gs = BitboardGameState()
+#     print(gs.key)
+#     gs.make_move((2, 2))
+#     print(gs.key)
+#     gs.unmake_move()
+#     print(gs.key)
