@@ -1,6 +1,7 @@
 from collections import defaultdict
 from os import system
 from bagchal import *
+from negamax import AlphaBetaAgent
 from game import Game
 from alphabeta import MinimaxAgent
 import pprint
@@ -103,8 +104,12 @@ def scratch():
     # print(gs)
     #
     # minimax_agent = MinimaxAgent()
-    # move = minimax_agent.get_best_move(gs, time_limit=10)
+    # move = minimax_agent.get_best_move(gs, time_limit=1)
     # print(move)
+
+    alphabeta_agent = AlphaBetaAgent()
+    move = alphabeta_agent.get_best_move(gs, time_limit=1)
+    print(move)
 
     #
     # game_state.unmake_move()
@@ -113,17 +118,16 @@ def scratch():
     # print(minimax_agent.evaluate_state(game_state))
 
     # for mcts agent
-    mcts = MCTS()
-    move = mcts.search(initial_state=gs,
-                       time_limit=1.5)
+    # mcts = MCTS()
+    # move = mcts.search(initial_state=gs,
+    #                    time_limit=1.5)
     # display_board(game_state)
     # mcts.visualize_tree(max_depth=1)
-    print(move)
-    # print(mcts.get_prioritized_moves())
-    print(f"Total Simulations: {mcts.simulations_run}")
-    print(f"Goat Wins: {mcts.goat_wins}",
-          f"Tiger Wins: {mcts.tiger_wins}",
-          f"Draws: {mcts.draws}")
+    # print(move)
+    # print(f"Total Simulations: {mcts.simulations_run}")
+    # print(f"Goat Wins: {mcts.goat_wins}",
+    #       f"Tiger Wins: {mcts.tiger_wins}",
+    #       f"Draws: {mcts.draws}")
 
 
 def display_board(game_state):
@@ -328,9 +332,15 @@ if __name__ == "__main__":
     # analyze_game_performance(history)
     run_game()
     # scratch()
+    # while True:
+    #     scratch()
+    #     c = input("Continue? y/n")
+    #     if not c.lower().startswith('y'):
+    #         break
     # debug_minimax()
     # test_alphabeta()
     #
+    # scratch()
     # with Profile() as profile:
     #     scratch()
     #     # test_mcts()
@@ -338,5 +348,5 @@ if __name__ == "__main__":
     #         Stats(profile)
     #         .strip_dirs()
     #         .sort_stats(SortKey.TIME)
-    #         .print_stats(50)
+    #         .print_stats(20)
     #     )
