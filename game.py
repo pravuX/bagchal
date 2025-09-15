@@ -3,7 +3,8 @@ from collections import defaultdict
 from enum import Enum
 import pygame
 from bagchal import *
-from alphabeta import MinimaxAgent
+# from alphabeta import MinimaxAgent
+from negamax import AlphaBetaAgent
 from mcts import MCTS
 
 mcts_flag, minimax_flag = 0, 1
@@ -54,14 +55,15 @@ class Game:
 
         self.pending_player_move = None
 
-        self.minimax_agent = MinimaxAgent()
-        self.mcts_agent = MCTS()
+        # self.minimax_agent = MinimaxAgent()
+        # self.minimax_agent = AlphaBetaAgent()
+        # self.mcts_agent = MCTS()
 
-        self.using_agent = mcts_flag
+        self.using_agent = minimax_flag
 
         self.ai_thread = None
         # ai thinking time in seconds
-        self.time_limit = 1
+        self.time_limit = 1.4
         self.ai_is_thinking = False
         self.ai_result_move = None
 
@@ -246,7 +248,8 @@ class Game:
         # print("AI Init Started at")
         try:
             if self.using_agent == minimax_flag:
-                self.minimax_agent = MinimaxAgent()
+                self.minimax_agent = AlphaBetaAgent()
+                # self.minimax_agent = MinimaxAgent()
             elif self.using_agent == mcts_flag:
                 self.mcts_agent = MCTS()
         finally:
@@ -267,7 +270,7 @@ class Game:
                 agent.visualize_tree(max_depth=1)
             else:  # Minimax
                 move = agent.get_best_move(
-                    game_state, time_limit=self.time_limit)
+                    game_state, time_limit=self.time_limit, game_history=self.state_hash)
 
             # When the search is done, store the result
             self.ai_result_move = move
