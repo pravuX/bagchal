@@ -3,7 +3,7 @@ from os import system
 from bagchal import *
 from negamax import AlphaBetaAgent
 from game import Game
-from alphabeta import MinimaxAgent
+# from alphabeta import MinimaxAgent
 import pprint
 from mcts import MCTS
 import time
@@ -100,21 +100,36 @@ def scratch():
 
     # for minimax agent
     gs = BitboardGameState()
-    # # gs.print()
-    # print(gs)
+    gs.tigers_bb = 0
+    # pos_tiger = [0, 11, 20, 24]
+    # pos_goat = [1, 2, 3, 4, 8, 9, 10, 15, 21, 22, 23]
+
+    pos_tiger = [0, 8, 20, 24]
+    pos_goat = [1, 2, 3, 5, 10, 14, 15, 19, 21, 22]
+    for p in pos_tiger:
+        gs.tigers_bb |= (1 << p)
+    for p in pos_goat:
+        gs.goats_bb |= (1 << p)
+    gs.goats_to_place = 10
+    display_board(gs)
+    print(gs)
     #
     # minimax_agent = MinimaxAgent()
     # move = minimax_agent.get_best_move(gs, time_limit=1)
     # print(move)
 
     alphabeta_agent = AlphaBetaAgent()
-    move = alphabeta_agent.get_best_move(gs, time_limit=1)
+    moves = gs.get_legal_moves()
+    print("unsorted\t\t", moves)
+    ordered_moves = alphabeta_agent.get_ordered_moves(gs, moves, None)
+    print("sorted at once\t\t", ordered_moves)
+    for i in range(len(moves)):
+        alphabeta_agent.pick_move(gs, moves, i, None, 0)
+    print("sorted incremen\t\t", moves)
+    move = alphabeta_agent.get_best_move(gs, time_limit=1, game_history=[])
     print(move)
-
     #
     # game_state.unmake_move()
-    # display_board(game_state)
-    # print(game_state)
     # print(minimax_agent.evaluate_state(game_state))
 
     # for mcts agent
@@ -131,7 +146,11 @@ def scratch():
 
 
 def display_board(game_state):
-    board = game_state.board
+    board = [0] * 25
+    for tiger in extract_indices_fast(game_state.tigers_bb):
+        board[tiger] = Piece_TIGER
+    for goat in extract_indices_fast(game_state.goats_bb):
+        board[goat] = Piece_GOAT
     piece = game_state.piece
     print("-"*26)
     for i, cell in enumerate(board):

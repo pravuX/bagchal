@@ -1,5 +1,7 @@
 import time
 from bagchal import *
+
+# type of evaluation that is stored in the transposition_table
 exact_flag, alpha_flag, beta_flag = 0, 1, 2
 
 
@@ -9,70 +11,88 @@ class TimeoutError(Exception):
 
 class AlphaBetaAgent():
 
+    # Tiger is the maximizing player
+    # Goat is the minimizing player
+
     def __init__(self):
         self.no_of_nodes = 0
         self.start_time = 0.0
         self.time_limit = 0.0
+        self.window = 4  # the width of the aspiration window
         self.contempt = -0.5
         self.max_depth = 1
 
+        # depth -> killer move 1, killer move 2
+        self.killers = {}
         # state_key -> (depth, evaluation, flag, best_move)
         self.transposition_table = {}
-        # state_key -> [killer1, killer2]
-        self.killers = {}
         # state_key -> evaluation
         self.previous_evaluations = {}
         # state_key -> (accessible, inaccessible)
         self.accessibility_cache = {}
         # state_key -> potential_capture_score
         self.potential_captures_cache = {}
+        # state_key -> legal moves for the player to move(turn)
+        self.legal_moves_cache = {}
 
     def get_best_move(self, gs, game_history=None, time_limit=1.5):
+        self.transposition_table.clear()
+        self.killers.clear()
         self.time_limit = time_limit
         self.game_history = game_history
 
-        self.transposition_table.clear()
-        self.killers.clear()
-        self.accessibility_cache.clear()
-        self.potential_captures_cache.clear()
-        self.previous_evaluations.clear()
+        if len(self.accessibility_cache) > 50_000:
+            self.accessibility_cache.clear()
+        if len(self.potential_captures_cache) > 50_000:
+            self.potential_captures_cache.clear()
+        if len(self.previous_evaluations) > 50_000:
+            self.previous_evaluations.clear()
+        if len(self.legal_moves_cache) > 50_000:
+            self.legal_moves_cache.clear()
 
         self.start_time = time.time()
         best_move_so_far = None
 
         game_state = gs.copy()
 
-        alpha = float('-inf')
-        beta = float('inf')
-
         initial_history = [game_state.key]
 
-        # REMOVE
-        self.root_key = game_state.key
+        alpha = float('-inf')
+        beta = float('inf')
 
         depth = 1
         while True:
             try:
                 # print(f"Searching at depth {depth}.")
                 self.no_of_nodes = 0
+                # print(self.get_ordered_moves(game_state, hashed_move=None))
 
-                _, best_move_this_depth = self.negamax(
+                val, best_move_this_depth = self.negamax(
                     game_state, depth, alpha, beta, initial_history)
+
+                if (val <= alpha) or (val >= beta):  # AW Failed
+                    alpha = float('-inf')
+                    beta = float('inf')
+                    continue  # continue search with larger window at the same depth
 
                 if best_move_this_depth:
                     best_move_so_far = best_move_this_depth
 
+                # aspiration window for the next iteration
+                alpha = val - self.window
+                beta = val + self.window
+
                 elapsed_time = time.time() - self.start_time
                 print(
-                    f" > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s. Total nodes: {self.no_of_nodes}")
+                    f"  > Depth {depth} complete. Best move: {best_move_so_far}. Time: {elapsed_time:.2f}s. Total nodes: {self.no_of_nodes}")
                 depth += 1
                 self.max_depth = depth
             except TimeoutError:
                 print(
-                    f" > Timeout occurred at depth {depth}. Total nodes: {self.no_of_nodes}. Using best move from depth {depth-1}")
+                    f"  > Timeout occurred at depth {depth}. Total nodes: {self.no_of_nodes}. Using best move from depth {depth-1}")
                 break
         print(
-            f" > Best move: {best_move_so_far}.")
+            f"Final best move: {best_move_so_far}.")
 
         return best_move_so_far
 
@@ -83,60 +103,68 @@ class AlphaBetaAgent():
 
         flag = alpha_flag
 
-        state_key = game_state.key
-
-        if game_state.is_game_over or depth == 0:
-            val = self.evaluate(game_state)
-            self.record_hash(state_key, depth, val,
-                             exact_flag, best_move=None)
-            return val, None
-
         hashed_move = None
-        remove_flag = None
-        if state_key in self.transposition_table:
-            val, hashed_move, remove_flag = self.probe_hash(
-                state_key, depth, alpha, beta)
+        if game_state.key in self.transposition_table:
+            val, hashed_move = self.probe_hash(
+                game_state.key, depth, alpha, beta)
             if val is not None:
                 return val, hashed_move
 
-        moves = game_state.get_legal_moves()
+        if game_state.is_game_over:
+            val = self.evaluate(game_state, depth)
+            self.record_hash(game_state.key, depth, val,
+                             exact_flag, best_move=None)
+            return val, None
+
+        if depth == 0:
+            val = self.quiescence(game_state, alpha, beta)
+            return val, None
+
+        moves = self.get_ordered_moves(game_state, hashed_move, depth)
+
+        found_PV = False
         best_move = moves[0]
 
-        for i in range(len(moves)):
-            self.pick_move(game_state, moves, i,
-                           hashed_move, depth, remove_flag)
-            move = moves[i]
-
+        for move in moves:
             game_state.make_move(move)
             self.no_of_nodes += 1
 
-            repeated = game_state.key in tree_history or game_state.key in self.game_history
-            if repeated:
+            if game_state.key in tree_history or game_state.key in self.game_history:
+                # needs tuning
                 val = self.contempt
             else:
                 tree_history.append(game_state.key)
-                val = -self.negamax(game_state, depth -
-                                    1, -beta, -alpha, tree_history)[0]
-
+                if found_PV:
+                    val = -self.negamax(game_state, depth -
+                                        1, -alpha-1, -alpha, tree_history)[0]
+                    if alpha < val < beta:  # check for failure
+                        val = -self.negamax(game_state,
+                                            depth-1, -beta, -alpha, tree_history)[0]
+                else:
+                    val = -self.negamax(game_state, depth -
+                                        1, -beta, -alpha, tree_history)[0]
                 tree_history.pop()
 
             game_state.unmake_move()
 
             if val >= beta:
-                self.record_hash(game_state.key, depth, beta,
-                                 beta_flag, best_move=move)
-                if game_state.is_quiet(move):
+
+                if MOVE_MASKS[move[0]] & (1 << move[1]):
                     key = (depth, game_state.turn)
                     killers = self.killers.get(key, [None, None])
                     killers[1] = killers[0]
                     killers[0] = move
                     self.killers[key] = killers
-                # cutoff
+
+                self.record_hash(game_state.key, depth, beta,
+                                 beta_flag, best_move=move)
+                # beta cutoff
                 return beta, move
 
             if val > alpha:
                 alpha = val
                 best_move = move
+                found_PV = True
                 flag = exact_flag
 
         self.record_hash(game_state.key, depth, alpha,
@@ -149,49 +177,74 @@ class AlphaBetaAgent():
         else:
             return goat_priority(game_state.tigers_bb, game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP, OUTER_EDGE_MASK, STRATEGIC_MASK)
 
-    # REMOVE: Just for debugging
-    # def get_ordered_moves(self, game_state, moves, hashed_move, depth):
-    #     key = (depth, game_state.turn)
-    #     killers = self.killers.get(key, [None, None])
-    #     scored_moves = []
-    #     for move in moves:
-    #         score = self._score_move(game_state, move)
-    #         if hashed_move and hashed_move == move:
-    #             score += 2000
-    #         elif move == killers[0]:
-    #             score += 1500
-    #         elif move == killers[1]:
-    #             score += 1400
-    #         # static priority eval
-    #         scored_moves.append((score, move))
-    #     scored_moves.sort(reverse=True, key=lambda x: x[0])
-    #
-    #     return [m for _, m in scored_moves]
+    def get_ordered_moves(self, game_state, hashed_move, depth=0):
+        # TODO: instead of fully sorting, it'd be better to bring the best move
+        #  to the current index (kind of incremental insertion sort). The advantage
+        #  of this approach is that if our move ordering is good, then moves played
+        #  early will cause cut-offs and we won't uselessly spend time scoring other
+        #  moves!
 
-    def pick_move(self, game_state, moves, current_idx, hashed_move, depth, remove_flag):
-        best_score = float('-inf')
-        best_idx = current_idx
+        state_key = game_state.key
+        if state_key in self.legal_moves_cache:
+            moves = self.legal_moves_cache[state_key]
+        else:
+            moves = game_state.get_legal_moves()
+            self.legal_moves_cache[state_key] = moves
 
-        key = (depth, game_state.turn)
-        killers = self.killers.get(key, [None, None])
-        for j, move in enumerate(moves[current_idx:len(moves)]):
-            score = self._score_move(game_state, move)
-            if move == hashed_move:
-                score += 2000
-            elif move == killers[0]:
-                score += 1500
-            elif move == killers[1]:
-                score += 1400
+        scored_moves = []
+        for move in moves:
+            score = 0
+            # TT Move
+            if hashed_move and hashed_move == move:
+                score += 1_000_000
 
-            if score > best_score:
-                # REMOVE
-                # somehow a very poor move is stored in the hash table, why??
-                if current_idx == 0 and game_state.turn == Piece_GOAT and game_state.key == self.root_key:
-                    print(move, score, remove_flag)
-                best_score = score
-                best_idx = j + current_idx  # offset
+            # Killer Moves
+            key = (depth, game_state.turn)
+            killers = self.killers.get(key, [None, None])
+            if move in killers:
+                score += 500_000
 
-        moves[current_idx], moves[best_idx] = moves[best_idx], moves[current_idx]
+            # static priority eval
+            score += self._score_move(game_state, move)
+
+            scored_moves.append((score, move))
+
+        scored_moves.sort(reverse=True, key=lambda x: x[0])
+
+        return [m for _, m in scored_moves]
+
+    def quiescence(self, game_state: BitboardGameState, alpha, beta):
+        val = self.evaluate(game_state)
+        if val >= beta:
+            return beta
+        if val > alpha:
+            alpha = val
+
+        good_moves = self.get_good_moves(game_state)
+
+        for move in good_moves:
+            game_state.make_move(move)
+            val = -self.quiescence(game_state, -beta, -alpha)
+            game_state.unmake_move()
+            if val >= beta:
+                return beta
+            if val > alpha:
+                alpha = val
+
+        return alpha
+
+    def get_good_moves(self, game_state: BitboardGameState):
+        moves = []
+        occupied_bb = game_state.tigers_bb | game_state.goats_bb
+        empty_bb = ~occupied_bb & BOARD_MASK
+
+        if game_state.turn == Piece_TIGER:
+            for src in extract_indices_fast(game_state.tigers_bb):
+                for mid_mask, land_mask in CAPTURE_MASKS[src]:
+                    if (game_state.goats_bb & mid_mask) and (empty_bb & land_mask):
+                        dst = math.frexp(land_mask)[1] - 1
+                        moves.append((src, dst))
+        return moves
 
     def _count_potential_captures(self, state: BitboardGameState, empty_bb):
         if state.key in self.potential_captures_cache:
@@ -224,7 +277,7 @@ class AlphaBetaAgent():
         self.accessibility_cache[state.key] = (accessible, inaccessible)
         return accessible, inaccessible
 
-    def evaluate(self, state: BitboardGameState):
+    def evaluate(self, state: BitboardGameState, depth=None):
         """
         Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
@@ -250,7 +303,9 @@ class AlphaBetaAgent():
 
         if state.is_game_over:
             result = state.get_result
-            score = 2000
+            score = 1000
+            if depth is not None:
+                score -= (self.max_depth - depth)  # ply
             return score * result * state.turn
 
         trapped = state.trapped_tiger_count
@@ -280,37 +335,33 @@ class AlphaBetaAgent():
                       goat_presence_score * w_presence +
                       inaccessibility_score * w_inacc)
 
-        if inaccessible >= 1 and eaten == 0 and is_placement:
-            # this is a sure win for goat if the goat can keep placing pieces without losing any
-            # we must encourage this line of play for goat
-            if state.turn == Piece_GOAT:
-                goat_score += 800
-            else:
-                tiger_score -= 800
-
-        final_evaluation = tiger_score - goat_score
+        final_evaluation = tiger_score - goat_score  # [-4, 4]
         self.previous_evaluations[state.key] = final_evaluation
         return final_evaluation * state.turn
 
     def probe_hash(self, state_key, depth, alpha, beta):
         hashed_depth, hashed_eval, flag, hashed_move = self.transposition_table[state_key]
+
         if hashed_depth >= depth:
             if flag == exact_flag:
-                return hashed_eval, hashed_move, flag
+                return hashed_eval, hashed_move
 
             # This is an UPPER bound (true_value <= hashed_eval)
             if flag == alpha_flag:
                 if hashed_eval <= alpha:
-                    return hashed_eval, hashed_move, flag
+                    # The best this node can be is still worse than what the maximizer (alpha) already has.
+                    # This will cause a cutoff. Return the bound.
+                    return hashed_eval, hashed_move
 
             # This is a LOWER bound (true_value >= hashed_eval)
             if flag == beta_flag:
                 if hashed_eval >= beta:
-                    return hashed_eval, hashed_move, flag
+                    # This node is guaranteed to be better than what the minimizer (beta) will allow.
+                    # This will cause a cutoff. Return the bound.
+                    return hashed_eval, hashed_move
 
         # The stored value is not useful (either too shallow or doesn't cause a cutoff).
-        # return None, None
-        return None, hashed_move, flag
+        return None, hashed_move
 
     def record_hash(self, state_key, depth, evaluation, flag, best_move):
         # always-repalce scheme

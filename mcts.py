@@ -81,7 +81,7 @@ class MCTS:
                 self.tiger_wins += 1
             elif result == Piece_GOAT:
                 self.goat_wins += 1
-            elif result == 0:
+            elif result == Piece_EMPTY:
                 self.draws += 1
 
         if time_limit is not None:
@@ -134,6 +134,8 @@ class MCTS:
                         self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP, OUTER_EDGE_MASK, STRATEGIC_MASK)
 
                 priority_score_norm = -1 * np.tanh(0.1 * p_score)
+                # TODO:
+                # add a contempt factor if the state inthe curent node has occurred before in the path_nodes
 
                 new_child = Node(
                     total_value=priority_score_norm,
