@@ -56,7 +56,6 @@ class AlphaBetaAgent():
     def __init__(self):
         # half move counter
         self.ply = 0
-        self.best_move = None
         self.game_state: BitboardGameState
         self.no_of_nodes = 0
 
@@ -65,6 +64,10 @@ class AlphaBetaAgent():
         self.killers = {}
         # (square, turn) -> no of cutoffs
         self.history = defaultdict(int)
+        # ply -> length of the pv at that ply
+        self.pv_length = {}
+        # (ply, ply) -> expected line of play
+        self.pv_table = {}
 
     def get_best_move(self, gs, game_history=None, time_limit=1.5):
         self.game_state = gs.copy()
@@ -78,25 +81,29 @@ class AlphaBetaAgent():
 
         score = self.negamax(alpha, beta, depth)
 
+        best_move = self.pv_table[(0, 0)]
         print(
-            f" > Best Move: {self.best_move}. No of Nodes: {self.no_of_nodes}. Score: {score}. Depth: {depth}")
-        return self.best_move
+            f" > Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Depth: {depth}")
+        print(" > PV:", end=" ")
+        for i in range(self.pv_length[0]):
+            print(f"{self.pv_table[(0, i)]}", end=" ")
+        print()
+
+        return best_move
 
     def negamax(self, alpha, beta, depth):
 
         self.no_of_nodes += 1
+
+        # init PV length
+        self.pv_length[self.ply] = self.ply
 
         if self.game_state.is_game_over:
             return self.evaluate()
         if depth == 0:
             return self.evaluate()
 
-        old_alpha = alpha
-
         moves = self.game_state.get_legal_moves()
-
-        # fallback in case the search doesnot find a best move
-        best_move_so_far = moves[0]
 
         for i in range(len(moves)):
 
@@ -125,11 +132,6 @@ class AlphaBetaAgent():
                     self.killers[killer_key] = killers
 
                 # node (move) fails high
-                if self.ply == 0:
-                    # TODO: this is block is not executed at all why?
-                    # it means that there are no cutoffs happening at the root node!!
-                    print("inshallah")
-                    self.best_move = move
                 return beta
 
             # found a better move
@@ -138,15 +140,16 @@ class AlphaBetaAgent():
                 if self.is_quiet(move):
                     history_key = (self.game_state.turn, move[1])
                     self.history[history_key] += depth
-                # PV node (move)
-                if self.ply == 0:  # root
-                    # associate best move with the best score
-                    best_move_so_far = move
+
                 alpha = score
 
-        # found better move
-        if old_alpha != alpha:
-            self.best_move = best_move_so_far
+                # update PV table
+                self.pv_table[(self.ply, self.ply)] = move
+                for next_ply in range(self.ply + 1, self.pv_length[self.ply + 1]):
+                    self.pv_table[(self.ply, next_ply)
+                                  ] = self.pv_table[(self.ply + 1, next_ply)]
+
+                self.pv_length[self.ply] = self.pv_length[self.ply + 1]
 
         # node (move) fails low i.e. score <= alpha
         return alpha
