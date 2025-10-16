@@ -1,7 +1,9 @@
+import time
 from collections import defaultdict
 from bagchal import *
 
 EXACT_FLAG, ALPHA_FLAG, BETA_FLAG = 0, 1, 2
+MAX_PLY = 64
 
 
 class TimeoutError(Exception):
@@ -73,37 +75,98 @@ class AlphaBetaAgent():
         self.game_state = gs.copy()
         self.game_history = game_history
 
+        # PV Sorting
+        self.follow_pv = False
+        self.score_pv = False
+
+        # Time Management
+        self.start_time = time.time()
+        self.time_limit = time_limit
+
+        self.killers.clear()
+        self.history.clear()
+        self.pv_length.clear()
+        self.pv_table.clear()
+        # most implementations do not reset the no of nodes within iterative deepening loop.
+        # not sure why that is the case, but whatever
+        # self.no_of_nodes = 0
+
+        # TODO: should we reset ply as well?
+        # if we terminate a search early when timeout occurs we should, otherwise it's decreases to zero
+        # when the search terminates.
+        # self.ply = 0
+
         alpha = float('-inf')
         beta = float('inf')
         depth = 5
 
-        self.no_of_nodes = 0
+        # iterative deepening
+        for current_depth in range(1, depth+1):
+            self.no_of_nodes = 0
+            self.follow_pv = True
+            try:
+                score = self.negamax(alpha, beta, current_depth)
 
-        score = self.negamax(alpha, beta, depth)
+                best_move = self.pv_table[(0, 0)]
 
-        best_move = self.pv_table[(0, 0)]
-        print(
-            f" > Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Depth: {depth}")
-        print(" > PV:", end=" ")
-        for i in range(self.pv_length[0]):
-            print(f"{self.pv_table[(0, i)]}", end=" ")
-        print()
+                elapsed_time = time.time() - self.start_time
+                print(
+                    f" > Depth: {current_depth}. Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Time: {elapsed_time:.2f}s.")
+                print(" > PV:", end=" ")
+                for i in range(self.pv_length[0]):
+                    print(f"{self.pv_table[(0, i)]}", end=" ")
+                print()
 
+            except TimeoutError:
+                # TODO: At the moment there is no Time Management
+                # the problem is that if we terminate the search early then the PV is not populated so
+                # there's no best move to choose from
+                # we need a way to store the best move from last successful depth, to remove that issue
+
+                print(
+                    f" > Timeout occurred at depth {current_depth}. No of Nodes: {self.no_of_nodes}.")
+                break
+
+        # Non iterative deepening.
+        # score = self.negamax(alpha, beta, depth)
+        # elapsed_time = time.time() - self.start_time
+        # best_move = self.pv_table[(0, 0)]
+        # print(
+        #     f" > Depth: {depth}. Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Time: {elapsed_time:.2f}s.")
+        # print(" > PV:", end=" ")
+        # for i in range(self.pv_length[0]):
+        #     print(f"{self.pv_table[(0, i)]}", end=" ")
+        # print()
+
+        print(f" > Final Best Move: {best_move}.\n")
         return best_move
 
     def negamax(self, alpha, beta, depth):
+
+        # if self.no_of_nodes & 1023 == 0:
+        #     if time.time() - self.start_time > self.time_limit:
+        #         raise TimeoutError()
 
         self.no_of_nodes += 1
 
         # init PV length
         self.pv_length[self.ply] = self.ply
 
-        if self.game_state.is_game_over:
+        if self.game_state.is_game_over or (self.ply > MAX_PLY - 1):
             return self.evaluate()
+
         if depth == 0:
             return self.evaluate()
 
         moves = self.game_state.get_legal_moves()
+
+        if self.follow_pv:
+            self.follow_pv = False
+            for move in moves:
+                pv_move = self.pv_table.get((0, self.ply), None)
+                if pv_move == move:
+                    self.score_pv = True
+                    self.follow_pv = True
 
         for i in range(len(moves)):
 
@@ -151,7 +214,10 @@ class AlphaBetaAgent():
 
                 self.pv_length[self.ply] = self.pv_length[self.ply + 1]
 
+        if self.ply == 0:
+            print(moves)
         # node (move) fails low i.e. score <= alpha
+
         return alpha
 
     def is_quiet(self, move):
@@ -172,6 +238,14 @@ class AlphaBetaAgent():
             # if move == hashed_move:
             #     score += 1000
 
+            # TODO: test if the PV move is actually propped to the top of the search!!
+            if self.score_pv:
+                pv_move = self.pv_table.get((0, self.ply), None)
+                if pv_move == move:
+                    # We always wanna try the PV move first!
+                    score += 5000
+                    self.score_pv = True
+
             if move == killer1:
                 score += 1000
             elif move == killer2:
@@ -181,7 +255,6 @@ class AlphaBetaAgent():
                 # TODO: i'm not sure, that unique moves will be chosen this way
                 history_key = (self.game_state.turn, move[1])
                 history_heuristic = self.history[history_key]
-
                 score += history_heuristic
 
             if score > best_score:
