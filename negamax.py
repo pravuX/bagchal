@@ -91,14 +91,13 @@ class AlphaBetaAgent():
         self.pv_table.clear()
         self.no_of_nodes = 0
 
-        # TODO: should we reset ply as well?
-        # if we terminate a search early when timeout occurs we should, otherwise it
-        # automatically decreases to zero when the search terminates.
-        # self.ply = 0
+        # We reset the ply as well because our iterative deepening loop will terminate mid search.
+        # For for new position we must reset the ply as well.
+        self.ply = 0
 
         alpha = float('-inf')
         beta = float('inf')
-        depth = 6
+        depth = 100
 
         # iterative deepening
         for current_depth in range(1, depth+1):
@@ -117,34 +116,19 @@ class AlphaBetaAgent():
                 print()
 
             except TimeoutError:
-                # TODO: At the moment there is no Time Management
-                # the problem is that if we terminate the search early then the PV is not populated so
-                # there's no best move to choose from
-                # we need a way to store the best move from last successful depth, to remove that issue
 
                 print(
                     f" > Timeout occurred at depth {current_depth}. No of Nodes: {self.no_of_nodes}.")
                 break
-
-        # Non iterative deepening.
-        # score = self.negamax(alpha, beta, depth)
-        # elapsed_time = time.time() - self.start_time
-        # best_move = self.pv_table[(0, 0)]
-        # print(
-        #     f" > Depth: {depth}. Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Time: {elapsed_time:.2f}s.")
-        # print(" > PV:", end=" ")
-        # for i in range(self.pv_length[0]):
-        #     print(f"{self.pv_table[(0, i)]}", end=" ")
-        # print()
 
         print(f" > Final Best Move: {best_move}.\n")
         return best_move
 
     def negamax(self, alpha, beta, depth):
 
-        # if self.no_of_nodes & 1023 == 0:
-        #     if time.time() - self.start_time > self.time_limit:
-        #         raise TimeoutError()
+        if self.no_of_nodes & 1023 == 0:
+            if time.time() - self.start_time > self.time_limit:
+                raise TimeoutError()
 
         self.no_of_nodes += 1
 
