@@ -4,7 +4,6 @@ from enum import Enum
 import traceback
 import pygame
 from bagchal import *
-# from alphabeta import MinimaxAgent
 from negamax import AlphaBetaAgent
 from mcts import MCTS
 
@@ -56,15 +55,11 @@ class Game:
 
         self.pending_player_move = None
 
-        # self.minimax_agent = MinimaxAgent()
-        # self.minimax_agent = AlphaBetaAgent()
-        # self.mcts_agent = MCTS()
-
         self.using_agent = minimax_flag
 
         self.ai_thread = None
         # ai thinking time in seconds
-        self.time_limit = 1.0
+        self.time_limit = 1.5
         self.ai_is_thinking = False
         self.ai_result_move = None
 
@@ -250,7 +245,6 @@ class Game:
         try:
             if self.using_agent == minimax_flag:
                 self.minimax_agent = AlphaBetaAgent()
-                # self.minimax_agent = MinimaxAgent()
             elif self.using_agent == mcts_flag:
                 self.mcts_agent = MCTS()
         finally:
@@ -278,8 +272,8 @@ class Game:
         except Exception as e:
             print(f"AI Error: {e}")
             print(traceback.format_exc())
-            exit(1)
             self.ai_result_move = None
+            exit(1)
         finally:
             # Always make sure we signal that we are done
             self.ai_is_thinking = False
