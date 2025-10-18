@@ -85,24 +85,23 @@ class AlphaBetaAgent():
 
         self.killers.clear()
         self.history.clear()
+
         self.pv_length.clear()
+
         self.pv_table.clear()
-        # most implementations do not reset the no of nodes within iterative deepening loop.
-        # not sure why that is the case, but whatever
-        # self.no_of_nodes = 0
+        self.no_of_nodes = 0
 
         # TODO: should we reset ply as well?
-        # if we terminate a search early when timeout occurs we should, otherwise it's decreases to zero
-        # when the search terminates.
+        # if we terminate a search early when timeout occurs we should, otherwise it
+        # automatically decreases to zero when the search terminates.
         # self.ply = 0
 
         alpha = float('-inf')
         beta = float('inf')
-        depth = 5
+        depth = 6
 
         # iterative deepening
         for current_depth in range(1, depth+1):
-            self.no_of_nodes = 0
             self.follow_pv = True
             try:
                 score = self.negamax(alpha, beta, current_depth)
@@ -149,13 +148,12 @@ class AlphaBetaAgent():
 
         self.no_of_nodes += 1
 
+        found_pv = False
+
         # init PV length
         self.pv_length[self.ply] = self.ply
 
-        if self.game_state.is_game_over or (self.ply > MAX_PLY - 1):
-            return self.evaluate()
-
-        if depth == 0:
+        if depth == 0 or self.game_state.is_game_over or (self.ply > MAX_PLY - 1):
             return self.evaluate()
 
         moves = self.game_state.get_legal_moves()
@@ -177,7 +175,13 @@ class AlphaBetaAgent():
             self.game_state.make_move(move)
             self.ply += 1
 
-            score = -self.negamax(-beta, -alpha, depth - 1)
+            if found_pv:
+                score = -self.negamax(-alpha - 1, -alpha, depth - 1)
+                if alpha < score < beta:  # check for failure
+                    # another node is actually the PV node!
+                    score = -self.negamax(-beta, -alpha, depth - 1)
+            else:
+                score = -self.negamax(-beta, -alpha, depth - 1)
 
             self.game_state.unmake_move()
             self.ply -= 1
@@ -194,17 +198,19 @@ class AlphaBetaAgent():
 
                     self.killers[killer_key] = killers
 
+                    history_key = (self.game_state.turn, move[1])
+                    self.history[history_key] += depth
+
                 # node (move) fails high
                 return beta
 
             # found a better move
             if score > alpha:
 
-                if self.is_quiet(move):
-                    history_key = (self.game_state.turn, move[1])
-                    self.history[history_key] += depth
-
+                # the move is PV move
                 alpha = score
+
+                found_pv = True
 
                 # update PV table
                 self.pv_table[(self.ply, self.ply)] = move
@@ -214,10 +220,11 @@ class AlphaBetaAgent():
 
                 self.pv_length[self.ply] = self.pv_length[self.ply + 1]
 
-        if self.ply == 0:
-            print(moves)
-        # node (move) fails low i.e. score <= alpha
+        # For testing the effectiveness of move ordering
+        # if self.ply == 0:
+        #     print(moves)
 
+        # node (move) fails low i.e. score <= alpha
         return alpha
 
     def is_quiet(self, move):
@@ -238,24 +245,23 @@ class AlphaBetaAgent():
             # if move == hashed_move:
             #     score += 1000
 
-            # TODO: test if the PV move is actually propped to the top of the search!!
             if self.score_pv:
                 pv_move = self.pv_table.get((0, self.ply), None)
                 if pv_move == move:
                     # We always wanna try the PV move first!
                     score += 5000
-                    self.score_pv = True
-
-            if move == killer1:
-                score += 1000
-            elif move == killer2:
-                score += 900
+                    self.score_pv = False
+                    # print(f"Current PV Move: {pv_move}. Ply: {self.ply}")
             else:
-                # move = (src, dst)
-                # TODO: i'm not sure, that unique moves will be chosen this way
-                history_key = (self.game_state.turn, move[1])
-                history_heuristic = self.history[history_key]
-                score += history_heuristic
+
+                if move == killer1:
+                    score += 1000
+                elif move == killer2:
+                    score += 900
+                elif self.is_quiet(move):
+                    history_key = (self.game_state.turn, move[1])
+                    history_heuristic = self.history[history_key]
+                    score += history_heuristic
 
             if score > best_score:
                 best_score = score
@@ -264,15 +270,10 @@ class AlphaBetaAgent():
         moves[current_idx], moves[best_idx] = moves[best_idx], moves[current_idx]
 
     def _score_move(self, move):
-        # TODO: why does static move sorting result in slightly higher no of nodes searched?
         if self.game_state.turn == Piece_TIGER:
             return tiger_priority(self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
         else:
             return goat_priority(self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP, OUTER_EDGE_MASK, STRATEGIC_MASK)
-
-        # if self.game_state.turn == Piece_TIGER:
-        #     return 0.0
-        # return goat_priority(self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP, OUTER_EDGE_MASK, STRATEGIC_MASK)
 
     def evaluate(self):
         """
@@ -285,9 +286,7 @@ class AlphaBetaAgent():
 
         eat_max = 4  # before win
         potential_capture_max = 5
-        # potential_capture_max = 11
         inaccessible_max = 4
-        # inaccessible_max = 10
 
         trap_max = 3  # before win
         goat_presence_max = 20
