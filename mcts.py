@@ -27,8 +27,6 @@ class Node:
 
 class MCTS:
     previous_evaluations = {}
-    accessibility_cache = {}
-    potential_captures_cache = {}
     legal_moves_cache = {}
 
     def __init__(self):
@@ -40,17 +38,13 @@ class MCTS:
         self.rollout_depth = 5
 
     def search(self, initial_state: BitboardGameState, max_simulations=1000, time_limit=None):
-        print("Searching move...")
+        # print("Searching move...")
 
         self.game_state = initial_state.copy()
 
-        if len(self.accessibility_cache) > 10_000:
-            self.accessibility_cache.clear()
-        if len(self.potential_captures_cache) > 10_000:
-            self.potential_captures_cache.clear()
-        if len(self.legal_moves_cache) > 10_000:
+        if len(self.legal_moves_cache) >= 50_000:
             self.legal_moves_cache.clear()
-        if len(self.previous_evaluations) > 10_000:
+        if len(self.previous_evaluations) >= 50_000:
             self.previous_evaluations.clear()
 
         self.root = Node(player_to_move=self.game_state.turn)
@@ -92,7 +86,7 @@ class MCTS:
             while self.simulations_run < max_simulations:
                 search_helper()
         best_move = self.get_best_move()
-        print(f"Best move: {best_move}")
+        # print(f"Best move: {best_move}")
         return best_move
 
     def get_best_move(self):
@@ -115,7 +109,6 @@ class MCTS:
             # Lazy Move Generation
             if current_node.unexpanded_moves is None:
                 current_node.unexpanded_moves = self.get_prioritized_moves()
-                # current_node.unexpanded_moves = self.game_state.get_legal_moves_np()
 
             # this means that it is expandable
             if len(current_node.unexpanded_moves) > 0:
@@ -135,7 +128,7 @@ class MCTS:
 
                 priority_score_norm = -1 * np.tanh(0.1 * p_score)
                 # TODO:
-                # add a contempt factor if the state inthe curent node has occurred before in the path_nodes
+                # add a contempt factor if the state in the curent node has occurred before in the path_nodes
 
                 new_child = Node(
                     total_value=priority_score_norm,
@@ -246,34 +239,20 @@ class MCTS:
         while self.game_state.history:
             self.game_state.unmake_move()
 
-    def _get_potential_captures(self, state: BitboardGameState, state_key, empty_bb):
-        if state_key in self.potential_captures_cache:
-            return self.potential_captures_cache[state_key]
+    def _get_potential_captures(self, state: BitboardGameState, empty_bb):
 
         capture_opportunities = 0
-        # for tiger in extract_indices_fast(state.tigers_bb):
-        #     for j in range(CAPTURE_COUNTS[tiger]):
-        #         mid_mask = CAPTURE_MASKS_NP[tiger, j, 0]
-        #         land_mask = CAPTURE_MASKS_NP[tiger, j, 1]
-        #         if (state.goats_bb & mid_mask) and (empty_bb & land_mask):
-        #             capture_opportunities += 1
-
         for tiger in extract_indices_fast(state.tigers_bb):
             for mid_mask, land_mask in CAPTURE_MASKS[tiger]:
                 if (state.goats_bb & mid_mask) and (empty_bb & land_mask):
                     capture_opportunities += 1
 
-        self.potential_captures_cache[state_key] = capture_opportunities
         return capture_opportunities
 
-    def _get_tiger_accessibility(self, state: BitboardGameState, state_key):
-        if state_key in self.accessibility_cache:
-            return self.accessibility_cache[state_key]
-
+    def _get_tiger_accessibility(self, state: BitboardGameState):
         accessible, inaccessible = tiger_board_accessibility(
             state.tigers_bb, state.goats_bb,
             MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP)
-        self.accessibility_cache[state_key] = (accessible, inaccessible)
         return accessible, inaccessible
 
     def evaluate_state(self, state: BitboardGameState, state_key):
@@ -291,8 +270,8 @@ class MCTS:
         is_placement = state.goats_to_place > 0
 
         eat_max = 4  # before win
-        potential_capture_max = 11
-        inaccessible_max = 10
+        potential_capture_max = 5
+        inaccessible_max = 4
 
         trap_max = 3  # before win
         goat_presence_max = 20
@@ -302,7 +281,7 @@ class MCTS:
 
         if state.is_game_over:
             result = state.get_result
-            return 1000 if result == Piece_TIGER else -1000
+            return 2000 if result == Piece_TIGER else -2000
 
         trapped = state.trapped_tiger_count
         eaten = state.goats_eaten
@@ -312,16 +291,18 @@ class MCTS:
         eaten_score = eaten / eat_max
 
         potential_captures = self._get_potential_captures(
-            state, state_key, empty_bb)
+            state, empty_bb)
         potential_capture_score = potential_captures / potential_capture_max
+        potential_capture_score = min(1, potential_capture_score)
 
         trap_score = trapped / trap_max
         goat_presence_score = goats_on_board / goat_presence_max
         no_of_accessible_positions, no_of_inaccessible_positions = self._get_tiger_accessibility(
-            state, state_key)
+            state)
 
         inaccessibility_score = no_of_inaccessible_positions / inaccessible_max
         tiger_mobility_score = no_of_accessible_positions / tiger_mobility_max
+        inaccessibility_score = min(1, inaccessibility_score)
 
         tiger_score = (eaten_score * w_eat +
                        potential_capture_score * w_potcap +
@@ -331,7 +312,7 @@ class MCTS:
                       goat_presence_score * w_presence +
                       inaccessibility_score * w_inacc)
 
-        final_evaluation = tiger_score - goat_score  # [-3.0, 3.5]
+        final_evaluation = tiger_score - goat_score
         self.previous_evaluations[state_key] = final_evaluation
         return final_evaluation
 

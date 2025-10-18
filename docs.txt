@@ -108,3 +108,34 @@ from mcts import MCTS
     - render_game(): renders the game board
     - render_game_over(): renders the game over screen
     - update(): core update logic
+
+FOR DOCUMENTATION PURPOSES
+
+Gamestate
+[x] Bitboard Representation
+[x] Zobrist Hashing
+[x] Numba + Numpy(JIT optimizations)
+[x] Fast move generation, make/ unmake scheme
+[x] Staged generation (Captures, Non Captures)
+[x] Move scoring and position evaluation
+
+Search Algorithm
+Implementation Details:
+[x] Negamax
+[x] Alpha Beta Pruning
+[x] Iterative Deepening
+[x] Killer Moves and History Heursitic for Quiet (Non-Capture) Moves
+[x] Collecting and Logging Prinicial Variation Moves
+[x] PV Move Sorting✨
+[x] Principal Variation Search (PVS)✨
+[x] Time Management✨
+[x] Transposition Tables✨
+[ ] Contempt Factor (Discourage Move Repetition)
+
+We don't impelement quiescence search because only tigers can play capture moves and captures are, for the most part, good moves. There simply is no additional benefit from using quiescence search
+
+Similarly Null-Move pruning is not considered because Zugzwang situations are far more common in Bagchal. More often than not, we encounter position where it'd be better to not play any move (e.g. tiger has created a formation where any move played by goat leads to a guranteed goat capture)
+
+As for Aspiration Windows, I found no performance gain from using them they are not used.
+
+LMR is interesting for sure. In Bagchal, we know for sure that certain moves are just plain bad and it'd make sense to rely on our move ordering and prune away bad moves. But i've found that, in practice, Bagchal tends to have far lower branching factor, thus we cannot use a general move reduction parameter. I also tried selecting the parameter dynamically (basically only try 25% of the moves). Alas, there was no significant improvement in the performance of the search. So i've opted to not implement it.
