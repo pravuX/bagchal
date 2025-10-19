@@ -59,13 +59,12 @@ def scratch():
 
     # for minimax agent
     alphabeta_agent = AlphaBetaAgent()
-    moves = gs.get_legal_moves()
-    print("unsorted\t\t", moves)
-    for i in range(len(moves)):
-        alphabeta_agent.pick_move(gs, moves, i, None, 0)
-    print("sorted\t\t", moves)
+    # moves = gs.get_legal_moves()
+    # print("unsorted\t\t", moves)
+    # for i in range(len(moves)):
+    #     alphabeta_agent.pick_move(moves, i, None)
+    # print("sorted\t\t", moves)
     move = alphabeta_agent.get_best_move(gs, time_limit=1, game_history=[])
-    print(move)
 
     # for mcts agent
     # mcts = MCTS()

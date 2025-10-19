@@ -126,7 +126,7 @@ Implementation Details:
 [x] Iterative Deepening
 [x] Killer Moves and History Heursitic for Quiet (Non-Capture) Moves
 [x] Collecting and Logging Prinicial Variation Moves
-[x] PV Move Sorting✨
+[x] PV Move Sorting✨ (Handled by TT move sorting now)
 [x] Principal Variation Search (PVS)✨
 [x] Time Management✨
 [x] Transposition Tables✨
