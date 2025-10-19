@@ -4,6 +4,7 @@ from bagchal import *
 
 EXACT_FLAG, ALPHA_FLAG, BETA_FLAG = 0, 1, 2
 MAX_PLY = 64
+CONTEMPT = -20.0
 
 
 class TimeoutError(Exception):
@@ -74,6 +75,8 @@ class AlphaBetaAgent():
         self.history = defaultdict(int)
         # transposition table
         self.tt = TT()
+        # current line of play
+        self.tree_history = list()
 
     def get_best_move(self, gs, game_history=None, time_limit=1.5):
         self.game_state = gs.copy()
@@ -86,6 +89,7 @@ class AlphaBetaAgent():
         self.killers.clear()
         self.history.clear()
         self.tt.clear()
+        self.tree_history.clear()
 
         self.no_of_nodes = 0
 
@@ -95,10 +99,9 @@ class AlphaBetaAgent():
 
         alpha = float('-inf')
         beta = float('inf')
-        depth = 100
 
         # iterative deepening
-        for current_depth in range(1, depth+1):
+        for current_depth in range(1, 100):
 
             root_pv = PV_Line()
 
@@ -163,16 +166,27 @@ class AlphaBetaAgent():
             self.game_state.make_move(move)
             self.ply += 1
 
-            if found_pv:
-                score = -self.negamax(-alpha - 1, -alpha, depth - 1, node_pv)
-                if alpha < score < beta:  # check for failure
-                    # another node is actually the PV node!
-                    score = -self.negamax(-beta, -alpha, depth - 1, node_pv)
+            repeated = (self.game_state.key in self.tree_history or
+                        self.game_state.key in self.game_history)
+            if repeated:
+                score = CONTEMPT
             else:
-                score = -self.negamax(-beta, -alpha, depth - 1, node_pv)
+                self.tree_history.append(self.game_state.key)
 
-            self.game_state.unmake_move()
+                if found_pv:
+                    score = -self.negamax(-alpha - 1, -
+                                          alpha, depth - 1, node_pv)
+                    if alpha < score < beta:  # check for failure
+                        # another node is actually the PV node!
+                        score = -self.negamax(-beta, -
+                                              alpha, depth - 1, node_pv)
+                else:
+                    score = -self.negamax(-beta, -alpha, depth - 1, node_pv)
+
+                self.tree_history.pop()
+
             self.ply -= 1
+            self.game_state.unmake_move()
 
             # fail-hard beta cutoff
             if score >= beta:
