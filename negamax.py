@@ -10,6 +10,10 @@ class TimeoutError(Exception):
     ...
 
 
+class PV_Line(list):
+    ...
+
+
 class TTEntry:
     def __init__(self, state_key, depth, evaluation, flag, best_move):
         self.state_key = state_key
@@ -68,20 +72,12 @@ class AlphaBetaAgent():
         self.killers = {}
         # (square, turn) -> no of cutoffs
         self.history = defaultdict(int)
-        # ply -> length of the pv at that ply
-        self.pv_length = {}
-        # (ply, ply) -> expected line of play
-        self.pv_table = {}
         # transposition table
         self.tt = TT()
 
     def get_best_move(self, gs, game_history=None, time_limit=1.5):
         self.game_state = gs.copy()
         self.game_history = game_history
-
-        # PV Sorting
-        self.follow_pv = False
-        self.score_pv = False
 
         # Time Management
         self.start_time = time.time()
@@ -91,8 +87,6 @@ class AlphaBetaAgent():
         self.history.clear()
         self.tt.clear()
 
-        self.pv_length.clear()
-        self.pv_table.clear()
         self.no_of_nodes = 0
 
         # We reset the ply as well because our iterative deepening loop will terminate mid search,
@@ -105,18 +99,21 @@ class AlphaBetaAgent():
 
         # iterative deepening
         for current_depth in range(1, depth+1):
-            self.follow_pv = True
-            try:
-                score = self.negamax(alpha, beta, current_depth)
 
-                best_move = self.pv_table[(0, 0)]
+            root_pv = PV_Line()
+
+            try:
+                score = self.negamax(alpha, beta, current_depth, root_pv)
+
+                best_move = root_pv[0]
 
                 elapsed_time = time.time() - self.start_time
                 print(
                     f" > Depth: {current_depth}. Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Time: {elapsed_time:.2f}s.")
+
                 print(" > PV:", end=" ")
-                for i in range(self.pv_length[0]):
-                    print(f"{self.pv_table[(0, i)]}", end=" ")
+                for move in root_pv:
+                    print(f"{move}", end=" ")
                 print()
 
             except TimeoutError:
@@ -128,7 +125,7 @@ class AlphaBetaAgent():
         print(f" > Final Best Move: {best_move}.\n")
         return best_move
 
-    def negamax(self, alpha, beta, depth):
+    def negamax(self, alpha, beta, depth, parent_pv: PV_Line):
 
         if self.no_of_nodes & 1023 == 0:
             if time.time() - self.start_time > self.time_limit:
@@ -137,11 +134,11 @@ class AlphaBetaAgent():
         self.no_of_nodes += 1
 
         # init PV length
-        self.pv_length[self.ply] = self.ply
+        node_pv = PV_Line()
 
         state_key = self.game_state.key
         val, tt_move = self.tt.get(state_key, depth, alpha, beta)
-        if val:
+        if val is not None:
             return val
 
         if depth == 0 or self.game_state.is_game_over or (self.ply > MAX_PLY - 1):
@@ -157,14 +154,6 @@ class AlphaBetaAgent():
 
         found_pv = False
 
-        if self.follow_pv:
-            self.follow_pv = False
-            for move in moves:
-                pv_move = self.pv_table.get((0, self.ply), None)
-                if pv_move == move:
-                    self.score_pv = True
-                    self.follow_pv = True
-
         for i in range(len(moves)):
 
             self.pick_move(moves, i, tt_move)
@@ -175,12 +164,12 @@ class AlphaBetaAgent():
             self.ply += 1
 
             if found_pv:
-                score = -self.negamax(-alpha - 1, -alpha, depth - 1)
+                score = -self.negamax(-alpha - 1, -alpha, depth - 1, node_pv)
                 if alpha < score < beta:  # check for failure
                     # another node is actually the PV node!
-                    score = -self.negamax(-beta, -alpha, depth - 1)
+                    score = -self.negamax(-beta, -alpha, depth - 1, node_pv)
             else:
-                score = -self.negamax(-beta, -alpha, depth - 1)
+                score = -self.negamax(-beta, -alpha, depth - 1, node_pv)
 
             self.game_state.unmake_move()
             self.ply -= 1
@@ -218,12 +207,9 @@ class AlphaBetaAgent():
                 hash_flag = EXACT_FLAG
 
                 # update PV table
-                self.pv_table[(self.ply, self.ply)] = move
-                for next_ply in range(self.ply + 1, self.pv_length[self.ply + 1]):
-                    self.pv_table[(self.ply, next_ply)
-                                  ] = self.pv_table[(self.ply + 1, next_ply)]
-
-                self.pv_length[self.ply] = self.pv_length[self.ply + 1]
+                parent_pv.clear()
+                parent_pv.append(move)
+                parent_pv.extend(node_pv)
 
         # For testing the effectiveness of move ordering
         # if self.ply == 0:
@@ -251,24 +237,16 @@ class AlphaBetaAgent():
         for j, move in enumerate(moves[current_idx:len(moves)]):
             score = self._score_move(move)
 
-            if self.score_pv:
-                pv_move = self.pv_table.get((0, self.ply), None)
-                if pv_move == move:
-                    # We always wanna try the PV move first!
-                    score += 5000
-                    self.score_pv = False
-                    # print(f"Current PV Move: {pv_move}. Ply: {self.ply}")
-            else:
-                if move == tt_move:
-                    score += 2500
-                elif move == killer1:
-                    score += 1000
-                elif move == killer2:
-                    score += 900
-                elif self.is_quiet(move):
-                    history_key = (self.game_state.turn, move[1])
-                    history_heuristic = self.history[history_key]
-                    score += history_heuristic
+            if move == tt_move:
+                score += 5000
+            elif move == killer1:
+                score += 1000
+            elif move == killer2:
+                score += 900
+            elif self.is_quiet(move):
+                history_key = (self.game_state.turn, move[1])
+                history_heuristic = self.history[history_key]
+                score += history_heuristic
 
             if score > best_score:
                 best_score = score
