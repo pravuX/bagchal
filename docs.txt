@@ -1,0 +1,141 @@
+Entities:
+negamax.py: module that holds the AlphaBeta agent logic
+imports: (this means that the classes from bagchal.py are used here!)
+from bagchal import *
+
+1) TimeoutError: inherits from Exception
+  - Custom Exception raised when allotted time for making the move has elapsed
+2) AlphaBeta:
+  - The alpha beta agent
+  - Data Members:
+    - no_of_nodes: No of nodes explored during the search
+    - start_time, time_limit: for tracking thinking time
+    - window: the length of the aspiration window
+    - contempt: substitution for draw score (to discourage move repetition)
+    - killers: hash table storing "killer" moves
+    - tree_history: list of states reached from the root during the current line of play
+    - transposition_table: stores previously encountered positions, their evaluations and the best move if found
+
+  - Functions:
+    - get_best_move(): finds the best move from the given game_state within the specified time limit
+    - negamax(): the core negamax logic (Note: negamax is just a more efficient implementation of the alpha beta algorithm)
+    - pick_move(): picks the highest priority move from the given set of legal moves
+    - record_hash(): helper function for storing an entry in the transposition_table
+    - tt_get(): helper function that retrieves a transposition_table entry
+    - qsearch(): quiescence search for more robust leaf evaluations
+    - evaluate(): returns the static evaluations of the given position
+
+mcts.py: module that holds the MCTS agent logic
+from bagchal import *
+
+1) Node:
+  - represents a node in the game tree
+  - Data Members:
+    - parent: the immediate parent
+    - move: the move played from parent to reach the node
+    - player_to_move: player to move from this node
+    - unexpanded_move: list of moves yet to be played from this node
+    - children: list of child nodes
+    - visit_count: the no of times this node has been visited during MCTS simulations
+    - total_value: the cumulative "reward" expected at this node gathered over many MCTS simulations
+
+2) MCTS:
+  - implementation of MCTS algorithm
+  - Data Members:
+    - rollout_epsilon: the probability with which moves must be selected randomly during rollouts
+    - rollout_depth: the cutoff point for the rollout
+
+  - Functions
+    - search(): central logic for performing MCTS iterations
+    - get_best_move(): returns the best move as determined by the MCTS algorithm from the given game state
+    - tree_policy(): traverses the tree based on the UCT evaluation of nodes and selects an unexpanded node (Selection + Expansion)
+    - rollout_poilicy(): policy for selecting the next move to play during rollout of a leaf node
+    - rollout(): performs a rollout from the leaf node based on the rollout_poilicy (Rollout)
+    - backpropagate(): backpropagates the result of the rollout from the newly expanded node along the line of play from the root node
+    - evaluate_state(): returns the static evaluations of the given position
+
+bagchal.py: module the holds the core bagchal logic
+1) BitboardGameState:
+  - The bitboard representation of the bagchal game_state
+  - Data Members:
+    - tigers_bb: 64-bit integer representing the positions of tigers on the board
+    - goats_bb: 64-bit integer representing the positions of goats on the board
+    - turn: the player to move
+    - goats_to_place: remaining no of goats to be placed on the board
+    - zob_hash: the zobrist hash key for the game state
+
+  - Functions:
+    - key(): getter for the zobrist hash
+    - get_result(): returns the winner player or None if the game is still in play
+    - is_game_over(): returns true if the game has ended else false
+    - trapped_tiger_count(): the no of tigers trapped on the board.
+    - get_legal_moves(): returns a list of legal moves possible from the game_state
+    - make_move(): makes the passed move
+    - unmake_move(): unmakes the last move on the stack
+
+game.py: module that holds the UI
+imports:
+from bagchal import *
+from mcts import MCTS
+
+1) UIState:
+  - An Enum representing the various states that the application can be in
+    MAIN_MENU = "main_menu"
+    MODE_SELECT = "mode_select"
+    PLAYING_PVP = "playing_pvp"
+    PLAYING_PVC_GOAT = "playing_pvc_goat"
+    PLAYING_PVC_TIGER = "playing_pvc_tiger"
+    PLAYING_CVC = "playing_cvc"
+    GAME_OVER = "game_over"
+    EXITING = "exiting"
+
+2) Game: the central class that is responsible for managing UI state transitions and rendering the game board. it is modeled as a Finite State Machine
+  - Data Members:
+    - game_state: the current game state
+    - cell_size: the size of the cells in the game grid
+    - current_state: the current UI state
+    - minimax_agent: an instance of the Alpha Beta agent
+    - mcts_agent: an instance of the MCTS agent
+
+  - Functions:
+    - run(): the entry point
+    - reset_game(): resets the game to the initial state
+    - handle_events(): responsible for making transitions between different UI states based on user input
+    - update_ai_logic(): handler for AI moves
+    - place_piece(): place/ move a piece via user interaction
+    - render_main_menu(): renders the main menu
+    - render_mode_select(): renders the mode select menu
+    - render_game(): renders the game board
+    - render_game_over(): renders the game over screen
+    - update(): core update logic
+
+FOR DOCUMENTATION PURPOSES
+
+Gamestate
+[x] Bitboard Representation
+[x] Zobrist Hashing
+[x] Numba + Numpy(JIT optimizations)
+[x] Fast move generation, make/ unmake scheme
+[x] Staged generation (Captures, Non Captures)
+[x] Move scoring and position evaluation
+
+Search Algorithm
+Implementation Details:
+[x] Negamax
+[x] Alpha Beta Pruning
+[x] Iterative Deepening
+[x] Killer Moves and History Heursitic for Quiet (Non-Capture) Moves
+[x] Collecting and Logging Prinicial Variation Moves
+[x] PV Move Sorting✨ (Handled by TT move sorting now)
+[x] Principal Variation Search (PVS)✨
+[x] Time Management✨
+[x] Transposition Tables✨
+[x] Contempt Factor (Discourage Move Repetition)
+
+We don't impelement quiescence search because only tigers can play capture moves and captures are, for the most part, good moves. There simply is no additional benefit from using quiescence search
+
+Similarly Null-Move pruning is not considered because Zugzwang situations are far more common in Bagchal. More often than not, we encounter position where it'd be better to not play any move (e.g. tiger has created a formation where any move played by goat leads to a guranteed goat capture)
+
+As for Aspiration Windows, I found no performance gain from using them. So, they are not used.
+
+LMR is interesting for sure. In Bagchal, we know for sure that certain moves are just plain bad and it'd make sense to rely on our move ordering and prune away bad moves. But i've found that, in practice, Bagchal tends to have far lower branching factor, thus we cannot use a general move reduction parameter. I also tried selecting the parameter dynamically (basically only try 25% of the moves). Alas, there was no significant improvement in the performance of the search. So i've opted to not implement it.

@@ -4,23 +4,28 @@ from numba import njit
 import numpy as np
 
 
-tiger_capture_bonus: float = 3.0
-tiger_potential_capture_bonus: float = 2.0
-tiger_block_penalty: float = 3.0
+# The personality of the Agent can be tuned by adjusting these parameters
+
+# Tiger Parameters
+tiger_capture_bonus: float = 2000.0
+tiger_potential_capture_bonus: float = 1500.0
+tiger_block_penalty: float = 1.5
 
 # Goat parameters
-goat_sacrifice_penalty: float = 3.0
-goat_clustering_bonus: float = 0.5
-goat_strategic_position_bonus: float = 0.5
-goat_outer_edge_bonus: float = 0.5
+goat_sacrifice_penalty: float = 5.0
+goat_block_capture_bonus: float = 2.0
+goat_clustering_bonus: float = 1.0
+goat_strategic_position_bonus: float = 1.0
+goat_outer_edge_bonus: float = 1.0
 
 # State evaluation
-w_eat: float = 1.5
-w_potcap: float = 1.5
-w_mobility: float = 1
-w_trap: float = 1.5
-w_presence: float = 1
-w_inacc: float = 1.5
+w_eat: float = 100
+w_potcap: float = 50
+w_mobility: float = 10
+
+w_trap: float = 10
+w_presence: float = 10
+w_inacc: float = 50
 
 
 # these are only for turns and printing the board
@@ -225,7 +230,7 @@ class BitboardGameState:
                 count += 1
         return count
 
-    def get_legal_moves(self):
+    def get_legal_moves(self, only_captures=False):
         moves = []
         occupied_bb = self.tigers_bb | self.goats_bb
         empty_bb = ~occupied_bb & BOARD_MASK
@@ -244,9 +249,11 @@ class BitboardGameState:
 
         else:
             for src in extract_indices_fast(self.tigers_bb):
+
                 moves.extend((self._get_capture_moves(src, empty_bb)))
 
-                moves.extend(self._get_standard_moves(src, empty_bb))
+                if not only_captures:
+                    moves.extend(self._get_standard_moves(src, empty_bb))
 
             return moves
 
@@ -412,6 +419,39 @@ class BitboardGameState:
                                        goats_eaten)
         return copy_state
 
+    def is_quiet(self, move):
+        # for tiger an unquiet move is a capture move
+        # for goat an unquiet move is one that walks into a guaranteed capture
+        src, dst = move
+        is_placment = src == dst
+        occupied_bb = self.tigers_bb | self.goats_bb
+        empty_bb = ~occupied_bb & BOARD_MASK
+        if self.turn == Piece_TIGER:
+            # a non capture move has src adjacent to dst
+            return MOVE_MASKS[src] & (1 << dst) != 0
+        if self.turn == Piece_GOAT:
+            # one case in placement:
+            #  a tiger adjacent to the dst can capture the piece
+            neighboring_tigers = self.tigers_bb & MOVE_MASKS[dst]
+            if is_placment:
+                for tiger in extract_indices_fast(neighboring_tigers):
+                    for mid, land in CAPTURE_MASKS[tiger]:
+                        if mid == dst and (1 << land) & empty_bb:
+                            return False
+            # two cases in movement:
+            else:
+                for tiger in extract_indices_fast(neighboring_tigers):
+                    for mid, land in CAPTURE_MASKS[tiger]:
+                        # 1) goat moves from landing to mid
+                        if src == land and mid == dst:
+                            return False
+
+                        # 2) goat moves into mid and landing is empty
+                        if mid == dst and (1 << land) & empty_bb:
+                            return False
+                    # there's a third case in movement where a goat can unblock a capture but it's inefficient to calculate
+            return True
+
 
 @njit
 def tiger_board_accessibility(tigers_bb: int, goats_bb: int, MOVE_MASKS, CAPTURE_COUNTS, CAPTURE_MASKS):
@@ -486,11 +526,16 @@ def tiger_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUN
     #         mid_mask = CAPTURE_MASKS[tiger, j, 0]
     #         land_mask = CAPTURE_MASKS[tiger, j, 1]
     #         if (goats_bb & mid_mask) and ((1 << dst) & land_mask):
+    #             # discourage blocking potential capture
     #             priority_score -= tiger_block_penalty
     #             blocked = True
     #             break
+    #         elif (goats_bb & mid_mask) and ((1 << src) & land_mask):
+    #             # encourage moving away from a blocked potential capture
+    #             priority_score += tiger_block_penalty
+    #             blocked = True
 
-    return priority_score + np.random.random()/2
+    return priority_score
 
 
 @njit
@@ -507,7 +552,6 @@ def goat_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNT
 
     attacked = False
     # simulate the move
-    # is there a better way than this?
     goats_bb ^= (1 << src) | (1 << dst)
     occupied_bb = tigers_bb | goats_bb
     empty_bb = ~occupied_bb & BOARD_MASK
@@ -524,25 +568,37 @@ def goat_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNT
                 priority_score -= goat_sacrifice_penalty
                 attacked = True
                 break
-        if attacked:
+
+    # unmake
+    goats_bb ^= (1 << src) | (1 << dst)
+    occupied_bb = tigers_bb | goats_bb
+    empty_bb = ~occupied_bb & BOARD_MASK
+
+    blocks = False
+    for tiger in extract_indices_fast(tigers_bb):
+        for j in range(CAPTURE_COUNTS[tiger]):
+            mid_mask = CAPTURE_MASKS[tiger, j, 0]
+            land_mask = CAPTURE_MASKS[tiger, j, 1]
+            if (goats_bb & mid_mask) and ((1 << dst) & land_mask):
+                blocks = True
+                priority_score += goat_block_capture_bonus
+                break
+        if blocks:
             break
-    return priority_score
 
     # Clustering
-    no_of_neighboring_goats = popcount(neighboring_goats)
-    if not is_placement_phase:
-        no_of_neighboring_goats -= 1
+    if is_placement_phase:
+        no_of_neighboring_goats = popcount(neighboring_goats)
 
-    priority_score += no_of_neighboring_goats * \
-        goat_clustering_bonus
+        priority_score += no_of_neighboring_goats * \
+            goat_clustering_bonus
 
-    # useful when there's nothing much going on the board
-    if is_placement_phase and ((1 << dst) & STRATEGIC_MASK) != 0:
-        priority_score += goat_strategic_position_bonus
-    elif ((1 << dst) & OUTER_EDGE_MASK) != 0:
-        priority_score += goat_outer_edge_bonus
+        if ((1 << dst) & STRATEGIC_MASK) != 0:
+            priority_score += goat_strategic_position_bonus
+        elif ((1 << dst) & OUTER_EDGE_MASK) != 0:
+            priority_score += goat_outer_edge_bonus
 
-    return priority_score + np.random.random()/2
+    return priority_score
 
 #
 # if __name__ == "__main__":
