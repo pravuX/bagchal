@@ -37,8 +37,9 @@ class MCTS:
         # a more stable evaluation of the state
         self.rollout_depth = 5
 
-    def search(self, initial_state: BitboardGameState, max_simulations=1000, time_limit=None):
+    def search(self, initial_state: BitboardGameState, max_simulations=1000, time_limit=None, game_history=None):
         # print("Searching move...")
+        self.game_history = game_history
 
         self.game_state = initial_state.copy()
 
@@ -127,19 +128,23 @@ class MCTS:
                         self.game_state.tigers_bb, self.game_state.goats_bb, move, MOVE_MASKS_NP, CAPTURE_COUNTS, CAPTURE_MASKS_NP, OUTER_EDGE_MASK, STRATEGIC_MASK)
 
                 priority_score_norm = -1 * np.tanh(0.1 * p_score)
-                # TODO:
-                # add a contempt factor if the state in the curent node has occurred before in the path_nodes
+
+                self.game_state.make_move(move)
+
+                if self.game_state.key in self.game_history:
+                    # bad negative score means, repeated position for the player to move
+                    #  at the node is bad
+                    # multiply by -1 to flip perspective to that of the parent
+                    priority_score_norm += -1 * -1000
 
                 new_child = Node(
                     total_value=priority_score_norm,
                     parent=current_node,
                     move=move,
-                    player_to_move=self.game_state.turn * -1
+                    player_to_move=self.game_state.turn
                 )
                 current_node.children.append(new_child)
                 path_nodes.append(new_child)
-
-                self.game_state.make_move(move)
 
                 return path_nodes
 

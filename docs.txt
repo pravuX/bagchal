@@ -124,7 +124,7 @@ Implementation Details:
 [x] Negamax
 [x] Alpha Beta Pruning
 [x] Iterative Deepening
-[x] Killer Moves and History Heursitic for Quiet (Non-Capture) Moves
+[x] Killer Moves and History Heuristics for Quiet (Non-Capture) Moves
 [x] Collecting and Logging Prinicial Variation Moves
 [x] PV Move Sorting✨ (Handled by TT move sorting now)
 [x] Principal Variation Search (PVS)✨
@@ -139,3 +139,220 @@ Similarly Null-Move pruning is not considered because Zugzwang situations are fa
 As for Aspiration Windows, I found no performance gain from using them. So, they are not used.
 
 LMR is interesting for sure. In Bagchal, we know for sure that certain moves are just plain bad and it'd make sense to rely on our move ordering and prune away bad moves. But i've found that, in practice, Bagchal tends to have far lower branching factor, thus we cannot use a general move reduction parameter. I also tried selecting the parameter dynamically (basically only try 25% of the moves). Alas, there was no significant improvement in the performance of the search. So i've opted to not implement it.
+
+1. Introduction
+Purpose and motivation for the project
+Overview of Bagchal and its asymmetric gameplay
+High-level architecture (Engine, Search, UI, etc.)
+
+2. System Architecture
+Core components:
+GameState module
+Search module (AlphaBeta + MCTS)
+Evaluation module
+Transposition and move-ordering subsystems
+High-level data flow between components
+
+3. Game Representation
+Bitboard representation
+How the 25-position board is encoded as a 64-bit integer
+Piece encoding (Tiger = 1, Goat = -1)
+Move masks and adjacency maps
+Precomputed arrays for fast move generation
+Incremental make/unmake
+State mutation design for reversible search
+Zobrist hashing
+Unique hash per (piece, square) combination
+Used for repetition detection and transposition tables
+
+4. Core Search Frameworks
+4.1 AlphaBeta Search
+Recursive negamax structure
+Alpha, beta bounds and pruning logic
+PV handling and propagation
+Iterative deepening strategy
+
+4.2 Monte Carlo Tree Search (MCTS)
+Tree policy (selection + expansion)
+Rollout (simulation) policy with ε-randomness
+Backup (value propagation)
+Integration of heuristic evaluation for early rollouts
+
+5. Optimization Techniques
+5.1 Game State Optimization
+Bitboard rationale (compactness, bitwise speed)
+Zobrist hashing for fast identity and transposition
+NumPy + Numba JIT compilation for tight loops
+Move generation staging
+Prioritize captures → then non-captures
+Make/Unmake design
+Reversible moves
+Incremental hash updates (no recomputation)
+
+5.2 Search Enhancements
+Iterative Deepening – depth-by-depth search until cutoff
+Killer/History Heuristics – reward cutoff-inducing moves
+PV Handling – propagate best line from children
+Principal Variation Search (PVS) – alpha-beta optimization on PV node
+Transposition Tables – cache results for repeated states
+Contempt Factor – penalize repetition / drawish play
+Time Management – early cutoff, stable return on timeout
+
+5.3 Design Decisions and Omissions
+Quiescence Search: not required due to deterministic capture rules
+Null Move Pruning: avoided (zugzwangs common)
+Aspiration Windows: tested, no measurable gain
+Late Move Reductions (LMR): minimal effect (low branching factor)
+
+6. Monte Carlo Tree Search (Extended)
+Integration with deterministic evaluation
+First Play Urgency (FPU) initialization
+Move Prioritization
+Priority-based move ordering
+Influence of domain-specific heuristics
+Rollout control parameters
+rollout_epsilon: randomness factor
+rollout_depth: early termination depth
+Handling of repeated states and draw bias
+
+7. Evaluation Function and Heuristic Design
+Overview and purpose
+Feature components (captures, potential captures, traps, accessibility, etc.)
+Implementation details (bitwise extraction, vectorization)
+Terminal handling and contempt
+Calibration and tuning methodology
+
+8. Experimental Results and Performance Analysis
+Benchmark methodology
+Speed comparison: Python vs Numba
+Search efficiency metrics
+Nodes per second
+Transposition hits
+PV stability
+MCTS vs AlphaBeta: win rate and qualitative differences
+Observations and trade-offs
+
+9. Conclusion and Future Work
+Summary of achieved objectives
+Lessons learned from optimization
+Potential extensions (neural evaluation, parallel search, etc.)
+
+Board Representation:
+The 5x5 Bagchal board is encoded as two 64-bit integers (called Bitboards), `tigers_bb` and `goats_bb`, respectively representing the positions of tigers and goats on the board.
+
+The benefit of using Bitboards is that it leaves a small memory footprint, allows efficient move generation, make/ unmake move operations, accessibility checks and so on due to high-speed bitwise operations.
+
+The Bagchal board restricts movement of pieces based on what positions are adjacent to the position that holds a piece. The odd positions on the board can move within a von Neumann neighborhood (4-neighborhood), whereas even positions can move within a Moore neighborhood (8-neighborhood).
+
+[SHOW IMAGES OF EACH TYPE OF NEIGHBORHOOD]
+
+However in practice it is efficient to represent the relationship between positions as an adjacency list. Furthermore, the adjacency list can be used to precompute neighborhood and attack masks for each position. This can further speed up move generation.
+
+Zobrist Hashing:
+Unique keys are generated for each board position by combining features that distinguish different board configurations.
+
+The features considered are positions of all pieces on the board, the side to move, the no of goats left to place and the no of goats captured. The hash keys can be generated incrementally.
+
+These features are distinct enough that hash collisions are extremely rare and so, the hashes generated via Zobrist hashing can be used in transposition tables, as well as for repetition detection.
+
+Finding the Best Move:
+We employ two methods for finding the best move to play given any board position.
+
+The first one is the classic alpha-beta search with key enhancements and the second is the more modern approach called Monte Carlo Tree Search (or, MCTS).
+
+1) Alpha-Beta Search
+
+The basic negamax framework for Alpha-Beta Search is as follows:
+
+function negamax(node, depth, α, β, color) is
+    if depth = 0 or node is a terminal node then
+        return color × the heuristic value of node
+
+    childNodes := generateMoves(node)
+    childNodes := orderMoves(childNodes)
+    value := −∞
+    foreach child in childNodes do
+        value := max(value, −negamax(child, depth − 1, −β, −α, −color))
+        α := max(α, value)
+        if α ≥ β then
+            break (* cut-off *)
+    return value
+
+The Evaluation Function:
+        tiger_score = (eaten_score * w_eat +
+                       potential_capture_score * w_potcap +
+                       tiger_mobility_score * p_mobility)
+
+        goat_score = (trap_score * w_trap +
+                      goat_presence_score * w_presence +
+                      inaccessibility_score * w_inacc)
+        final_evaluation = (tiger_score - goat_score) * turn
+
+The philosophy behind evaluation is to consider the most important determinants for the "goodness" of the position. For tigers, this means the no of goats captured and the no of goats that can be immediately captured. The third parameter to consider for tigers is how freely the tiger can move about on the board.
+
+Similarly for goats, we consider the no of tigers trapped and the no of goats present on the board. The third and the most important parameter is the so called "inaccessibility_score". The higher the no of positions inaccessible to tigers on the board, the greater the chance of goat winning.
+
+The asymmetric nature of this game poses a challenge to come up with a balanced evaluation function. That is the reason why the effect of above parameters are tuned by using easily adjustable weights. These weights can be further adjusted to change the personality of the agent (i.e. make it more aggressive or more defensive).
+
+Following key enhancements are applied to increase the search efficiency of the algorithm:
+
+  i) Iterative Deepening (ID):
+It provides a simple framework for managing "thinking" time for the agent. The idea is to research the best move from the given position with increasing depth (starting from depth 1 and incrementing gradually until the allotted time is over).
+
+This has the added advantage of collecting the optimal line of play along with certain other information about the search that help in making subsequent iterations faster.
+
+ ii) Killer Moves and History Heuristic:
+Killer Moves are defined as non-capture moves that cause a beta-cutoff i.e. moves that raise the beta score and cause a cut-off. Two moves per search ply are stored.
+
+History Heuristic stores the target squares on the board and the corresponding number of beta-cutoff caused by the piece being on that position.
+
+These statistics are gathered during ID iterations.
+
+iii) Transposition Table (TT):
+A transposition is defined as a position that is arrived by a different sequence of moves. In Bagchal, transpositions are highly common so a TT is used to store the following information:
+
+TTEntry (depth, evaluation, flag, best_move)
+where,
+  depth = the depth where the position is evaluated
+  evaluation = the evaluation of the position
+  flag = the type of the valuation (Exact, Upperbound, Lowerbound)
+  best_move = the best move determined at this position
+
+The TT is indexed by the Zobrist Key of the position and can be used to return early during negamax search as well as for move sorting.
+
+ iv) Move Sorting:
+
+Move Sorting is essential for speeding up the negamax search. If the search encounters moves that cause cut-offs early (thus pruning parts of the search tree), it can penetrate larger depths and search more nodes.
+
+To sort the moves we use a move scoring routine and bring the highest scoring move to the current index when traversing a list of legal moves.
+
+Moves are first scored by a static priority function. This function is not common for other board games but in Bagchal, we made the observation that there are moves which are almost never good to make (for e.g. walking into a sure capture). So this basic scoring function is used to discourage such obviously bad moves and in the rare case where sacrificing a piece is strategic, the following methods take care of elevating the score of that move.
+
+Killer and History Heuristics are used to increment the base score of quiet moves.
+
+Finally, the most important part of move scoring is to always try the best moves from the PV Line first. This can be achieved by probing the transposition table and assigning the highest score to the hashed move. Though it is not always guaranteed that the entries on the TT will be exact entries, we haven't yet encountered a case where the TT has failed to store the PV Line.
+
+  v) Principal Variation Search (PVS):
+
+This is an optimization of negamax Search that assumes optimal move ordering (i.e the first move tested is the best one). Since we have a strong move sorting routine, PVS is highly effective in increasing the search efficiency. In certain cases, an 18% increase in efficiency was observed by using PVS, while in most cases, PVS improves search by 5-10%.
+
+
+ vi) Contempt Factor:
+
+ This is simply the "draw" score. Draw by repetition rule is followed i.e. a game is declared draw if the same state occurs three times with the same side to play.
+
+ It is possible in Bagchal to reverse the last played move. This has the effect that repetitions become common during the course of a game. Left to it's own devices, the agent will keep choosing the optimal move for a given position. This leads to situations where a winnable game ends in a draw.
+
+ So we use a contempt factor (some negative value) to discourage lines of play that lead to repeated positions.
+
+ With these enhancements on top of the base negamax with alpha-beta pruning, a competent Bagchal playing agent is achieved. The agent demonstrates strong strategic understanding. The goat agent knows to create formations that have certain regions completely inaccessible to tigers, similarly, tiger agent prioritizes moves that create greater capture opportunities and stronger formation, rather than pursuing immediate captures.
+
+ There are other enhancements to negamax that we found didn't provide any improvement to the search, or found inapplicable to the case of Bagchal.
+
+ Quiescence search did seem like a promising choice at first but then the asymmetric character of the made game it difficult to effectively integrate it into the algorithm. Since only tigers can play capture moves (trapping a tiger isn't equivalent to capturing a goat) and captures are almost always a good move to make, the idea of pursuing remaining capture moves at the leaf node to reach a more stable evaluation does not apply as for as our assessment goes.
+
+Null-Move Pruning is another a popular enhancement used in many Chess Engines. In Bagchal, however, Zugzwang situations are way too common for Null-Move Pruning to be useful.
+
+Aspiration Window is another common enhancement to Iterative Deepening, but it offered no significant advantage.
+
+Finally Later Move Reductions (LMR) had minimal effect on the search efficiency. This was the case because the branching factor at first if big (21) but eventually as the board fills up, only few moves are available. So the effectiveness of reducing moves goes down as gameplay progresses. Also, whether to reduce a move or not is extremely difficult to put into clear terms. Specially so when the no of moves available is small. For these reasons, LMR was tested but not included in the final implementation.

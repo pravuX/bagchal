@@ -59,7 +59,7 @@ class Game:
 
         self.ai_thread = None
         # ai thinking time in seconds
-        self.time_limit = 1.0
+        self.time_limit = 1.5
         self.ai_is_thinking = False
         self.ai_result_move = None
 
@@ -257,7 +257,8 @@ class Game:
         """This function runs on a separate thread."""
         try:
             if hasattr(agent, "search"):  # MCTS
-                move = agent.search(game_state, time_limit=self.time_limit)
+                move = agent.search(
+                    game_state, time_limit=self.time_limit, game_history=self.state_hash.keys())
                 print(f"Total Simulations: {agent.simulations_run}")
                 print(f"Goat Wins: {agent.goat_wins}",
                       f"Tiger Wins: {agent.tiger_wins}",
