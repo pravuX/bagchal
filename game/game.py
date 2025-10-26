@@ -5,7 +5,7 @@ import pygame
 from bagchal import *
 from negamax import AlphaBetaAgent
 from mcts import MCTS
-from .constants import UIState, ASSETS
+from .constants import UIState, ASSETS, COLORS
 from .effects import ParticleEffect
 from .renderer import GameRenderer
 from .event_handler import EventHandler
@@ -245,7 +245,7 @@ class Game:
                     self.pending_player_move = move
                     x, y = self.cell_to_pixel(col, row)
                     self.particles.append(ParticleEffect(
-                        x + self.offset, y + self.offset, (220, 180, 100)))
+                        x + self.offset, y + self.offset, COLORS['accent']))
                     return
             elif piece == self.game_state.turn:
                 self.selected_cell = idx

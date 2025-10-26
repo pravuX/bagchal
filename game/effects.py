@@ -31,5 +31,7 @@ class ParticleEffect:
         for p in self.particles:
             alpha = int(255 * (p['life'] / 30))
             size = max(2, int(4 * (p['life'] / 30)))
-            pygame.draw.circle(screen, p['color'],
+            r, g, b = p['color']
+            dyn_color = (r, g, b, alpha)
+            pygame.draw.circle(screen, dyn_color,
                                (int(p['x']), int(p['y'])), size)

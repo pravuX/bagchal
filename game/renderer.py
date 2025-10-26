@@ -263,13 +263,13 @@ class GameRenderer:
     def render_game_over(self):
         pieces = {-1: "Goat", 1: "Tiger"}
         fade_alpha = min(255, (pygame.time.get_ticks(
-        ) - self.game.game_over_timer + self.game.game_over_delay) // 400)
+        ) - self.game.game_over_timer + self.game.game_over_delay) // 500)
         pulse = abs(pygame.time.get_ticks() % 1600 - 800) / 400
         overlay = pygame.Surface(self.game.screen_size)
         overlay.fill(COLORS["game_over_bg"])
         overlay.set_alpha(fade_alpha)
         self.screen.blit(overlay, (0, 0))
-        scale = min(1.2, max(0.5, pulse))
+        scale = min(1.2, max(0.3, pulse))
 
         game_over_font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Over!", int(
