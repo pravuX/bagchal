@@ -16,6 +16,8 @@ COLORS = {
     "ai_thinking": (255, 200, 50),  # Bright yellow
     "white": (255, 255, 255),
     "game_over_bg": (20, 20, 30),  # Very dark
+    "win_tiger": (255, 150, 50),
+    "win_goat": (100, 255, 150)
 }
 
 ASSETS = {

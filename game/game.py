@@ -16,10 +16,10 @@ mcts_flag, minimax_flag = 0, 1
 class Game:
     def __init__(self, game_state,
                  caption="Bagchal - The Tiger and Goats Game",
-                 cell_size=200,
+                 cell_size=180,
                  tick_speed=60,
                  min_cell_size=100,
-                 max_cell_size=300):
+                 max_cell_size=500):
         pygame.init()
         pygame.display.set_caption(caption)
 
@@ -34,11 +34,11 @@ class Game:
         self.pending_player_move = None
         self.using_agent = minimax_flag
         self.ai_thread = None
-        self.time_limit = 0.6
+        self.time_limit = 1.0
         self.ai_is_thinking = False
         self.ai_result_move = None
         self.game_over_timer = 0
-        self.game_over_delay = 2500
+        self.game_over_delay = 1000
 
         self.initialize_board_data()
         self.selected_cell = None
@@ -218,6 +218,7 @@ class Game:
         return col * self.cell_size, row * self.cell_size
 
     def place_piece(self, pos):
+        self.last_move_highlight = None
         is_human_turn = (self.current_state == UIState.PLAYING_PVP) or \
                         (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == 1) or \
                         (self.current_state ==
