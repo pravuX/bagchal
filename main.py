@@ -2,7 +2,7 @@ from collections import defaultdict
 from os import system
 from bagchal import *
 from negamax import AlphaBetaAgent
-from game import Game
+from game.game import Game
 from mcts import MCTS
 import time
 import numpy as np
