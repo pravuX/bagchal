@@ -83,12 +83,17 @@ class Game:
     def __init__(self, game_state,
                  caption="Bagchal - The Tiger and Goats Game",
                  cell_size=200,
-                 tick_speed=60):  # Increased for smoother animations
+                 tick_speed=60,
+                 min_cell_size=100,
+                 max_cell_size=300):  # Increased for smoother animations
         pygame.init()
         pygame.display.set_caption(caption)
 
         self.game_state: BitboardGameState = game_state
+        self.base_cell_size = cell_size
         self.cell_size = cell_size
+        self.min_cell_size = min_cell_size
+        self.max_cell_size = max_cell_size
 
         self.current_state = UIState.MAIN_MENU
         self.running = True
@@ -111,6 +116,7 @@ class Game:
 
         self.initialize_pygame_state(tick_speed)
         self.load_assets()
+        self.cache_scaled_assets()  # Cache scaled versions
 
         self.state_hash = defaultdict(int)
 
@@ -144,22 +150,49 @@ class Game:
         self.board_height = self.grid_height - self.cell_size
 
     def initialize_pygame_state(self, tick_speed):
-        self.screen = pygame.display.set_mode(self.screen_size)
+        self.screen = pygame.display.set_mode(self.screen_size, pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
         self.tick_speed = tick_speed
 
     def load_assets(self):
-        self.bagh_img = pygame.image.load(ASSETS["bagh"]).convert_alpha()
-        self.goat_img = pygame.image.load(ASSETS["goat"]).convert_alpha()
-        self.bagh_selected = pygame.image.load(ASSETS["bagh_sel"]).convert_alpha()
-        self.goat_selected = pygame.image.load(ASSETS["goat_sel"]).convert_alpha()
+        # Load original images at full resolution
+        self.bagh_img_original = pygame.image.load(ASSETS["bagh"]).convert_alpha()
+        self.goat_img_original = pygame.image.load(ASSETS["goat"]).convert_alpha()
+        self.bagh_selected_original = pygame.image.load(ASSETS["bagh_sel"]).convert_alpha()
+        self.goat_selected_original = pygame.image.load(ASSETS["goat_sel"]).convert_alpha()
 
-        # Slightly larger pieces for better visibility
+    def cache_scaled_assets(self):
+        """Scale assets based on current cell size"""
         piece_size = int(self.cell_size * 0.55)
-        self.bagh_img = pygame.transform.smoothscale(self.bagh_img, (piece_size, piece_size))
-        self.goat_img = pygame.transform.smoothscale(self.goat_img, (piece_size, piece_size))
-        self.bagh_selected = pygame.transform.smoothscale(self.bagh_selected, (piece_size, piece_size))
-        self.goat_selected = pygame.transform.smoothscale(self.goat_selected, (piece_size, piece_size))
+        self.bagh_img = pygame.transform.smoothscale(self.bagh_img_original, (piece_size, piece_size))
+        self.goat_img = pygame.transform.smoothscale(self.goat_img_original, (piece_size, piece_size))
+        self.bagh_selected = pygame.transform.smoothscale(self.bagh_selected_original, (piece_size, piece_size))
+        self.goat_selected = pygame.transform.smoothscale(self.goat_selected_original, (piece_size, piece_size))
+
+    def handle_resize(self, new_size):
+        """Handle window resize event"""
+        width, height = new_size
+
+        # Calculate new cell size based on window dimensions
+        # Use the smaller dimension to maintain aspect ratio
+        available_width = width
+        available_height = height - 100  # Reserve space for status bar
+
+        # Calculate cell size that fits the window
+        max_cell_from_width = available_width // 5
+        max_cell_from_height = available_height // 5
+        new_cell_size = min(max_cell_from_width, max_cell_from_height)
+
+        # Clamp to min/max values
+        new_cell_size = max(self.min_cell_size, min(self.max_cell_size, new_cell_size))
+
+        if new_cell_size != self.cell_size:
+            self.cell_size = new_cell_size
+            self.initialize_board_data()
+            self.cache_scaled_assets()
+
+        # Update screen
+        self.screen = pygame.display.set_mode(self.screen_size, pygame.RESIZABLE)
 
     def reset_game(self):
         self.cleanup_ai_thread()
@@ -183,9 +216,11 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.current_state = UIState.EXITING
+            elif event.type == pygame.VIDEORESIZE:
+                self.handle_resize(event.size)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                play_btn_rect = pygame.Rect(277, 350, 200, 60)
-                exit_btn_rect = pygame.Rect(277, 450, 200, 60)
+                play_btn_rect = pygame.Rect(self.screen_size[0]//2 - 100, 350, 200, 60)
+                exit_btn_rect = pygame.Rect(self.screen_size[0]//2 - 100, 450, 200, 60)
 
                 if play_btn_rect.collidepoint(event.pos):
                     self.current_state = UIState.MODE_SELECT
@@ -196,11 +231,14 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.current_state = UIState.EXITING
+            elif event.type == pygame.VIDEORESIZE:
+                self.handle_resize(event.size)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                pvp_rect = pygame.Rect(127, 300, 550, 60)
-                pvc_goat_rect = pygame.Rect(107, 380, 600, 60)
-                pvc_tiger_rect = pygame.Rect(107, 460, 600, 60)
-                cvc_rect = pygame.Rect(87, 540, 650, 60)
+                center_x = self.screen_size[0] // 2
+                pvp_rect = pygame.Rect(center_x - 275, 300, 550, 60)
+                pvc_goat_rect = pygame.Rect(center_x - 300, 380, 600, 60)
+                pvc_tiger_rect = pygame.Rect(center_x - 300, 460, 600, 60)
+                cvc_rect = pygame.Rect(center_x - 325, 540, 650, 60)
 
                 if pvp_rect.collidepoint(event.pos):
                     self.reset_game()
@@ -233,6 +271,8 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.current_state = UIState.EXITING
+            elif event.type == pygame.VIDEORESIZE:
+                self.handle_resize(event.size)
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if self.current_state == UIState.PLAYING_PVP or \
                    (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == Piece_TIGER) or \
@@ -248,6 +288,8 @@ class Game:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.current_state = UIState.EXITING
+            elif event.type == pygame.VIDEORESIZE:
+                self.handle_resize(event.size)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     self.current_state = UIState.MODE_SELECT
