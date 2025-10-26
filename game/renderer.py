@@ -174,13 +174,16 @@ class GameRenderer:
                        y + h // 2, COLORS["white"])
         return rect
 
-    def render_main_menu(self):
+    def draw_gradient(self, color_1, color_2):
         for i in range(self.game.screen_size[1]):
             ratio = i / self.game.screen_size[1]
-            color = tuple(int(COLORS["menu_bg"][j] + (COLORS["mode_bg"]
-                          [j] - COLORS["menu_bg"][j]) * ratio) for j in range(3))
+            color = tuple(
+                int(color_1[j] + (color_2[j] - color_1[j]) * ratio) for j in range(3))
             pygame.draw.line(self.screen, color, (0, i),
                              (self.game.screen_size[0], i))
+
+    def render_main_menu(self):
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text(
@@ -195,12 +198,8 @@ class GameRenderer:
             "Exit", self.game.screen_size[0]//2 - 100, 450, 200, 60)
 
     def render_mode_select(self):
-        for i in range(self.game.screen_size[1]):
-            ratio = i / self.game.screen_size[1]
-            color = tuple(int(COLORS["mode_bg"][j] + (COLORS["menu_bg"]
-                          [j] - COLORS["menu_bg"][j]) * ratio) for j in range(3))
-            pygame.draw.line(self.screen, color, (0, i),
-                             (self.game.screen_size[0], i))
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
                        self.game.screen_size[0] // 2, 120, COLORS["accent"])
@@ -218,7 +217,9 @@ class GameRenderer:
                        self.game.screen_size[0] // 2, 650, COLORS["white"])
 
     def render_game(self):
-        self.screen.fill(COLORS["bg"])
+
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+
         self.draw_board()
         self.draw_valid_moves()
 
@@ -271,7 +272,7 @@ class GameRenderer:
     def render_game_over(self):
         pieces = {-1: "Goat", 1: "Tiger"}
         fade_alpha = min(255, (pygame.time.get_ticks(
-        ) - self.game.game_over_timer + self.game.game_over_delay) // 500)
+        ) - self.game.game_over_timer + self.game.game_over_delay) // 400)
         pulse = abs(pygame.time.get_ticks() % 1600 - 800) / 400
         overlay = pygame.Surface(self.game.screen_size)
         overlay.fill(COLORS["game_over_bg"])
