@@ -132,7 +132,7 @@ class GameRenderer:
         font_size = int(self.game.cell_size * 0.1)
 
         self.draw_button(turn_text, center,
-                         status_y - height, width, height, font_size)
+                         status_y - height//1.5, width, height, font_size)
 
         self.draw_button(goat_text, 0 + spacing,
                          y, width, height, font_size)
@@ -243,21 +243,29 @@ class GameRenderer:
             particle.draw(self.screen)
             if not particle.particles:
                 self.game.particles.remove(particle)
+
         if self.game.ai_is_thinking:
             self.game.ai_pulse = (self.game.ai_pulse + 0.1) % (2 * 3.14159)
             alpha = int(128 + 127 * abs(pygame.math.Vector2(1,
                         0).rotate_rad(self.game.ai_pulse).x))
-            overlay = pygame.Surface((300, 60), pygame.SRCALPHA)
+
+            overlay_width = 350
+            overlay_height = 60
+            overlay = pygame.Surface(
+                (overlay_width, overlay_height), pygame.SRCALPHA)
             pygame.draw.rect(overlay, (40, 40, 60, 200),
                              overlay.get_rect(), border_radius=10)
             pygame.draw.rect(overlay, (COLORS["ai_thinking"][0], COLORS["ai_thinking"][1],
                              COLORS["ai_thinking"][2], alpha), overlay.get_rect(), 3, border_radius=10)
-            self.screen.blit(overlay, (self.game.grid_width // 2 - 150, 20))
-            font = pygame.font.SysFont(None, 32)
+            self.screen.blit(overlay, (self.game.grid_width //
+                             2 - overlay_width / 2, 10))
+
+            font_size = int(self.game.cell_size * 0.1)
+            font = pygame.font.Font(ASSETS["font"], font_size)
             dots = "." * (int(pygame.time.get_ticks() / 300) % 4)
             text = font.render(
                 f"AI is Thinking{dots}", True, COLORS["ai_thinking"])
-            text_rect = text.get_rect(center=(self.game.grid_width // 2, 50))
+            text_rect = text.get_rect(center=(self.game.grid_width // 2, 40))
             self.screen.blit(text, text_rect)
 
     def render_game_over(self):
@@ -278,7 +286,7 @@ class GameRenderer:
         result_font_size = int(self.game.cell_size * 0.17)
         result_text = f"{pieces[self.game.game_state.get_result]} Won!" if self.game.game_state.get_result else "It's a Draw!"
         result_color = COLORS["win_tiger"] if self.game.game_state.get_result == Piece_TIGER else COLORS[
-            "win_tiger"] if self.game.game_state.get_result == Piece_GOAT else COLORS["white"]
+            "win_goat"] if self.game.game_state.get_result == Piece_GOAT else COLORS["white"]
         self.draw_text(result_text, int(
             result_font_size * scale), self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 - 100, result_color)
 
