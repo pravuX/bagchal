@@ -169,7 +169,7 @@ class AlphaBetaAgent():
             repeated = (self.game_state.key in self.tree_history or
                         self.game_state.key in self.game_history)
             if repeated:
-                score = CONTEMPT
+                score = -(CONTEMPT * CONTEMPT)  # ALMOST NEVER REPEATS A MOVE
             else:
                 self.tree_history.append(self.game_state.key)
 

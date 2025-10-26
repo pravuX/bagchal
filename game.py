@@ -59,7 +59,7 @@ class Game:
 
         self.ai_thread = None
         # ai thinking time in seconds
-        self.time_limit = 1.5
+        self.time_limit = 0.6
         self.ai_is_thinking = False
         self.ai_result_move = None
 
