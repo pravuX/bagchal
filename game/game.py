@@ -64,6 +64,19 @@ class Game:
         self.renderer = GameRenderer(self)
         self.event_handler = EventHandler(self)
 
+        self.resize_timer = 0
+        self.resize_delay = 200  # 200ms delay after the last resize event
+        self.pending_resize = None
+
+    def check_for_resize(self):
+        if self.pending_resize is None:
+            return
+
+        # Check if enough time has passed since the last resize event
+        if pygame.time.get_ticks() - self.resize_timer > self.resize_delay:
+            self.handle_resize(self.pending_resize)
+            self.pending_resize = None  # Clear the pending resize
+
     def state_hash_update(self):
         state_key = self.game_state.key
         self.state_hash[state_key] += 1
@@ -293,8 +306,15 @@ class Game:
     def update(self):
         self.move_processed_this_frame = False
         self.event_handler.handle_events()
+        self.check_for_resize()
 
-        if self.current_state == UIState.MAIN_MENU:
+        if self.pending_resize:
+            self.screen.fill(COLORS["menu_bg"])
+            font_size = min(32, int(self.screen.get_width() * 0.05))
+            self.renderer.draw_text(
+                "Resizing...", font_size, self.screen.get_width() // 2, self.screen.get_height() // 2, COLORS["white"])
+
+        elif self.current_state == UIState.MAIN_MENU:
             self.renderer.render_main_menu()
         elif self.current_state == UIState.MODE_SELECT:
             self.renderer.render_mode_select()
