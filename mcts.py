@@ -38,7 +38,7 @@ class MCTS:
         self.rollout_depth = 5
 
     def search(self, initial_state: BitboardGameState, max_simulations=1000, time_limit=None, game_history=None):
-        # print("Searching move...")
+        print("Searching move...")
         self.game_history = game_history
 
         self.game_state = initial_state.copy()
@@ -87,7 +87,10 @@ class MCTS:
             while self.simulations_run < max_simulations:
                 search_helper()
         best_move = self.get_best_move()
-        # print(f"Best move: {best_move}")
+        print(f"Best move: {best_move}")
+        print(f"Simulations run: {self.simulations_run}")
+        print(f"Goat Wins: {self.goat_wins}",
+              f"Tiger Wins: {self.tiger_wins}\n")
         return best_move
 
     def get_best_move(self):
