@@ -12,3 +12,6 @@
 ```sh
 λ python ./game.py
 ```
+
+## Demo Video
+[![Negamax Agent Demo](https://img.youtube.com/vi/BhFpz1-PkqM/maxresdefault.jpg)](https://www.youtube.com/watch?v=BhFpz1-PkqM)
