@@ -31,7 +31,7 @@ class EventHandler:
 
     def handle_main_menu_events(self, events):
         for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 play_btn_rect = pygame.Rect(
                     self.game.screen_size[0]//2 - 100, 350, 200, 60)
                 exit_btn_rect = pygame.Rect(
@@ -43,24 +43,37 @@ class EventHandler:
 
     def handle_mode_select_events(self, events):
         for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                center_x = self.game.screen_size[0] // 2
-                pvp_rect = pygame.Rect(center_x - 275, 300, 550, 60)
-                pvc_goat_rect = pygame.Rect(center_x - 300, 380, 600, 60)
-                pvc_tiger_rect = pygame.Rect(center_x - 300, 460, 600, 60)
-                cvc_rect = pygame.Rect(center_x - 325, 540, 650, 60)
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                x_width = self.game.screen_size[0]
+                y_height = self.game.screen_size[1]
+                pvp_rect = pygame.Rect(x_width *.056, x_width* 0.45, x_width* 0.18, y_height * 0.360)
+                pvc_goat_rect = pygame.Rect(x_width * .292, x_width* 0.45, x_width* 0.18, y_height * 0.360)
+                pvc_tiger_rect = pygame.Rect(x_width * .528 , x_width* 0.45, x_width* 0.18, y_height * 0.360)
+                cvc_rect = pygame.Rect(x_width * .764, x_width* 0.45, x_width* 0.18, y_height * 0.360)
                 if pvp_rect.collidepoint(event.pos):
-                    self.game.reset_game()
-                    self.game.current_state = UIState.PLAYING_PVP
+                     for r in range(0, 1800):  # smaller ripple range for speed
+                            pygame.draw.circle(self.game.screen,(80, 70, 120), pygame.mouse.get_pos(), r, width = 0)
+                            pygame.display.update()
+                            self.game.reset_game()
+                            self.game.current_state = UIState.PLAYING_PVP
                 elif pvc_goat_rect.collidepoint(event.pos):
+                    for r in range(0, 1800):  # smaller ripple range for speed
+                            pygame.draw.circle(self.game.screen,(70, 120, 80), pygame.mouse.get_pos(), r, width = 0)
+                            pygame.display.update()
                     self.game.reset_game()
                     self.game.current_state = UIState.PLAYING_PVC_GOAT
                     self.start_ai_initialization()
                 elif pvc_tiger_rect.collidepoint(event.pos):
+                    for r in range(0, 1800):  # smaller ripple range for speed
+                            pygame.draw.circle(self.game.screen,(120, 80, 70), pygame.mouse.get_pos(), r, width = 0)
+                            pygame.display.update()
                     self.game.reset_game()
                     self.game.current_state = UIState.PLAYING_PVC_TIGER
                     self.start_ai_initialization()
                 elif cvc_rect.collidepoint(event.pos):
+                    for r in range(0, 1800):  # smaller ripple range for speed
+                            pygame.draw.circle(self.game.screen,(120, 70, 120), pygame.mouse.get_pos(), r, width = 0)
+                            pygame.display.update()
                     self.game.reset_game()
                     self.game.current_state = UIState.PLAYING_CVC
                     self.start_ai_initialization()
@@ -71,7 +84,7 @@ class EventHandler:
 
     def handle_game_events(self, events):
         for event in events:
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.current_state == UIState.PLAYING_PVP or \
                    (self.game.current_state == UIState.PLAYING_PVC_GOAT and self.game.game_state.turn == 1) or \
                    (self.game.current_state == UIState.PLAYING_PVC_TIGER and self.game.game_state.turn == -1):

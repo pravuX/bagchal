@@ -6,8 +6,8 @@ COLORS = {
     "board": (139, 90, 60),  # Dark brown
     "board_light": (180, 140, 100),  # Light brown
     "text": (40, 20, 10),  # Dark brown text
-    "menu_bg": (25, 35, 45),  # Dark blue-grey
-    "mode_bg": (35, 25, 45),  # Dark purple
+    "menu_bg": (25, 35, 45),  # Dark blue-grey #19232D
+    "mode_bg": (35, 25, 45),  # Dark purple #23192D
     "button": (100, 70, 50),  # Brown button
     "button_hover": (140, 100, 70),  # Light brown hover
     "accent": (220, 180, 100),  # Gold accent
@@ -26,6 +26,9 @@ ASSETS = {
     "goat": "assets/goat.png",
     "bagh_sel": "assets/bagh_selected.png",
     "goat_sel": "assets/goat_selected.png",
+    "backgroundgradiant": "assets/backgroundgradiant.png",
+    "button": "assets/buttons.png",
+    "verticalbuttonpvp": "assets/verticalbutton_pvp.png",
 }
 
 

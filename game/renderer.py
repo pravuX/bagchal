@@ -183,7 +183,8 @@ class GameRenderer:
                              (self.game.screen_size[0], i))
 
     def render_main_menu(self):
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text(
@@ -198,27 +199,30 @@ class GameRenderer:
             "Exit", self.game.screen_size[0]//2 - 100, 450, 200, 60)
 
     def render_mode_select(self):
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
-
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        x_width = self.game.screen_size[0]
+        y_height = self.game.screen_size[1]
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
-                       self.game.screen_size[0] // 2, 120, COLORS["accent"])
-        self.draw_button("Player vs Player",
-                         self.game.screen_size[0] // 2 - 275, 300, 550, 60)
-        self.draw_button("Player vs Goat AI",
-                         self.game.screen_size[0] // 2 - 300, 380, 600, 60)
-        self.draw_button("Player vs Tiger AI",
-                         self.game.screen_size[0] // 2 - 300, 460, 600, 60)
-        self.draw_button("Computer vs Computer",
-                         self.game.screen_size[0] // 2 - 325, 540, 650, 60)
+                       x_width // 2, 120, COLORS["accent"])
+        # self.screen.blit(self.game.verticalbutton_pvp, (52, 300))
+        self.draw_button("PvP",#player v player to fit inside the square
+                         x_width *.056, x_width* 0.45, x_width* 0.18, y_height * 0.360)
+        self.draw_button("PvG",#player v goat ai to fit inside the square
+                         x_width * .292, x_width* 0.45, x_width* 0.18, y_height * 0.360)
+        self.draw_button("PvT",#player v tiger ai to fit inside the square
+                         x_width * .528 , x_width* 0.45, x_width* 0.18, y_height * 0.360)
+        self.draw_button("CvC",#computer v computer to fit inside the square
+                         x_width * .764, x_width* 0.45, x_width* 0.18, y_height * 0.360)
 
         font_size = int(self.game.cell_size * 0.17)
-        self.draw_text("Press ESC to go back", font_size,
-                       self.game.screen_size[0] // 2, 650, COLORS["white"])
+        self.draw_text("Press ESC to go back", 40, #this is font size
+                       self.game.screen_size[0] // 2, 950, COLORS["white"])
 
     def render_game(self):
-
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         self.draw_board()
         self.draw_valid_moves()
