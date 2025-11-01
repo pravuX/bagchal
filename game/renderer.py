@@ -125,7 +125,7 @@ class GameRenderer:
         padding = 50  # within button
         spacing = 10  # between buttons
         height = panel_height // 2
-        width = self.game.grid_width // 4 + padding
+        width = self.game.grid_width * 0.25 + padding
         center = self.game.grid_width // 2 - width // 2
         y = status_y + panel_height // 4
 
@@ -206,19 +206,15 @@ class GameRenderer:
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
                        x_width // 2, 120, COLORS["accent"])
-        # self.screen.blit(self.game.verticalbutton_pvp, (52, 300))
-        self.draw_button("PvP",#player v player to fit inside the square
-                         x_width *.056, x_width* 0.45, x_width* 0.18, y_height * 0.360)
-        self.draw_button("PvG",#player v goat ai to fit inside the square
-                         x_width * .292, x_width* 0.45, x_width* 0.18, y_height * 0.360)
-        self.draw_button("PvT",#player v tiger ai to fit inside the square
-                         x_width * .528 , x_width* 0.45, x_width* 0.18, y_height * 0.360)
-        self.draw_button("CvC",#computer v computer to fit inside the square
-                         x_width * .764, x_width* 0.45, x_width* 0.18, y_height * 0.360)
+        #import images for buttons of gamemode
+        self.screen.blit(self.game.playervsplayer_img, (x_width *.056, x_width* 0.45))
+        self.screen.blit(self.game.playervsgoat_img, (x_width * .292, x_width* 0.45))
+        self.screen.blit(self.game.playervsbagh_img, (x_width * .528 , x_width* 0.45))
+        self.screen.blit(self.game.AivsAi, (x_width * .764, x_width* 0.45))
 
         font_size = int(self.game.cell_size * 0.17)
-        self.draw_text("Press ESC to go back", 40, #this is font size
-                       self.game.screen_size[0] // 2, 950, COLORS["white"])
+        self.draw_text("Press ESC to go back", 20, #this is font size
+                       self.game.screen_size[0] // 2, y_height - 50, COLORS["white"])
 
     def render_game(self):
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
