@@ -1,8 +1,9 @@
 import pygame
 import threading
 from .constants import UIState
+pygame.mixer.init()
 
-
+click_sound = pygame.mixer.Sound("assets/button_click.mp3")
 class EventHandler:
     def __init__(self, game):
         self.game = game
@@ -51,27 +52,31 @@ class EventHandler:
                 pvc_tiger_rect = pygame.Rect(x_width * .528 , x_width* 0.45, x_width* 0.18, y_height * 0.360)
                 cvc_rect = pygame.Rect(x_width * .764, x_width* 0.45, x_width* 0.18, y_height * 0.360)
                 if pvp_rect.collidepoint(event.pos):
-                     for r in range(0, 1800):  # smaller ripple range for speed
+                     click_sound.play()
+                     for r in range(0, x_width+200):  # smaller ripple range for speed
                             pygame.draw.circle(self.game.screen,(80, 70, 120), pygame.mouse.get_pos(), r, width = 0)
                             pygame.display.update()
                             self.game.reset_game()
                             self.game.current_state = UIState.PLAYING_PVP
                 elif pvc_goat_rect.collidepoint(event.pos):
-                    for r in range(0, 1800):  # smaller ripple range for speed
+                    click_sound.play()
+                    for r in range(0, x_width+200):  # smaller ripple range for speed
                             pygame.draw.circle(self.game.screen,(70, 120, 80), pygame.mouse.get_pos(), r, width = 0)
                             pygame.display.update()
                     self.game.reset_game()
                     self.game.current_state = UIState.PLAYING_PVC_GOAT
                     self.start_ai_initialization()
                 elif pvc_tiger_rect.collidepoint(event.pos):
-                    for r in range(0, 1800):  # smaller ripple range for speed
+                    click_sound.play()
+                    for r in range(0, x_width+200):  # smaller ripple range for speed
                             pygame.draw.circle(self.game.screen,(120, 80, 70), pygame.mouse.get_pos(), r, width = 0)
                             pygame.display.update()
                     self.game.reset_game()
                     self.game.current_state = UIState.PLAYING_PVC_TIGER
                     self.start_ai_initialization()
                 elif cvc_rect.collidepoint(event.pos):
-                    for r in range(0, 1800):  # smaller ripple range for speed
+                    click_sound.play()
+                    for r in range(0, x_width+200):  # smaller ripple range for speed
                             pygame.draw.circle(self.game.screen,(120, 70, 120), pygame.mouse.get_pos(), r, width = 0)
                             pygame.display.update()
                     self.game.reset_game()

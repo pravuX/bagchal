@@ -27,8 +27,10 @@ ASSETS = {
     "bagh_sel": "assets/bagh_selected.png",
     "goat_sel": "assets/goat_selected.png",
     "backgroundgradiant": "assets/backgroundgradiant.png",
-    "button": "assets/buttons.png",
-    "verticalbuttonpvp": "assets/verticalbutton_pvp.png",
+    "playervsbagh" : "assets/playervsbagh.png",
+    "playervsgoat" : "assets/playervsgoat.png",
+    "playervsplayer" : "assets/playervsplayer.png",
+    "AivsAi" : "assets/AivsAi.png", 
 }
 
 

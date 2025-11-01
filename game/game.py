@@ -108,12 +108,18 @@ class Game:
             ASSETS["goat_sel"]).convert_alpha()
         self.backgroundgradiant_original = pygame.image.load(
             ASSETS["backgroundgradiant"]).convert_alpha()
-        self.button_original = pygame.image.load(
-            ASSETS['button']).convert_alpha()
-        self.verticalbuttonpvp = pygame.image.load(
-            ASSETS['verticalbuttonpvp']).convert_alpha()
+        self.pvp_original = pygame.image.load(
+            ASSETS['playervsplayer']).convert_alpha()
+        self.pvb_original = pygame.image.load(
+            ASSETS['playervsbagh']).convert_alpha()
+        self.pvg_original = pygame.image.load(
+            ASSETS['playervsgoat']).convert_alpha()
+        self.AvA_original = pygame.image.load(
+            ASSETS['AivsAi']).convert_alpha()
 
     def cache_scaled_assets(self):
+        x_width = self.screen_size[0]
+        y_height = self.screen_size[1]
         piece_size = int(self.cell_size * 0.55)
         self.bagh_img = pygame.transform.smoothscale(
             self.bagh_img_original, (piece_size, piece_size))
@@ -125,10 +131,14 @@ class Game:
             self.goat_selected_original, (piece_size, piece_size))
         self.backgroundgradiant_img = pygame.transform.smoothscale(
             self.backgroundgradiant_original, (1000, 1000))
-        self.button_img = pygame.transform.smoothscale(
-            self.button_original, (300, 300))
-        self.verticalbutton_pvp = pygame.transform.smoothscale(
-            self.verticalbuttonpvp, (180, 300))
+        self.playervsplayer_img = pygame.transform.smoothscale(
+            self.pvp_original, (x_width* 0.18, y_height * 0.360))
+        self.playervsbagh_img= pygame.transform.smoothscale(
+            self.pvb_original, (x_width* 0.18, y_height * 0.360))
+        self.playervsgoat_img= pygame.transform.smoothscale(
+            self.pvg_original, (x_width* 0.18, y_height * 0.360))
+        self.AivsAi = pygame.transform.smoothscale(
+            self.AvA_original, (x_width* 0.18, y_height * 0.360))
 
     def handle_resize(self, new_size):
         width, height = new_size
