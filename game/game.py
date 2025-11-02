@@ -94,6 +94,8 @@ class Game:
         pygame.mixer.init()
         self.click_sound = pygame.mixer.Sound("assets/button_click.mp3")
         self.goat_sound = pygame.mixer.Sound("assets/goat-baa.mp3")
+        self.placement_sound = pygame.mixer.Sound("assets/piece-placement.mp3")
+        self.capture_sound = pygame.mixer.Sound("assets/piece-capture.mp3")
 
     def initialize_button_rects(self):
         x_width = self.screen_size[0]
@@ -587,13 +589,13 @@ class Game:
                     screen_y = self.board_position[1] + y + self.offset
                     self.particles.append(ParticleEffect(
                         screen_x, screen_y, COLORS['accent']))
-                    # self.click_sound.play()
-                    self.goat_sound.play()
+                    # self.goat_sound.play()
+                    self.placement_sound.play()
                     return
             # Select piece
             elif piece == self.game_state.turn:
                 self.selected_cell = clicked_idx
-                self.click_sound.play()
+                self.placement_sound.play()
                 self.valid_moves = [
                     m for m in self.game_state.get_legal_moves() if m[0] == clicked_idx]
         else:
@@ -608,7 +610,10 @@ class Game:
                 screen_y = self.board_position[1] + y + self.offset
                 self.particles.append(ParticleEffect(
                     screen_x, screen_y, (220, 180, 100)))
-                self.click_sound.play()
+                if MOVE_MASKS[move[0]] & (1 << move[1]):
+                    self.placement_sound.play()
+                else:
+                    self.capture_sound.play()
             self.selected_cell = None
             self.valid_moves = []
 
@@ -646,6 +651,10 @@ class Game:
             self.state_hash_update()
             self.move_processed_this_frame = True
             self.last_move_frame = current_frame
+            if MOVE_MASKS[move[0]] & (1 << move[1]) or move[0] == move[1]:
+                self.placement_sound.play()
+            else:
+                self.capture_sound.play()
 
     def update(self):
         self.move_processed_this_frame = False
