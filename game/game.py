@@ -83,6 +83,9 @@ class Game:
         self.replay_auto_play_delay = 1500  # 1.5 seconds per move
         self.ai_suggestions = {}  # Cache AI suggestions for replay positions
 
+        pygame.mixer.init()
+        self.click_sound = pygame.mixer.Sound("assets/button_click.mp3")
+
         # Initialize database
         initialize_database()
 
@@ -120,25 +123,25 @@ class Game:
             btn_height = 360
         # mode select buttons
         self.pvp_rect = pygame.Rect(
-            x_width//2 - 2* btn_width - x_width* .084,
+            x_width//2 - 2 * btn_width - x_width * .084,
             y_height * 0.35,
             btn_width,
             btn_height)
 
         self.pvc_goat_rect = pygame.Rect(
-            x_width//2 -btn_width - x_width* .028,
+            x_width//2 - btn_width - x_width * .028,
             y_height * 0.35,
             btn_width,
             btn_height)
 
         self.pvc_tiger_rect = pygame.Rect(
-            x_width//2 + x_width *.028,
+            x_width//2 + x_width * .028,
             y_height * 0.35,
             btn_width,
             btn_height)
 
         self.cvc_rect = pygame.Rect(
-            x_width//2 + x_width * .084+ btn_width,
+            x_width//2 + x_width * .084 + btn_width,
             y_height * 0.35,
             btn_width,
             btn_height)
@@ -542,10 +545,12 @@ class Game:
                     screen_y = self.board_position[1] + y + self.offset
                     self.particles.append(ParticleEffect(
                         screen_x, screen_y, COLORS['accent']))
+                    self.click_sound.play()
                     return
             # Select piece
             elif piece == self.game_state.turn:
                 self.selected_cell = clicked_idx
+                self.click_sound.play()
                 self.valid_moves = [
                     m for m in self.game_state.get_legal_moves() if m[0] == clicked_idx]
         else:
@@ -560,6 +565,7 @@ class Game:
                 screen_y = self.board_position[1] + y + self.offset
                 self.particles.append(ParticleEffect(
                     screen_x, screen_y, (220, 180, 100)))
+                self.click_sound.play()
             self.selected_cell = None
             self.valid_moves = []
 

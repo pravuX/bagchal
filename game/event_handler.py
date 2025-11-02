@@ -7,8 +7,6 @@ from .database import get_last_games
 class EventHandler:
     def __init__(self, game):
         self.game = game
-        pygame.mixer.init()
-        self.click_sound = pygame.mixer.Sound("assets/button_click.mp3")
 
     def handle_events(self):
 
@@ -40,13 +38,13 @@ class EventHandler:
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.play_btn_rect_main.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.MODE_SELECT
                 elif self.game.analysis_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.ANALYSIS_MODE
                 elif self.game.exit_btn_rect_main.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.EXITING
 
     def handle_mode_select_events(self, events):
@@ -55,10 +53,10 @@ class EventHandler:
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.MAIN_MENU
                 if self.game.pvp_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     for r in range(0, x_width+200, speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (80, 70, 120), pygame.mouse.get_pos(), r, width=0)
@@ -67,7 +65,7 @@ class EventHandler:
                         self.game.current_game_mode = "PvP"
                         self.game.current_state = UIState.PLAYING_PVP
                 elif self.game.pvc_goat_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     for r in range(0, x_width+200, speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (70, 120, 80), pygame.mouse.get_pos(), r, width=0)
@@ -77,7 +75,7 @@ class EventHandler:
                     self.game.current_state = UIState.PLAYING_PVC_GOAT
                     self.start_ai_initialization()
                 elif self.game.pvc_tiger_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     for r in range(0, x_width+200, speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (120, 80, 70), pygame.mouse.get_pos(), r, width=0)
@@ -87,7 +85,7 @@ class EventHandler:
                     self.game.current_state = UIState.PLAYING_PVC_TIGER
                     self.start_ai_initialization()
                 elif self.game.cvc_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     for r in range(0, x_width+200, speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (120, 70, 120), pygame.mouse.get_pos(), r, width=0)
@@ -105,12 +103,11 @@ class EventHandler:
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.MAIN_MENU
                 if self.game.current_state == UIState.PLAYING_PVP or \
                    (self.game.current_state == UIState.PLAYING_PVC_GOAT and self.game.game_state.turn == 1) or \
                    (self.game.current_state == UIState.PLAYING_PVC_TIGER and self.game.game_state.turn == -1):
-                    self.click_sound.play()
                     self.game.place_piece(event.pos)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
@@ -149,14 +146,14 @@ class EventHandler:
                         button_height
                     )
                     if button_rect.collidepoint(event.pos):
-                        self.click_sound.play()
+                        self.game.click_sound.play()
                         # Load and start replay
                         if self.game.load_game_for_replay(game["id"]):
                             self.game.current_state = UIState.REPLAYING
                         break
 
                 if self.game.back_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.MAIN_MENU
 
         keys = pygame.key.get_pressed()
@@ -169,17 +166,17 @@ class EventHandler:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
 
                 if self.game.prev_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.step_replay_backward()
                 elif self.game.play_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.toggle_replay_auto_play()
                 elif self.game.next_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.step_replay_forward()
                     self.game.auto_play = False  # Stop auto-play on manual step
                 elif self.game.exit_btn_rect.collidepoint(event.pos):
-                    self.click_sound.play()
+                    self.game.click_sound.play()
                     self.game.current_state = UIState.ANALYSIS_MODE
 
         keys = pygame.key.get_pressed()
