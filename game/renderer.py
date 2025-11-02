@@ -337,31 +337,27 @@ class GameRenderer:
                        40, COLORS["ai_thinking"])
 
     def render_game_over(self):
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         pieces = {-1: "Goat", 1: "Tiger"}
-        fade_alpha = min(255, (pygame.time.get_ticks(
-        ) - self.game.game_over_timer + self.game.game_over_delay) // 400)
-        pulse = abs(pygame.time.get_ticks() % 1600 - 800) / 400
-        overlay = pygame.Surface(self.game.screen_size)
-        overlay.fill(COLORS["game_over_bg"])
-        overlay.set_alpha(fade_alpha)
-        self.screen.blit(overlay, (0, 0))
-        scale = min(1.2, max(0.3, pulse))
 
         game_over_font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Over!", int(
-            game_over_font_size * scale), self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 - 200, COLORS["accent"])
+            game_over_font_size), self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 - 200, COLORS["accent"])
 
         result_font_size = int(self.game.cell_size * 0.17)
         result_text = f"{pieces[self.game.game_state.get_result]} Won!" if self.game.game_state.get_result else "It's a Draw!"
         result_color = COLORS["win_tiger"] if self.game.game_state.get_result == Piece_TIGER else COLORS[
             "win_goat"] if self.game.game_state.get_result == Piece_GOAT else COLORS["white"]
         self.draw_text(result_text, int(
-            result_font_size * scale), self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 - 100, result_color)
+            result_font_size), self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 - 100, result_color)
 
-        self.draw_text("Press SPACE to play again", result_font_size,
-                       self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 + 50, COLORS["white"])
-        self.draw_text("Press ESC for main menu", result_font_size,
-                       self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 + 100, COLORS["white"])
+        exit_btn = self.game.exit_btn_rect
+        self.draw_button("Exit", exit_btn.x, exit_btn.y,
+                         exit_btn.width, exit_btn.height, 20)
+        play = self.game.play_again_btn
+        font_size = int(play.width * 0.1)
+        self.draw_button("Play Again", play.x, play.y,
+                         play.width+50, play.height, font_size)
 
     def render_analysis_mode(self):
         """Render the Analysis Mode screen showing last 5 games."""

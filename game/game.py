@@ -222,6 +222,13 @@ class Game:
             button_height
         )
 
+        self.play_again_btn = pygame.Rect(
+            x_width//2 - 100,
+            350 + 2 * y_spacing,
+            menu_button_width,
+            menu_button_height
+        )
+
     def check_for_resize(self):
         if self.pending_resize is None:
             return
