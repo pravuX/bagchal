@@ -1,77 +1,86 @@
 import pygame
-from .constants import COLORS, ASSETS
+from .constants import COLORS, ASSETS, UIState
 from bagchal import Piece_GOAT, Piece_TIGER, extract_indices_fast, BOARD_MASK
+from .database import get_last_games
 
 
 class GameRenderer:
     def __init__(self, game):
         self.game = game
         self.screen = game.screen
+        self.board_surface = game.board_surface
 
     def draw_board(self):
+        target_surface = self.game.board_surface if self.game.board_surface else self.screen
         board_rect = pygame.Rect(
             self.game.offset, self.game.offset, self.game.board_width, self.game.board_height)
-        pygame.draw.rect(self.screen, COLORS["board_light"], board_rect)
+        pygame.draw.rect(target_surface, COLORS["board_light"], board_rect)
 
         pygame.draw.rect(
-            self.screen, COLORS["board"], board_rect, border_radius=10)
+            target_surface, COLORS["board"], board_rect, border_radius=10)
 
         line_color = COLORS["board_light"]
+        target_surface = self.game.board_surface if self.game.board_surface else self.screen
 
-        pygame.draw.line(self.screen, line_color, (self.game.offset, self.game.offset), (
+        pygame.draw.line(target_surface, line_color, (self.game.offset, self.game.offset), (
             self.game.board_width + self.game.offset, self.game.board_height + self.game.offset), 5)
-        pygame.draw.line(self.screen, line_color, (self.game.offset, self.game.board_height +
+        pygame.draw.line(target_surface, line_color, (self.game.offset, self.game.board_height +
                          self.game.offset), (self.game.board_width + self.game.offset, self.game.offset), 5)
-        pygame.draw.line(self.screen, line_color, (self.game.offset, self.game.board_height // 2 +
+        pygame.draw.line(target_surface, line_color, (self.game.offset, self.game.board_height // 2 +
                          self.game.offset), (self.game.board_width // 2 + self.game.offset, self.game.offset), 4)
-        pygame.draw.line(self.screen, line_color, (self.game.offset, self.game.board_height // 2 + self.game.offset),
+        pygame.draw.line(target_surface, line_color, (self.game.offset, self.game.board_height // 2 + self.game.offset),
                          (self.game.board_width // 2 + self.game.offset, self.game.board_height + self.game.offset), 4)
-        pygame.draw.line(self.screen, line_color, (self.game.board_width + self.game.offset, self.game.board_height //
+        pygame.draw.line(target_surface, line_color, (self.game.board_width + self.game.offset, self.game.board_height //
                          2 + self.game.offset), (self.game.board_width // 2 + self.game.offset, self.game.offset), 4)
-        pygame.draw.line(self.screen, line_color, (self.game.board_width + self.game.offset, self.game.board_height // 2 +
+        pygame.draw.line(target_surface, line_color, (self.game.board_width + self.game.offset, self.game.board_height // 2 +
                          self.game.offset), (self.game.board_width // 2 + self.game.offset, self.game.board_height + self.game.offset), 4)
 
         for i in range(self.game.grid_cols):
-            pygame.draw.line(self.screen, line_color, (i * self.game.cell_size + self.game.offset, self.game.offset),
+            pygame.draw.line(target_surface, line_color, (i * self.game.cell_size + self.game.offset, self.game.offset),
                              (i * self.game.cell_size + self.game.offset, self.game.grid_height - self.game.cell_size + self.game.offset), 4)
         for i in range(self.game.grid_rows):
-            pygame.draw.line(self.screen, line_color, (self.game.offset, i * self.game.cell_size + self.game.offset),
+            pygame.draw.line(target_surface, line_color, (self.game.offset, i * self.game.cell_size + self.game.offset),
                              (self.game.grid_width - self.game.cell_size + self.game.offset, i * self.game.cell_size + self.game.offset), 4)
 
         for row in range(5):
             for col in range(5):
                 x = col * self.game.cell_size + self.game.offset
                 y = row * self.game.cell_size + self.game.offset
-                pygame.draw.circle(self.screen, COLORS["accent"], (x, y), 7)
-                pygame.draw.circle(self.screen, COLORS["board"], (x, y), 5)
+                pygame.draw.circle(target_surface, COLORS["accent"], (x, y), 7)
+                pygame.draw.circle(target_surface, COLORS["board"], (x, y), 5)
                 idx = col + row * self.game.grid_cols
 
-                # Draw valid moves for goats during placement phase
-                occupied_bb = self.game.game_state.tigers_bb | self.game.game_state.goats_bb
-                empty_bb = ~occupied_bb & BOARD_MASK
-                if empty_bb & (1 << idx) and self.game.game_state.turn == Piece_GOAT and self.game.game_state.goats_to_place > 0:
-                    self.draw_pulsating_circle(x, y)
+                # Draw valid moves for goats during placement phase (not in replay mode)
+                if self.game.current_state != UIState.REPLAYING:
+                    occupied_bb = self.game.game_state.tigers_bb | self.game.game_state.goats_bb
+                    empty_bb = ~occupied_bb & BOARD_MASK
+                    if empty_bb & (1 << idx) and self.game.game_state.turn == Piece_GOAT and self.game.game_state.goats_to_place > 0:
+                        self.draw_pulsating_circle(x, y, target_surface)
 
     def draw_valid_moves(self):
         if not self.game.valid_moves:
             return
+        target_surface = self.game.board_surface if self.game.board_surface else self.screen
         for move in self.game.valid_moves:
             to_idx = move[1]
             row, col = divmod(to_idx, 5)
             x = col * self.game.cell_size + self.game.offset
             y = row * self.game.cell_size + self.game.offset
-            self.draw_pulsating_circle(x, y)
+            self.draw_pulsating_circle(x, y, target_surface)
 
-    def draw_pulsating_circle(self, x, y):
+    def draw_pulsating_circle(self, x, y, target_surface=None):
+        if target_surface is None:
+            target_surface = self.screen
         pulse = abs(pygame.time.get_ticks() % 800 - 400) / 400
         radius = int(self.game.cell_size//5 + 5 * pulse)
         s = pygame.Surface(
             (radius * 2, radius * 2), pygame.SRCALPHA)
         pygame.draw.circle(
             s, COLORS["valid_move"], (radius, radius), radius)
-        self.screen.blit(s, (x - radius, y - radius))
+        target_surface.blit(s, (x - radius, y - radius))
 
     def draw_pieces(self):
+        target_surface = self.game.board_surface if self.game.board_surface else self.screen
         tiger_positions = extract_indices_fast(self.game.game_state.tigers_bb)
         goat_positions = extract_indices_fast(self.game.game_state.goats_bb)
 
@@ -90,7 +99,7 @@ class GameRenderer:
                 circle_surface, COLORS["selected"], (radius, radius), radius)
 
             circle_rect = circle_surface.get_rect(center=(center_x, center_y))
-            self.screen.blit(circle_surface, circle_rect)
+            target_surface.blit(circle_surface, circle_rect)
 
         for i in tiger_positions:
             row, col = divmod(i, 5)
@@ -99,7 +108,7 @@ class GameRenderer:
 
             img = self.game.bagh_selected if i == self.game.selected_cell else self.game.bagh_img
             img_rect = img.get_rect(center=(center_x, center_y))
-            self.screen.blit(img, img_rect)
+            target_surface.blit(img, img_rect)
 
         for i in goat_positions:
             row, col = divmod(i, 5)
@@ -108,13 +117,20 @@ class GameRenderer:
 
             img = self.game.goat_selected if i == self.game.selected_cell else self.game.goat_img
             img_rect = img.get_rect(center=(center_x, center_y))
-            self.screen.blit(img, img_rect)
+            target_surface.blit(img, img_rect)
 
     def draw_status(self):
-        status_y = self.game.grid_height
+        # Position status bar below board surface
+        if self.game.board_surface:
+            status_y = self.game.board_position[1] + self.game.grid_height
+        else:
+            status_y = self.game.grid_height
         panel_height = 100
+        # Status bar spans screen width, not board width
+        panel_width = self.game.screen_size[0] if hasattr(
+            self.game, 'screen_size') else self.game.grid_width
         panel_rect = pygame.Rect(
-            0, status_y, self.game.grid_width, panel_height)
+            0, status_y, panel_width, panel_height)
         pygame.draw.rect(self.screen, COLORS["board"], panel_rect)
 
         turn_text = "Tiger's Turn" if self.game.game_state.turn == 1 else "Goat's Turn"
@@ -125,8 +141,8 @@ class GameRenderer:
         padding = 50  # within button
         spacing = 10  # between buttons
         height = panel_height // 2
-        width = self.game.grid_width * 0.25 + padding
-        center = self.game.grid_width // 2 - width // 2
+        width = panel_width // 4 + padding
+        center = panel_width // 2 - width // 2
         y = status_y + panel_height // 4
 
         font_size = int(self.game.cell_size * 0.1)
@@ -140,7 +156,9 @@ class GameRenderer:
         self.draw_button(eaten_text, center,
                          y, width, height, font_size)
 
-        self.draw_button(trapped_text, self.game.grid_width -
+        panel_width = self.game.screen_size[0] if hasattr(
+            self.game, 'screen_size') else self.game.grid_width
+        self.draw_button(trapped_text, panel_width -
                          width - spacing, y, width, height, font_size)
 
     def draw_text(self, text, size, x, y, color=None):
@@ -183,8 +201,8 @@ class GameRenderer:
                              (self.game.screen_size[0], i))
 
     def render_main_menu(self):
-        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text(
@@ -194,34 +212,56 @@ class GameRenderer:
         self.draw_text("The Tigers and Goats Game", font_size,
                        self.game.screen_size[0] // 2, 220, COLORS["white"])
         self.draw_button(
-            "Play", self.game.screen_size[0]//2 - 100, 350, 200, 60)
+            "Play", self.game.screen_size[0]//2 - 100, 350, 250, 60)
         self.draw_button(
-            "Exit", self.game.screen_size[0]//2 - 100, 450, 200, 60)
+            "Analysis", self.game.screen_size[0]//2 - 100, 430, 250, 60)
+        self.draw_button(
+            "Exit", self.game.screen_size[0]//2 - 100, 510, 250, 60)
 
     def render_mode_select(self):
-        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
         x_width = self.game.screen_size[0]
         y_height = self.game.screen_size[1]
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
                        x_width // 2, 120, COLORS["accent"])
-        #import images for buttons of gamemode
-        self.screen.blit(self.game.playervsplayer_img, (x_width *.056, x_width* 0.45))
-        self.screen.blit(self.game.playervsgoat_img, (x_width * .292, x_width* 0.45))
-        self.screen.blit(self.game.playervsbagh_img, (x_width * .528 , x_width* 0.45))
-        self.screen.blit(self.game.AivsAi, (x_width * .764, x_width* 0.45))
+        # import images for buttons of gamemode
+        self.screen.blit(self.game.playervsplayer_img,
+                         (x_width * .056, x_width * 0.45))
+        self.screen.blit(self.game.playervsgoat_img,
+                         (x_width * .292, x_width * 0.45))
+        self.screen.blit(self.game.playervsbagh_img,
+                         (x_width * .528, x_width * 0.45))
+        self.screen.blit(self.game.AivsAi, (x_width * .764, x_width * 0.45))
+
+        # self.screen.blit(self.game.verticalbutton_pvp, (52, 300))
+        # self.draw_button("PvP",  # player v player to fit inside the square
+        #                  x_width * .056, y_height * 0.45, x_width * 0.18, y_height * 0.360)
+        # self.draw_button("PvG",  # player v goat ai to fit inside the square
+        #                  x_width * .292, y_height * 0.45, x_width * 0.18, y_height * 0.360)
+        # self.draw_button("PvT",  # player v tiger ai to fit inside the square
+        #                  x_width * .528, y_height * 0.45, x_width * 0.18, y_height * 0.360)
+        # self.draw_button("CvC",  # computer v computer to fit inside the square
+        #                  x_width * .764, y_height * 0.45, x_width * 0.18, y_height * 0.360)
 
         font_size = int(self.game.cell_size * 0.17)
-        self.draw_text("Press ESC to go back", 20, #this is font size
+        self.draw_text("Press ESC to go back", font_size,  # this is font size
                        self.game.screen_size[0] // 2, y_height - 50, COLORS["white"])
 
     def render_game(self):
-        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+
+        # Clear board surface
+        if self.game.board_surface:
+            self.game.board_surface.fill(
+                (0, 0, 0, 0))  # Transparent background
 
         self.draw_board()
-        self.draw_valid_moves()
+        # Only show valid moves if not in replay mode
+        if self.game.current_state != UIState.REPLAYING:
+            self.draw_valid_moves()
 
         if self.game.last_move_highlight:
             from_idx, _ = self.game.last_move_highlight
@@ -232,15 +272,22 @@ class GameRenderer:
                         (self.game.last_move_frame or 0)) // 5)
             r, g, b, _ = COLORS["selected"]
             if alpha > 0:
+                target_surface = self.game.board_surface if self.game.board_surface else self.screen
                 s = pygame.Surface((40, 40), pygame.SRCALPHA)
                 pygame.draw.circle(
                     s, (r, g, b, alpha), (20, 20), 20, 3)
-                self.screen.blit(s, (x - 20, y - 20))
+                target_surface.blit(s, (x - 20, y - 20))
 
         self.draw_pieces()
+
+        # Blit board surface to screen if using separate surface
+        if self.game.board_surface:
+            self.screen.blit(self.game.board_surface, self.game.board_position)
+
         self.draw_status()
         for particle in self.game.particles[:]:
             particle.update()
+            # Particles are already created in screen coordinates, so draw directly on screen
             particle.draw(self.screen)
             if not particle.particles:
                 self.game.particles.remove(particle)
@@ -295,3 +342,220 @@ class GameRenderer:
                        self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 + 50, COLORS["white"])
         self.draw_text("Press ESC for main menu", result_font_size,
                        self.game.screen_size[0] // 2, self.game.screen_size[1] // 2 + 100, COLORS["white"])
+
+    def render_analysis_mode(self):
+        """Render the Analysis Mode screen showing last 5 games."""
+
+        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+
+        # Title
+        font_size = int(self.game.cell_size * 0.4)
+        self.draw_text(
+            "Analysis Mode", font_size,
+            self.game.screen_size[0] // 2, 120, COLORS["accent"])
+
+        # Get games
+        games = get_last_games(5)
+
+        if not games:
+            # No games message
+            font_size = int(self.game.cell_size * 0.17)
+            self.draw_text(
+                "No games found. Play some games first!",
+                font_size, self.game.screen_size[0] // 2,
+                self.game.screen_size[1] // 2, COLORS["white"])
+        else:
+            # Display games
+            x_width = self.game.screen_size[0]
+            y_start = 250
+            button_height = 100
+            button_spacing = 120
+            button_width = x_width * 0.8
+            button_x = x_width * 0.1
+
+            mode_names = {
+                "PvP": "Player vs Player",
+                "PvC_Goat": "Player vs Computer (Goat)",
+                "PvC_Tiger": "Player vs Computer (Tiger)",
+                "CvC": "Computer vs Computer"
+            }
+
+            for i, game in enumerate(games):
+                y_pos = y_start + i * button_spacing
+
+                # Draw game button/card
+                button_rect = pygame.Rect(
+                    button_x, y_pos, button_width, button_height)
+                mouse_pos = pygame.mouse.get_pos()
+                is_hovered = button_rect.collidepoint(mouse_pos)
+                button_color = COLORS["button_hover"] if is_hovered else COLORS["button"]
+
+                pygame.draw.rect(self.screen, button_color,
+                                 button_rect, border_radius=10)
+                pygame.draw.rect(
+                    self.screen, COLORS["accent"], button_rect, 3, border_radius=10)
+
+                # Game info text
+                font_size = int(button_width * 0.017)
+                game_num = f"Game #{game['id']}"
+                mode_text = mode_names.get(
+                    game['game_mode'], game['game_mode'])
+                winner_text = f"Winner: {game['winner']}" if game['winner'] else "Draw"
+                timestamp_text = game['timestamp']
+                moves_text = f"{game['total_moves']} moves"
+
+                x_diff = 0.333 * button_width
+                y_diff = 0.333 * button_height
+                self.draw_text(game_num, font_size, button_x +
+                               100, y_pos + 0.5 * button_height, COLORS["white"])
+                self.draw_text(mode_text, font_size, button_x +
+                               100 + x_diff, y_pos + y_diff, COLORS["white"])
+                self.draw_text(winner_text, font_size, button_x +
+                               100 + 2 * x_diff, y_pos + y_diff, COLORS["white"])
+                self.draw_text(timestamp_text, font_size, button_x +
+                               100 + 2 * x_diff, y_pos + 2 * y_diff, COLORS["white"])
+                self.draw_text(moves_text, font_size, button_x +
+                               100 + x_diff, y_pos + 2 * y_diff, COLORS["white"])
+
+        # Back button
+        self.draw_button(
+            "Main Menu",
+            self.game.screen_size[0] // 2 - 150,
+            self.game.screen_size[1] - 80,
+            300, 60)
+
+    def render_replay_mode(self):
+        """Render replay mode with board, controls, and AI suggestions."""
+        # Render background
+        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        # Clear and render board surface
+        if self.game.board_surface:
+            self.game.board_surface.fill(
+                (0, 0, 0, 0))  # Transparent background
+
+        self.draw_board()
+        self.draw_pieces()
+
+        # Highlight current move if replay_index > 0 (draw on board surface)
+        if self.game.replay_index > 0 and self.game.replay_index <= len(self.game.replay_moves):
+            move_data = self.game.replay_moves[self.game.replay_index - 1]
+            from_idx = move_data["from"]
+            to_idx = move_data["to"]
+            target_surface = self.game.board_surface if self.game.board_surface else self.screen
+
+            # Highlight from position
+            row, col = divmod(from_idx, 5)
+            x = col * self.game.cell_size + self.game.offset
+            y = row * self.game.cell_size + self.game.offset
+            s = pygame.Surface(
+                (self.game.cell_size // 3, self.game.cell_size // 3), pygame.SRCALPHA)
+            pygame.draw.circle(s, (*COLORS["selected"][:3], 150),
+                               (self.game.cell_size // 6,
+                                self.game.cell_size // 6),
+                               self.game.cell_size // 6)
+            target_surface.blit(
+                s, (x - self.game.cell_size // 6, y - self.game.cell_size // 6))
+
+            # Highlight to position
+            row, col = divmod(to_idx, 5)
+            x = col * self.game.cell_size + self.game.offset
+            y = row * self.game.cell_size + self.game.offset
+            s = pygame.Surface(
+                (self.game.cell_size // 3, self.game.cell_size // 3), pygame.SRCALPHA)
+            pygame.draw.circle(s, (*COLORS["valid_move"][:3], 150),
+                               (self.game.cell_size // 6,
+                                self.game.cell_size // 6),
+                               self.game.cell_size // 6)
+            target_surface.blit(
+                s, (x - self.game.cell_size // 6, y - self.game.cell_size // 6))
+
+        # Blit board surface to screen after all board rendering is done
+        if self.game.board_surface:
+            self.screen.blit(self.game.board_surface, self.game.board_position)
+
+        # Draw status bar on screen (below board)
+        # self.draw_status()
+
+        # Replay controls at bottom
+        x_width = self.game.screen_size[0]
+        y_height = self.game.screen_size[1]
+        button_y = y_height - 80
+        button_height = 50
+        button_width = 120
+        button_spacing = 140
+        center_x = x_width // 2
+
+        # Previous button
+        prev_text = "Previous"
+        self.draw_button(prev_text, center_x - button_spacing *
+                         1.5, button_y, button_width, button_height, 18)
+
+        # Play/Pause button
+        play_text = "Pause" if self.game.auto_play else "Play"
+        self.draw_button(play_text, center_x - button_width //
+                         2, button_y, button_width, button_height, 18)
+
+        # Next button
+        next_text = "Next"
+        self.draw_button(next_text, center_x + button_spacing *
+                         0.5, button_y, button_width, button_height, 18)
+
+        # Exit replay button (top right)
+        exit_rect = self.draw_button("Exit", x_width - 120, 20, 100, 40, 16)
+
+        # Move counter
+        total_moves = len(self.game.replay_moves)
+        current_move = self.game.replay_index
+        move_counter_text = f"Move {current_move} of {total_moves}"
+        self.draw_text(move_counter_text, 24, center_x,
+                       button_y - 30, COLORS["white"])
+
+        # Auto-play indicator
+        if self.game.auto_play:
+            self.draw_text("Auto-playing...", 18, center_x,
+                           button_y - 60, COLORS["ai_thinking"])
+
+        # AI Suggestion Panel (right side)
+        suggestion_panel_x = x_width - 250
+        suggestion_panel_y = 100
+        suggestion_panel_width = 220
+        suggestion_panel_height = 150
+
+        panel_rect = pygame.Rect(
+            suggestion_panel_x, suggestion_panel_y,
+            suggestion_panel_width, suggestion_panel_height
+        )
+        pygame.draw.rect(
+            self.screen, COLORS["board"], panel_rect, border_radius=10)
+        pygame.draw.rect(
+            self.screen, COLORS["accent"], panel_rect, 3, border_radius=10)
+
+        # Title
+        self.draw_text("AI Suggestion", 20,
+                       suggestion_panel_x + suggestion_panel_width // 2,
+                       suggestion_panel_y + 20, COLORS["accent"])
+
+        # Get AI suggestion
+        if not self.game.game_state.is_game_over:
+            suggested_move = self.game.get_ai_suggestion_for_position()
+            if suggested_move:
+                from_pos, to_pos = suggested_move
+                suggestion_text = f"Move: ({from_pos}, {to_pos})"
+                agent_text = "Negamax"
+            else:
+                suggestion_text = "Calculating..."
+                agent_text = ""
+
+            self.draw_text(suggestion_text, 16,
+                           suggestion_panel_x + suggestion_panel_width // 2,
+                           suggestion_panel_y + 60, COLORS["white"])
+            if agent_text:
+                self.draw_text(f"Agent: {agent_text}", 14,
+                               suggestion_panel_x + suggestion_panel_width // 2,
+                               suggestion_panel_y + 90, COLORS["white"])
+        else:
+            self.draw_text("Game Over", 16,
+                           suggestion_panel_x + suggestion_panel_width // 2,
+                           suggestion_panel_y + 60, COLORS["white"])
