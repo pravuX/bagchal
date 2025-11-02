@@ -25,7 +25,6 @@ class Game:
         pygame.display.set_caption(caption)
 
         self.game_state: BitboardGameState = game_state
-        self.base_cell_size = cell_size
         self.cell_size = cell_size
         self.min_cell_size = min_cell_size
         self.max_cell_size = max_cell_size
@@ -70,10 +69,6 @@ class Game:
         self.pending_resize = None
 
         # Board surface for maintaining aspect ratio
-        self.board_surface = None
-        self.board_surface_size = (900, 900)  # Fixed size for board
-        self.board_position = (0, 0)  # Position to blit board on screen
-        self.board_scale = 1.0
 
         # Track game mode for saving
         self.current_game_mode = None
@@ -100,7 +95,7 @@ class Game:
         menu_button_height = 120
         y_spacing = 150
         btn_width = x_width * 0.18
-        btn_height= y_height * 0.360
+        btn_height = y_height * 0.360
         # menu buttons
         self.play_btn_rect_main = pygame.Rect(
             x_width//2 - 100,
@@ -267,8 +262,8 @@ class Game:
         x_width = self.screen_size[0]
         y_height = self.screen_size[1]
         btn_width = x_width * 0.18
-        btn_height= y_height * 0.360
-        if x_width>=1000:
+        btn_height = y_height * 0.360
+        if x_width >= 1000:
             btn_width = 180
             btn_height = 360
         piece_size = int(self.cell_size * 0.55)
@@ -328,13 +323,16 @@ class Game:
         """Calculate board position to center it on screen with margins."""
         # Calculate margins based on UI needs
         top_margin = 50
-        left_margin = 50
-        right_margin = 300 if self.current_state == UIState.REPLAYING else 50
+        bottom_margin = 150  # Status bar height
+
+        # Available space
+        available_height = self.screen_size[1] - top_margin - bottom_margin
 
         # Center board horizontally
         board_x = (self.screen_size[0] - self.grid_width) // 2
-        # Center board vertically with top margin
-        board_y = top_margin
+
+        # Center board vertically in available space
+        board_y = top_margin + (available_height - self.grid_height) // 2
 
         self.board_position = (board_x, board_y)
 
@@ -473,12 +471,16 @@ class Game:
         return col * self.cell_size, row * self.cell_size
 
     def place_piece(self, pos):
+        """Place a piece or select a piece with circular hitbox detection."""
         self.last_move_highlight = None
+
         is_human_turn = (self.current_state == UIState.PLAYING_PVP) or \
                         (self.current_state == UIState.PLAYING_PVC_GOAT and self.game_state.turn == 1) or \
                         (self.current_state ==
                          UIState.PLAYING_PVC_TIGER and self.game_state.turn == -1)
-        if (self.ai_is_thinking or self.is_game_over() or not is_human_turn or self.pending_player_move or self.move_processed_this_frame):
+
+        if (self.ai_is_thinking or self.is_game_over() or not is_human_turn or
+                self.pending_player_move or self.move_processed_this_frame):
             return
 
         # Convert screen coordinates to board coordinates
@@ -488,56 +490,74 @@ class Game:
 
         board_x, board_y = board_coords
 
-        # Convert board coordinates to grid coordinates (accounting for offset)
-        col = (board_x - self.offset//2) // self.cell_size
-        row = (board_y - self.offset//2) // self.cell_size
+        # Define hitbox radius (adjust this value as needed)
+        hitbox_radius = self.cell_size * 0.35  # 35% of cell size, adjust to taste
 
-        # Validate grid coordinates
-        if col < 0 or col >= 5 or row < 0 or row >= 5:
+        # Find the nearest grid position within hitbox radius
+        clicked_idx = None
+        min_distance = float('inf')
+
+        for row in range(5):
+            for col in range(5):
+                # Calculate piece center in board coordinates
+                piece_x = col * self.cell_size + self.offset
+                piece_y = row * self.cell_size + self.offset
+
+                # Calculate distance from click to piece center
+                dx = board_x - piece_x
+                dy = board_y - piece_y
+                distance = (dx * dx + dy * dy) ** 0.5
+
+                # Check if within hitbox and is the closest one
+                if distance < hitbox_radius and distance < min_distance:
+                    min_distance = distance
+                    clicked_idx = col + row * self.grid_cols
+
+        # If no piece was clicked within radius, return
+        if clicked_idx is None:
             return
 
-        idx = col + row * self.grid_cols
+        # Now we have the clicked grid index, proceed with game logic
+        col = clicked_idx % 5
+        row = clicked_idx // 5
+
         piece = None
         if self.game_state.turn == 1:
-            if self.game_state.tigers_bb & (1 << idx):
+            if self.game_state.tigers_bb & (1 << clicked_idx):
                 piece = 1
         else:
-            if self.game_state.goats_bb & (1 << idx):
+            if self.game_state.goats_bb & (1 << clicked_idx):
                 piece = -1
+
         move = None
         if self.selected_cell is None:
+            # Goat placement phase
             if self.game_state.turn == -1 and self.game_state.goats_to_place > 0:
-                move = (idx, idx)
+                move = (clicked_idx, clicked_idx)
                 if move in self.game_state.get_legal_moves():
                     self.pending_player_move = move
                     x, y = self.cell_to_pixel(col, row)
-                    # Create particles in screen coordinates (board_position + board coordinates)
-                    if self.board_surface:
-                        screen_x = self.board_position[0] + x + self.offset
-                        screen_y = self.board_position[1] + y + self.offset
-                    else:
-                        screen_x = x + self.offset
-                        screen_y = y + self.offset
+                    # Create particles in screen coordinates
+                    screen_x = self.board_position[0] + x + self.offset
+                    screen_y = self.board_position[1] + y + self.offset
                     self.particles.append(ParticleEffect(
                         screen_x, screen_y, COLORS['accent']))
                     return
+            # Select piece
             elif piece == self.game_state.turn:
-                self.selected_cell = idx
+                self.selected_cell = clicked_idx
                 self.valid_moves = [
-                    m for m in self.game_state.get_legal_moves() if m[0] == idx]
+                    m for m in self.game_state.get_legal_moves() if m[0] == clicked_idx]
         else:
-            move = (self.selected_cell, idx)
+            # Move selected piece
+            move = (self.selected_cell, clicked_idx)
             if move in self.game_state.get_legal_moves():
                 self.pending_player_move = move
-                self.last_move_highlight = (self.selected_cell, idx)
+                self.last_move_highlight = (self.selected_cell, clicked_idx)
                 x, y = self.cell_to_pixel(col, row)
-                # Create particles in screen coordinates (board_position + board coordinates)
-                if self.board_surface:
-                    screen_x = self.board_position[0] + x + self.offset
-                    screen_y = self.board_position[1] + y + self.offset
-                else:
-                    screen_x = x + self.offset
-                    screen_y = y + self.offset
+                # Create particles in screen coordinates
+                screen_x = self.board_position[0] + x + self.offset
+                screen_y = self.board_position[1] + y + self.offset
                 self.particles.append(ParticleEffect(
                     screen_x, screen_y, (220, 180, 100)))
             self.selected_cell = None

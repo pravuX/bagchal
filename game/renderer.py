@@ -9,6 +9,7 @@ class GameRenderer:
         self.game = game
         self.screen = game.screen
         self.board_surface = game.board_surface
+        self.is_debug = False
 
     def draw_board(self):
         target_surface = self.game.board_surface if self.game.board_surface else self.screen
@@ -224,8 +225,8 @@ class GameRenderer:
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
                        x_width // 2, 120, COLORS["accent"])
-        
-        #draw exit button top right
+
+        # draw exit button top right
         exit_btn = self.game.exit_btn_rect
         self.draw_button("Exit", exit_btn.x, exit_btn.y,
                          exit_btn.width, exit_btn.height, 20)
@@ -269,11 +270,11 @@ class GameRenderer:
         # Only show valid moves if not in replay mode
         if self.game.current_state != UIState.REPLAYING:
             self.draw_valid_moves()
-        #draw exit button top right
+        # draw exit button top right
         exit_btn = self.game.exit_btn_rect
         self.draw_button("Exit", exit_btn.x, exit_btn.y,
                          exit_btn.width, exit_btn.height, 20)
-        
+
         if self.game.last_move_highlight:
             from_idx, _ = self.game.last_move_highlight
             row, col = divmod(from_idx, 5)
@@ -296,6 +297,10 @@ class GameRenderer:
             self.screen.blit(self.game.board_surface, self.game.board_position)
 
         self.draw_status()
+
+        if self.is_debug:
+            self.draw_circular_hitboxes()
+
         for particle in self.game.particles[:]:
             particle.update()
             # Particles are already created in screen coordinates, so draw directly on screen
@@ -573,3 +578,59 @@ class GameRenderer:
             self.draw_text("Game Over", 16,
                            suggestion_panel_x + suggestion_panel_width // 2,
                            suggestion_panel_y + 60, COLORS["white"])
+
+    def draw_circular_hitboxes(self):
+        """Debug: Draw circular hitboxes for all grid positions."""
+        # Define hitbox radius (should match place_piece logic)
+        hitbox_radius = self.game.cell_size * 0.35
+
+        # Get mouse position for highlighting
+        mouse_pos = pygame.mouse.get_pos()
+        board_coords = self.game.get_board_coords_from_screen(
+            mouse_pos[0], mouse_pos[1])
+
+        for row in range(5):
+            for col in range(5):
+                # Calculate center position in board coordinates
+                piece_x = col * self.game.cell_size + self.game.offset
+                piece_y = row * self.game.cell_size + self.game.offset
+
+                # Convert to screen coordinates
+                screen_x = self.game.board_position[0] + piece_x
+                screen_y = self.game.board_position[1] + piece_y
+
+                # Check if mouse is over this hitbox
+                is_hovered = False
+                if board_coords:
+                    board_x, board_y = board_coords
+                    dx = board_x - piece_x
+                    dy = board_y - piece_y
+                    distance = (dx * dx + dy * dy) ** 0.5
+                    is_hovered = distance < hitbox_radius
+
+                # Draw hitbox circle on screen
+                color = (0, 255, 0, 80) if is_hovered else (255, 0, 0, 50)
+                s = pygame.Surface(
+                    (int(hitbox_radius * 2), int(hitbox_radius * 2)), pygame.SRCALPHA)
+                pygame.draw.circle(s, color, (int(hitbox_radius), int(
+                    hitbox_radius)), int(hitbox_radius), 10)
+                self.screen.blit(
+                    s, (screen_x - hitbox_radius, screen_y - hitbox_radius))
+
+                # Draw center point
+                pygame.draw.circle(self.screen, (255, 0, 0),
+                                   (int(screen_x), int(screen_y)), 3)
+
+                # Draw grid coordinates
+                font = pygame.font.SysFont(None, 25)
+                idx = col + row * 5
+                text = font.render(f"{idx}", True, (255, 255, 255))
+                self.screen.blit(text, (screen_x - 8, screen_y - 25))
+
+        # Draw mouse position info
+        if board_coords:
+            font = pygame.font.SysFont(None, 20)
+            board_x, board_y = board_coords
+            text = font.render(
+                f"Board: ({int(board_x)}, {int(board_y)})", True, (255, 255, 255))
+            self.screen.blit(text, (10, 10))
