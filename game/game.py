@@ -120,30 +120,30 @@ class Game:
             menu_button_width,
             menu_button_height)
 
-        if x_width >= 900:
+        if x_width >= 1000:
             btn_width = 180
             btn_height = 360
         # mode select buttons
         self.pvp_rect = pygame.Rect(
-            x_width * .056,
+            x_width//2 - 2* btn_width - x_width* .084,
             y_height * 0.35,
             btn_width,
             btn_height)
 
         self.pvc_goat_rect = pygame.Rect(
-            x_width * .292,
+            x_width//2 -btn_width - x_width* .028,
             y_height * 0.35,
             btn_width,
             btn_height)
 
         self.pvc_tiger_rect = pygame.Rect(
-            x_width * .528,
+            x_width//2 + x_width *.028,
             y_height * 0.35,
             btn_width,
             btn_height)
 
         self.cvc_rect = pygame.Rect(
-            x_width * .764,
+            x_width//2 + x_width * .084+ btn_width,
             y_height * 0.35,
             btn_width,
             btn_height)
