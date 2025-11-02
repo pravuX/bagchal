@@ -120,15 +120,9 @@ class GameRenderer:
             target_surface.blit(img, img_rect)
 
     def draw_status(self):
-        # Position status bar below board surface
-        if self.game.board_surface:
-            status_y = self.game.board_position[1] + self.game.grid_height
-        else:
-            status_y = self.game.grid_height
+        status_y = self.game.screen_size[1] - 100
         panel_height = 100
-        # Status bar spans screen width, not board width
-        panel_width = self.game.screen_size[0] if hasattr(
-            self.game, 'screen_size') else self.game.grid_width
+        panel_width = self.game.screen_size[0]
         panel_rect = pygame.Rect(
             0, status_y, panel_width, panel_height)
         pygame.draw.rect(self.screen, COLORS["board"], panel_rect)
@@ -208,15 +202,19 @@ class GameRenderer:
         self.draw_text(
             "Bagchal", font_size, self.game.screen_size[0] // 2, 150, COLORS["accent"])
 
-        font_size = int(self.game.cell_size * 0.17)
-        self.draw_text("The Tigers and Goats Game", font_size,
+        self.draw_text("The Tigers and Goats Game", font_size//2,
                        self.game.screen_size[0] // 2, 220, COLORS["white"])
-        self.draw_button(
-            "Play", self.game.screen_size[0]//2 - 100, 350, 250, 60)
-        self.draw_button(
-            "Analysis", self.game.screen_size[0]//2 - 100, 430, 250, 60)
-        self.draw_button(
-            "Exit", self.game.screen_size[0]//2 - 100, 510, 250, 60)
+
+        play = self.game.play_btn_rect_main
+        analysis = self.game.analysis_btn_rect
+        exits = self.game.exit_btn_rect_main
+        font_size = int(play.width * 0.1)
+        self.draw_button("Play", play.x, play.y,
+                         play.width, play.height, font_size)
+        self.draw_button("Analysis", analysis.x, analysis.y,
+                         analysis.width, analysis.height, font_size)
+        self.draw_button("Exit", exits.x, exits.y,
+                         exits.width, exits.height, font_size)
 
     def render_mode_select(self):
         # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
@@ -226,16 +224,19 @@ class GameRenderer:
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
                        x_width // 2, 120, COLORS["accent"])
-        # import images for buttons of gamemode
-        self.screen.blit(self.game.playervsplayer_img,
-                         (x_width * .056, x_width * 0.45))
-        self.screen.blit(self.game.playervsgoat_img,
-                         (x_width * .292, x_width * 0.45))
-        self.screen.blit(self.game.playervsbagh_img,
-                         (x_width * .528, x_width * 0.45))
-        self.screen.blit(self.game.AivsAi, (x_width * .764, x_width * 0.45))
 
-        # self.screen.blit(self.game.verticalbutton_pvp, (52, 300))
+        pvp = self.game.pvp_rect
+        pvc_g = self.game.pvc_goat_rect
+        pvc_t = self.game.pvc_tiger_rect
+        cvc = self.game.cvc_rect
+        self.screen.blit(self.game.playervsplayer_img,
+                         (pvp.x, pvp.y))
+        self.screen.blit(self.game.playervsgoat_img,
+                         (pvc_g.x, pvc_g.y))
+        self.screen.blit(self.game.playervsbagh_img,
+                         (pvc_t.x, pvc_t.y))
+        self.screen.blit(self.game.AivsAi, (cvc.x, cvc.y))
+
         # self.draw_button("PvP",  # player v player to fit inside the square
         #                  x_width * .056, y_height * 0.45, x_width * 0.18, y_height * 0.360)
         # self.draw_button("PvG",  # player v goat ai to fit inside the square
@@ -419,18 +420,16 @@ class GameRenderer:
                                100 + x_diff, y_pos + 2 * y_diff, COLORS["white"])
 
         # Back button
-        self.draw_button(
-            "Main Menu",
-            self.game.screen_size[0] // 2 - 150,
-            self.game.screen_size[1] - 80,
-            300, 60)
+        mm_btn = self.game.analysis_mm_btn
+        self.draw_button("Main Menu", mm_btn.x, mm_btn.y,
+                         mm_btn.width, mm_btn.height)
 
     def render_replay_mode(self):
         """Render replay mode with board, controls, and AI suggestions."""
         # Render background
         # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
-        # Clear and render board surface
+
         if self.game.board_surface:
             self.game.board_surface.fill(
                 (0, 0, 0, 0))  # Transparent background
@@ -476,51 +475,56 @@ class GameRenderer:
             self.screen.blit(self.game.board_surface, self.game.board_position)
 
         # Draw status bar on screen (below board)
-        # self.draw_status()
+        self.draw_status()
 
         # Replay controls at bottom
         x_width = self.game.screen_size[0]
-        y_height = self.game.screen_size[1]
-        button_y = y_height - 80
-        button_height = 50
-        button_width = 120
-        button_spacing = 140
+        # y_height = self.game.screen_size[1]
+        # button_y = y_height - 80
         center_x = x_width // 2
 
         # Previous button
         prev_text = "Previous"
-        self.draw_button(prev_text, center_x - button_spacing *
-                         1.5, button_y, button_width, button_height, 18)
+        prev_btn = self.game.prev_btn_rect
+
+        font_size = int(prev_btn.width * 0.1)
+
+        self.draw_button(prev_text, prev_btn.x, prev_btn.y,
+                         prev_btn.width, prev_btn.height, font_size)
 
         # Play/Pause button
+        play_btn = self.game.play_btn_rect
         play_text = "Pause" if self.game.auto_play else "Play"
-        self.draw_button(play_text, center_x - button_width //
-                         2, button_y, button_width, button_height, 18)
+        self.draw_button(play_text, play_btn.x, play_btn.y,
+                         play_btn.width, play_btn.height, font_size)
 
         # Next button
+        next_btn = self.game.next_btn_rect
         next_text = "Next"
-        self.draw_button(next_text, center_x + button_spacing *
-                         0.5, button_y, button_width, button_height, 18)
+        self.draw_button(next_text, next_btn.x, next_btn.y,
+                         next_btn.width, next_btn.height, font_size)
 
         # Exit replay button (top right)
-        exit_rect = self.draw_button("Exit", x_width - 120, 20, 100, 40, 16)
+        exit_btn = self.game.exit_btn_rect
+        self.draw_button("Exit", exit_btn.x, exit_btn.y,
+                         exit_btn.width, exit_btn.height, font_size - 2)
 
         # Move counter
         total_moves = len(self.game.replay_moves)
         current_move = self.game.replay_index
         move_counter_text = f"Move {current_move} of {total_moves}"
         self.draw_text(move_counter_text, 24, center_x,
-                       button_y - 30, COLORS["white"])
+                       self.game.screen_size[1] - 150, COLORS["white"])
 
         # Auto-play indicator
         if self.game.auto_play:
             self.draw_text("Auto-playing...", 18, center_x,
-                           button_y - 60, COLORS["ai_thinking"])
+                           50, COLORS["ai_thinking"])
 
         # AI Suggestion Panel (right side)
-        suggestion_panel_x = x_width - 250
+        suggestion_panel_x = x_width - 300
         suggestion_panel_y = 100
-        suggestion_panel_width = 220
+        suggestion_panel_width = 300
         suggestion_panel_height = 150
 
         panel_rect = pygame.Rect(
