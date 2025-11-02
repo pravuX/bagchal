@@ -109,6 +109,10 @@ class EventHandler:
                    (self.game.current_state == UIState.PLAYING_PVC_GOAT and self.game.game_state.turn == 1) or \
                    (self.game.current_state == UIState.PLAYING_PVC_TIGER and self.game.game_state.turn == -1):
                     self.game.place_piece(event.pos)
+                if self.game.switch_ai_btn_rect.collidepoint(event.pos):
+                    self.game.click_sound.play()
+                    self.game.toggle_agent()
+
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             self.game.cleanup_ai_thread()

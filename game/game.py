@@ -104,19 +104,22 @@ class Game:
             x_width//2 - 100,
             350,
             menu_button_width,
-            menu_button_height)
+            menu_button_height
+        )
 
         self.analysis_btn_rect = pygame.Rect(
             x_width//2 - 100,
             350 + y_spacing,
             menu_button_width,
-            menu_button_height)
+            menu_button_height
+        )
 
         self.exit_btn_rect_main = pygame.Rect(
             x_width//2 - 100,
             350 + 2 * y_spacing,
             menu_button_width,
-            menu_button_height)
+            menu_button_height
+        )
 
         if x_width >= 1000:
             btn_width = 180
@@ -126,32 +129,37 @@ class Game:
             x_width//2 - 2 * btn_width - x_width * .084,
             y_height * 0.35,
             btn_width,
-            btn_height)
+            btn_height
+        )
 
         self.pvc_goat_rect = pygame.Rect(
             x_width//2 - btn_width - x_width * .028,
             y_height * 0.35,
             btn_width,
-            btn_height)
+            btn_height
+        )
 
         self.pvc_tiger_rect = pygame.Rect(
             x_width//2 + x_width * .028,
             y_height * 0.35,
             btn_width,
-            btn_height)
+            btn_height
+        )
 
         self.cvc_rect = pygame.Rect(
             x_width//2 + x_width * .084 + btn_width,
             y_height * 0.35,
             btn_width,
-            btn_height)
+            btn_height
+        )
 
         # Analysis main menu button
         self.analysis_mm_btn = pygame.Rect(
             x_width // 2 - 150,
             y_height - 80,
             300,
-            60)
+            60
+        )
 
         # Replay control buttons at bottom
         button_height = 50
@@ -197,6 +205,14 @@ class Game:
             x_width // 2 - 100,
             y_height - 80,
             200, 60
+        )
+
+        # agent select button
+        self.switch_ai_btn_rect = pygame.Rect(
+            10,
+            20,
+            button_width + 100,
+            button_height
         )
 
     def check_for_resize(self):
@@ -389,6 +405,28 @@ class Game:
                 self.mcts_agent = MCTS()
         finally:
             self.ai_initialized = True
+
+    def toggle_agent(self):
+        """Toggle between Minimax and MCTS agents; safe to call at any time."""
+        # Stop any running AI thread first
+        self.cleanup_ai_thread()
+
+        # Flip agent selection
+        self.using_agent = mcts_flag if self.using_agent == minimax_flag else minimax_flag
+
+        # Reset AI state so new agent will be (re)initialized
+        self.ai_result_move = None
+        self.ai_is_thinking = False
+        self.ai_initialized = False
+
+        # Initialize the newly selected agent (fast constructors expected)
+        try:
+            self._initialize_ai_async()
+        except Exception as e:
+            print(f"Error initializing agent: {e}")
+
+    def get_agent_name(self) -> str:
+        return "MCTS" if self.using_agent == mcts_flag else "Minimax"
 
     def _ai_worker(self, agent, game_state):
         try:
