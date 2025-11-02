@@ -195,8 +195,8 @@ class GameRenderer:
                              (self.game.screen_size[0], i))
 
     def render_main_menu(self):
-        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text(
@@ -217,8 +217,8 @@ class GameRenderer:
                          exits.width, exits.height, font_size)
 
     def render_mode_select(self):
-        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
         x_width = self.game.screen_size[0]
         y_height = self.game.screen_size[1]
         font_size = int(self.game.cell_size * 0.4)
@@ -234,6 +234,7 @@ class GameRenderer:
         pvc_g = self.game.pvc_goat_rect
         pvc_t = self.game.pvc_tiger_rect
         cvc = self.game.cvc_rect
+
         self.screen.blit(self.game.playervsplayer_img,
                          (pvp.x, pvp.y))
         self.screen.blit(self.game.playervsgoat_img,
@@ -256,8 +257,8 @@ class GameRenderer:
                        self.game.screen_size[0] // 2, y_height - 50, COLORS["white"])
 
     def render_game(self):
-        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         # Clear board surface
         if self.game.board_surface:
@@ -356,8 +357,8 @@ class GameRenderer:
     def render_analysis_mode(self):
         """Render the Analysis Mode screen showing last 5 games."""
 
-        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         # Title
         font_size = int(self.game.cell_size * 0.4)
@@ -436,8 +437,8 @@ class GameRenderer:
     def render_replay_mode(self):
         """Render replay mode with board, controls, and AI suggestions."""
         # Render background
-        # self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
-        self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
+        self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
+        # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         if self.game.board_surface:
             self.game.board_surface.fill(

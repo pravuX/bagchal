@@ -48,13 +48,14 @@ class EventHandler:
 
     def handle_mode_select_events(self, events):
         x_width = self.game.screen_size[0]
+        speed = 2#int(.01 * x_width)
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
                     self.game.current_state = UIState.MAIN_MENU
                 if self.game.pvp_rect.collidepoint(event.pos):
                     self.click_sound.play()
-                    for r in range(0, x_width+200):  # smaller ripple range for speed
+                    for r in range(0, x_width+200,speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (80, 70, 120), pygame.mouse.get_pos(), r, width=0)
                         pygame.display.update()
@@ -63,7 +64,7 @@ class EventHandler:
                         self.game.current_state = UIState.PLAYING_PVP
                 elif self.game.pvc_goat_rect.collidepoint(event.pos):
                     self.click_sound.play()
-                    for r in range(0, x_width+200):  # smaller ripple range for speed
+                    for r in range(0, x_width+200,speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (70, 120, 80), pygame.mouse.get_pos(), r, width=0)
                         pygame.display.update()
@@ -73,7 +74,7 @@ class EventHandler:
                     self.start_ai_initialization()
                 elif self.game.pvc_tiger_rect.collidepoint(event.pos):
                     self.click_sound.play()
-                    for r in range(0, x_width+200):  # smaller ripple range for speed
+                    for r in range(0, x_width+200,speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (120, 80, 70), pygame.mouse.get_pos(), r, width=0)
                         pygame.display.update()
@@ -83,7 +84,7 @@ class EventHandler:
                     self.start_ai_initialization()
                 elif self.game.cvc_rect.collidepoint(event.pos):
                     self.click_sound.play()
-                    for r in range(0, x_width+200):  # smaller ripple range for speed
+                    for r in range(0, x_width+200,speed):  # smaller ripple range for speed
                         pygame.draw.circle(
                             self.game.screen, (120, 70, 120), pygame.mouse.get_pos(), r, width=0)
                         pygame.display.update()
