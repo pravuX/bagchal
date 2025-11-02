@@ -99,6 +99,8 @@ class Game:
         menu_button_width = 250
         menu_button_height = 120
         y_spacing = 150
+        btn_width = x_width * 0.18
+        btn_height= y_height * 0.360
         # menu buttons
         self.play_btn_rect_main = pygame.Rect(
             x_width//2 - 100,
@@ -118,30 +120,33 @@ class Game:
             menu_button_width,
             menu_button_height)
 
+        if x_width >= 900:
+            btn_width = 180
+            btn_height = 360
         # mode select buttons
         self.pvp_rect = pygame.Rect(
             x_width * .056,
-            y_height * 0.45,
-            x_width * 0.18,
-            y_height * 0.360)
+            y_height * 0.35,
+            btn_width,
+            btn_height)
 
         self.pvc_goat_rect = pygame.Rect(
             x_width * .292,
-            y_height * 0.45,
-            x_width * 0.18,
-            y_height * 0.360)
+            y_height * 0.35,
+            btn_width,
+            btn_height)
 
         self.pvc_tiger_rect = pygame.Rect(
             x_width * .528,
-            y_height * 0.45,
-            x_width * 0.18,
-            y_height * 0.360)
+            y_height * 0.35,
+            btn_width,
+            btn_height)
 
         self.cvc_rect = pygame.Rect(
             x_width * .764,
-            y_height * 0.45,
-            x_width * 0.18,
-            y_height * 0.360)
+            y_height * 0.35,
+            btn_width,
+            btn_height)
 
         # Analysis main menu button
         self.analysis_mm_btn = pygame.Rect(
@@ -261,6 +266,11 @@ class Game:
     def cache_scaled_assets(self):
         x_width = self.screen_size[0]
         y_height = self.screen_size[1]
+        btn_width = x_width * 0.18
+        btn_height= y_height * 0.360
+        if x_width>=1000:
+            btn_width = 180
+            btn_height = 360
         piece_size = int(self.cell_size * 0.55)
         self.bagh_img = pygame.transform.smoothscale(
             self.bagh_img_original, (piece_size, piece_size))
@@ -271,15 +281,15 @@ class Game:
         self.goat_selected = pygame.transform.smoothscale(
             self.goat_selected_original, (piece_size, piece_size))
         self.backgroundgradiant_img = pygame.transform.smoothscale(
-            self.backgroundgradiant_original, (1000, 1000))
+            self.backgroundgradiant_original, (1920, 1080))
         self.playervsplayer_img = pygame.transform.smoothscale(
-            self.pvp_original, (x_width * 0.18, y_height * 0.360))
+            self.pvp_original, (btn_width, btn_height))
         self.playervsbagh_img = pygame.transform.smoothscale(
-            self.pvb_original, (x_width * 0.18, y_height * 0.360))
+            self.pvb_original, (btn_width, btn_height))
         self.playervsgoat_img = pygame.transform.smoothscale(
-            self.pvg_original, (x_width * 0.18, y_height * 0.360))
+            self.pvg_original, (btn_width, btn_height))
         self.AivsAi = pygame.transform.smoothscale(
-            self.AvA_original, (x_width * 0.18, y_height * 0.360))
+            self.AvA_original, (btn_width, btn_height))
 
     def handle_resize(self, new_size):
         width, height = new_size
