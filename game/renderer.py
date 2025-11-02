@@ -224,6 +224,11 @@ class GameRenderer:
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
                        x_width // 2, 120, COLORS["accent"])
+        
+        #draw exit button top right
+        exit_btn = self.game.exit_btn_rect
+        self.draw_button("Exit", exit_btn.x, exit_btn.y,
+                         exit_btn.width, exit_btn.height, 20)
 
         pvp = self.game.pvp_rect
         pvc_g = self.game.pvc_goat_rect
@@ -263,7 +268,11 @@ class GameRenderer:
         # Only show valid moves if not in replay mode
         if self.game.current_state != UIState.REPLAYING:
             self.draw_valid_moves()
-
+        #draw exit button top right
+        exit_btn = self.game.exit_btn_rect
+        self.draw_button("Exit", exit_btn.x, exit_btn.y,
+                         exit_btn.width, exit_btn.height, 20)
+        
         if self.game.last_move_highlight:
             from_idx, _ = self.game.last_move_highlight
             row, col = divmod(from_idx, 5)
