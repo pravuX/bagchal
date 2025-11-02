@@ -50,6 +50,8 @@ class EventHandler:
         x_width = self.game.screen_size[0]
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self.game.exit_btn_rect.collidepoint(event.pos):
+                    self.game.current_state = UIState.MAIN_MENU
                 if self.game.pvp_rect.collidepoint(event.pos):
                     self.click_sound.play()
                     for r in range(0, x_width+200):  # smaller ripple range for speed
@@ -97,6 +99,8 @@ class EventHandler:
     def handle_game_events(self, events):
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self.game.exit_btn_rect.collidepoint(event.pos):
+                        self.game.current_state = UIState.MAIN_MENU                
                 if self.game.current_state == UIState.PLAYING_PVP or \
                    (self.game.current_state == UIState.PLAYING_PVC_GOAT and self.game.game_state.turn == 1) or \
                    (self.game.current_state == UIState.PLAYING_PVC_TIGER and self.game.game_state.turn == -1):
