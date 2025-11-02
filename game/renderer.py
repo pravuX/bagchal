@@ -309,28 +309,27 @@ class GameRenderer:
                 self.game.particles.remove(particle)
 
         if self.game.ai_is_thinking:
-            self.game.ai_pulse = (self.game.ai_pulse + 0.1) % (2 * 3.14159)
-            alpha = int(128 + 127 * abs(pygame.math.Vector2(1,
-                        0).rotate_rad(self.game.ai_pulse).x))
+            self.draw_pulsating_overlay("Thinking")
 
-            overlay_width = 350
-            overlay_height = 60
-            overlay = pygame.Surface(
-                (overlay_width, overlay_height), pygame.SRCALPHA)
-            pygame.draw.rect(overlay, (40, 40, 60, 200),
-                             overlay.get_rect(), border_radius=10)
-            pygame.draw.rect(overlay, (COLORS["ai_thinking"][0], COLORS["ai_thinking"][1],
-                             COLORS["ai_thinking"][2], alpha), overlay.get_rect(), 3, border_radius=10)
-            self.screen.blit(overlay, (self.game.grid_width //
-                             2 - overlay_width / 2, 10))
-
-            font_size = int(self.game.cell_size * 0.1)
-            font = pygame.font.Font(ASSETS["font"], font_size)
-            dots = "." * (int(pygame.time.get_ticks() / 300) % 4)
-            text = font.render(
-                f"AI is Thinking{dots}", True, COLORS["ai_thinking"])
-            text_rect = text.get_rect(center=(self.game.grid_width // 2, 40))
-            self.screen.blit(text, text_rect)
+    def draw_pulsating_overlay(self, text):
+        x_width = self.game.screen_size[0]
+        center_x = x_width // 2
+        self.game.ai_pulse = (self.game.ai_pulse + 0.1) % (2 * 3.14159)
+        alpha = int(128 + 127 * abs(pygame.math.Vector2(1,
+                    0).rotate_rad(self.game.ai_pulse).x))
+        overlay_width = 350
+        overlay_height = 60
+        overlay = pygame.Surface(
+            (overlay_width, overlay_height), pygame.SRCALPHA)
+        pygame.draw.rect(overlay, (40, 40, 60, 200),
+                         overlay.get_rect(), border_radius=10)
+        pygame.draw.rect(overlay, (COLORS["ai_thinking"][0], COLORS["ai_thinking"][1],
+                         COLORS["ai_thinking"][2], alpha), overlay.get_rect(), 3, border_radius=10)
+        self.screen.blit(overlay, (self.game.screen_size[0] //
+                         2 - overlay_width / 2, 10))
+        dots = "." * (int(pygame.time.get_ticks() / 300) % 4)
+        self.draw_text(f"{text}{dots}", 18, center_x,
+                       40, COLORS["ai_thinking"])
 
     def render_game_over(self):
         pieces = {-1: "Goat", 1: "Tiger"}
@@ -494,8 +493,6 @@ class GameRenderer:
 
         # Replay controls at bottom
         x_width = self.game.screen_size[0]
-        # y_height = self.game.screen_size[1]
-        # button_y = y_height - 80
         center_x = x_width // 2
 
         # Previous button
@@ -533,10 +530,9 @@ class GameRenderer:
 
         # Auto-play indicator
         if self.game.auto_play:
-            self.draw_text("Auto-playing...", 18, center_x,
-                           50, COLORS["ai_thinking"])
+            self.draw_pulsating_overlay("Auto-playing")
 
-        # AI Suggestion Panel (right side)
+            # AI Suggestion Panel (right side)
         suggestion_panel_x = x_width - 300
         suggestion_panel_y = 100
         suggestion_panel_width = 300
