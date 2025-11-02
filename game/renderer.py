@@ -310,10 +310,11 @@ class GameRenderer:
         if self.game.ai_is_thinking:
             self.draw_pulsating_overlay("Thinking")
 
-        switch_ai = self.game.switch_ai_btn_rect
-        font_size = int(switch_ai.width * 0.07)
-        self.draw_button(f"{self.game.get_agent_name()} Agent", switch_ai.x, switch_ai.y,
-                         switch_ai.width, switch_ai.height, font_size)
+        if self.game.current_state != UIState.PLAYING_PVP:
+            switch_ai = self.game.switch_ai_btn_rect
+            font_size = int(switch_ai.width * 0.07)
+            self.draw_button(f"{self.game.get_agent_name()} Agent", switch_ai.x, switch_ai.y,
+                             switch_ai.width, switch_ai.height, font_size)
 
     def draw_pulsating_overlay(self, text):
         x_width = self.game.screen_size[0]

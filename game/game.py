@@ -80,7 +80,7 @@ class Game:
         self.auto_play = False
         self.replay_game_id = None
         self.replay_timer = 0
-        self.replay_auto_play_delay = 1500  # 1.5 seconds per move
+        self.replay_auto_play_delay = 1000
         self.ai_suggestions = {}  # Cache AI suggestions for replay positions
 
         self.initialize_sounds()
@@ -96,6 +96,7 @@ class Game:
         self.goat_sound = pygame.mixer.Sound("assets/goat-baa.mp3")
         self.placement_sound = pygame.mixer.Sound("assets/piece-placement.mp3")
         self.capture_sound = pygame.mixer.Sound("assets/piece-capture.mp3")
+        self.selection_sound = pygame.mixer.Sound("assets/selection.wav")
 
     def initialize_button_rects(self):
         x_width = self.screen_size[0]
@@ -595,7 +596,7 @@ class Game:
             # Select piece
             elif piece == self.game_state.turn:
                 self.selected_cell = clicked_idx
-                self.placement_sound.play()
+                self.selection_sound.play()
                 self.valid_moves = [
                     m for m in self.game_state.get_legal_moves() if m[0] == clicked_idx]
         else:
