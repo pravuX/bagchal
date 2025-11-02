@@ -42,4 +42,6 @@ class UIState(Enum):
     PLAYING_PVC_TIGER = "playing_pvc_tiger"
     PLAYING_CVC = "playing_cvc"
     GAME_OVER = "game_over"
+    ANALYSIS_MODE = "analysis_mode"
+    REPLAYING = "replaying"
     EXITING = "exiting"
