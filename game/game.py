@@ -9,7 +9,7 @@ from .constants import UIState, ASSETS, COLORS
 from .effects import ParticleEffect
 from .renderer import GameRenderer
 from .event_handler import EventHandler
-from .database import init_database, save_game, get_game_by_id
+from .database import initialize_database, save_game, get_game_by_id
 
 mcts_flag, minimax_flag = 0, 1
 
@@ -77,7 +77,7 @@ class Game:
 
         # Track game mode for saving
         self.current_game_mode = None
-        
+
         # Replay state management
         self.replay_mode = False
         self.replay_moves = []
@@ -87,9 +87,114 @@ class Game:
         self.replay_timer = 0
         self.replay_auto_play_delay = 1500  # 1.5 seconds per move
         self.ai_suggestions = {}  # Cache AI suggestions for replay positions
-        
+
         # Initialize database
-        init_database()
+        initialize_database()
+
+        self.initialize_button_rects()
+
+    def initialize_button_rects(self):
+        x_width = self.screen_size[0]
+        y_height = self.screen_size[1]
+        menu_button_width = 250
+        menu_button_height = 120
+        y_spacing = 150
+        # menu buttons
+        self.play_btn_rect_main = pygame.Rect(
+            x_width//2 - 100,
+            350,
+            menu_button_width,
+            menu_button_height)
+
+        self.analysis_btn_rect = pygame.Rect(
+            x_width//2 - 100,
+            350 + y_spacing,
+            menu_button_width,
+            menu_button_height)
+
+        self.exit_btn_rect_main = pygame.Rect(
+            x_width//2 - 100,
+            350 + 2 * y_spacing,
+            menu_button_width,
+            menu_button_height)
+
+        # mode select buttons
+        self.pvp_rect = pygame.Rect(
+            x_width * .056,
+            y_height * 0.45,
+            x_width * 0.18,
+            y_height * 0.360)
+
+        self.pvc_goat_rect = pygame.Rect(
+            x_width * .292,
+            y_height * 0.45,
+            x_width * 0.18,
+            y_height * 0.360)
+
+        self.pvc_tiger_rect = pygame.Rect(
+            x_width * .528,
+            y_height * 0.45,
+            x_width * 0.18,
+            y_height * 0.360)
+
+        self.cvc_rect = pygame.Rect(
+            x_width * .764,
+            y_height * 0.45,
+            x_width * 0.18,
+            y_height * 0.360)
+
+        # Analysis main menu button
+        self.analysis_mm_btn = pygame.Rect(
+            x_width // 2 - 150,
+            y_height - 80,
+            300,
+            60)
+
+        # Replay control buttons at bottom
+        button_height = 50
+        button_width = 150
+        button_spacing = 170
+        button_x = x_width - 150
+        button_y = 300 - button_height // 2
+
+        # Previous button
+        self.prev_btn_rect = pygame.Rect(
+            button_x,
+            button_y,
+            button_width,
+            button_height
+        )
+
+        # Play/Pause button
+        self.play_btn_rect = pygame.Rect(
+            button_x,
+            button_y + button_spacing * 0.5,
+            button_width,
+            button_height
+        )
+
+        # Next button
+        self.next_btn_rect = pygame.Rect(
+            button_x,
+            button_y + button_spacing * 1.0,
+            button_width,
+            button_height
+        )
+
+        # Exit replay button
+        self.exit_btn_rect = pygame.Rect(
+            x_width - 120,
+            20,
+            100,
+            40
+        )
+
+        # Replay back button
+        self.back_btn_rect = pygame.Rect(
+            x_width // 2 - 100,
+            y_height - 80,
+            200, 60
+        )
 
     def check_for_resize(self):
         if self.pending_resize is None:
@@ -112,12 +217,13 @@ class Game:
         self.offset = self.cell_size // 2
         self.board_width = self.grid_width - self.cell_size
         self.board_height = self.grid_height - self.cell_size
-        
+
         # Create/update board surface with fixed aspect ratio
         board_size = self.grid_width  # Square board
         self.board_surface_size = (board_size, board_size)
-        self.board_surface = pygame.Surface(self.board_surface_size, pygame.SRCALPHA)
-        
+        self.board_surface = pygame.Surface(
+            self.board_surface_size, pygame.SRCALPHA)
+
         # Update screen size (can be different from board size)
         if not hasattr(self, 'screen_size') or self.screen_size is None:
             # Initial screen size calculation
@@ -167,66 +273,68 @@ class Game:
         self.backgroundgradiant_img = pygame.transform.smoothscale(
             self.backgroundgradiant_original, (1000, 1000))
         self.playervsplayer_img = pygame.transform.smoothscale(
-            self.pvp_original, (x_width* 0.18, y_height * 0.360))
-        self.playervsbagh_img= pygame.transform.smoothscale(
-            self.pvb_original, (x_width* 0.18, y_height * 0.360))
-        self.playervsgoat_img= pygame.transform.smoothscale(
-            self.pvg_original, (x_width* 0.18, y_height * 0.360))
+            self.pvp_original, (x_width * 0.18, y_height * 0.360))
+        self.playervsbagh_img = pygame.transform.smoothscale(
+            self.pvb_original, (x_width * 0.18, y_height * 0.360))
+        self.playervsgoat_img = pygame.transform.smoothscale(
+            self.pvg_original, (x_width * 0.18, y_height * 0.360))
         self.AivsAi = pygame.transform.smoothscale(
-            self.AvA_original, (x_width* 0.18, y_height * 0.360))
+            self.AvA_original, (x_width * 0.18, y_height * 0.360))
 
     def handle_resize(self, new_size):
         width, height = new_size
         self.screen_size = (width, height)
-        
+
         # Calculate available space for board (with margins for UI)
         top_margin = 50
         bottom_margin = 150  # For status bar and controls
         left_margin = 50
         right_margin = 300  # For AI panel in replay mode
-        
+
         available_width = width - left_margin - right_margin
         available_height = height - top_margin - bottom_margin
-        
+
         # Calculate cell size maintaining square board
         max_cell_from_width = available_width // 5
         max_cell_from_height = available_height // 5
         new_cell_size = min(max_cell_from_width, max_cell_from_height)
         new_cell_size = max(self.min_cell_size, min(
             self.max_cell_size, new_cell_size))
-        
+
         if new_cell_size != self.cell_size:
             self.cell_size = new_cell_size
             self.initialize_board_data()
             self.cache_scaled_assets()
-        
+
         # Update board position
         self.update_board_position()
-        
+
         self.screen = pygame.display.set_mode(
             self.screen_size, pygame.RESIZABLE)
-    
+
+        self.initialize_button_rects()
+
     def update_board_position(self):
         """Calculate board position to center it on screen with margins."""
         # Calculate margins based on UI needs
         top_margin = 50
         left_margin = 50
         right_margin = 300 if self.current_state == UIState.REPLAYING else 50
-        
+
         # Center board horizontally
         board_x = (self.screen_size[0] - self.grid_width) // 2
         # Center board vertically with top margin
         board_y = top_margin
-        
+
         self.board_position = (board_x, board_y)
-    
+
     def get_board_coords_from_screen(self, screen_x, screen_y):
         """Convert screen coordinates to board surface coordinates."""
         board_x, board_y = self.board_position
-        
+
         # Check if click is within board area
         if (board_x <= screen_x <= board_x + self.grid_width and
-            board_y <= screen_y <= board_y + self.grid_height):
+                board_y <= screen_y <= board_y + self.grid_height):
             # Convert to board surface coordinates
             rel_x = screen_x - board_x
             rel_y = screen_y - board_y
@@ -247,7 +355,7 @@ class Game:
         self.initial_render_done = False
         self.particles = []
         self.last_move_highlight = None
-        
+
         # Reset replay state
         self.replay_mode = False
         self.replay_moves = []
@@ -344,7 +452,7 @@ class Game:
                         winner = "Goat"
                     else:
                         winner = "Draw"
-                    
+
                     # Save the game
                     save_game(self.game_state, self.current_game_mode, winner)
             elif pygame.time.get_ticks() - self.game_over_timer >= self.game_over_delay:
@@ -362,22 +470,22 @@ class Game:
                          UIState.PLAYING_PVC_TIGER and self.game_state.turn == -1)
         if (self.ai_is_thinking or self.is_game_over() or not is_human_turn or self.pending_player_move or self.move_processed_this_frame):
             return
-        
+
         # Convert screen coordinates to board coordinates
         board_coords = self.get_board_coords_from_screen(pos[0], pos[1])
         if board_coords is None:
             return  # Click is outside board area
-        
+
         board_x, board_y = board_coords
-        
+
         # Convert board coordinates to grid coordinates (accounting for offset)
-        col = (board_x - self.offset//2) // self.cell_size 
-        row = (board_y - self.offset//2) // self.cell_size 
-        
+        col = (board_x - self.offset//2) // self.cell_size
+        row = (board_y - self.offset//2) // self.cell_size
+
         # Validate grid coordinates
         if col < 0 or col >= 5 or row < 0 or row >= 5:
             return
-        
+
         idx = col + row * self.grid_cols
         piece = None
         if self.game_state.turn == 1:
@@ -511,11 +619,11 @@ class Game:
         game_data = get_game_by_id(game_id)
         if not game_data:
             return False
-        
+
         # Reset to initial state
         self.game_state = BitboardGameState()
         self.reset_game()
-        
+
         # Store replay data
         self.replay_moves = game_data["moves"]
         self.replay_index = 0
@@ -523,72 +631,72 @@ class Game:
         self.replay_mode = True
         self.auto_play = False
         self.ai_suggestions = {}
-        
+
         # Clear AI state for replay
         self.cleanup_ai_thread()
         self.ai_initialized = False
-        
+
         return True
-    
+
     def step_replay_forward(self):
         """Execute next move in replay sequence."""
         if self.replay_index >= len(self.replay_moves):
             self.auto_play = False  # Stop auto-play when reached end
             return
-        
+
         move_data = self.replay_moves[self.replay_index]
         move = (move_data["from"], move_data["to"])
-        
+
         # Make the move (game_state.make_move handles capture info internally)
         self.game_state.make_move(move)
         self.replay_index += 1
-        
+
         # Clear cached suggestion for this position
         if self.replay_index in self.ai_suggestions:
             del self.ai_suggestions[self.replay_index]
-    
+
     def step_replay_backward(self):
         """Undo last move in replay sequence."""
         if self.replay_index <= 0:
             return
-        
+
         self.game_state.unmake_move()
         self.replay_index -= 1
-        
+
         # Clear cached suggestion for this position
         if self.replay_index in self.ai_suggestions:
             del self.ai_suggestions[self.replay_index]
-    
+
     def toggle_replay_auto_play(self):
         """Toggle auto-play mode for replay."""
         self.auto_play = not self.auto_play
         if self.auto_play:
             self.replay_timer = pygame.time.get_ticks()
-    
+
     def get_ai_suggestion_for_position(self):
         """Get AI suggested move for current replay position."""
         # Check cache first
         if self.replay_index in self.ai_suggestions:
             return self.ai_suggestions[self.replay_index]
-        
+
         # Don't suggest if game is over
         if self.game_state.is_game_over:
             return None
-        
+
         try:
             # Determine which agent to use based on game mode
             # For now, default to minimax, but could be based on original game mode
             if not self.ai_initialized:
                 self.minimax_agent = AlphaBetaAgent()
                 self.ai_initialized = True
-            
+
             # Get suggested move with short time limit for replay
             suggested_move = self.minimax_agent.get_best_move(
-                self.game_state, 
-                time_limit=0.5, 
+                self.game_state,
+                time_limit=0.5,
                 game_history=[]
             )
-            
+
             # Cache the suggestion
             self.ai_suggestions[self.replay_index] = suggested_move
             return suggested_move
