@@ -1,7 +1,9 @@
+import random
 import pygame
 from .constants import COLORS, ASSETS, UIState
 from bagchal import Piece_GOAT, Piece_TIGER, extract_indices_fast, BOARD_MASK
 from .database import get_last_games
+from .effects import ParticleEffect
 
 
 class GameRenderer:
@@ -202,7 +204,7 @@ class GameRenderer:
         self.draw_text(
             "Bagchal", font_size, self.game.screen_size[0] // 2, 150, COLORS["accent"])
 
-        self.draw_text("The Tigers and Goats Game", font_size//2,
+        self.draw_text("The Tigers and Goats Game", int(font_size/2.5),
                        self.game.screen_size[0] // 2, 220, COLORS["white"])
 
         play = self.game.play_btn_rect_main
@@ -223,7 +225,7 @@ class GameRenderer:
         y_height = self.game.screen_size[1]
         font_size = int(self.game.cell_size * 0.4)
         self.draw_text("Game Mode", font_size,
-                       x_width // 2, 120, COLORS["accent"])
+                       x_width // 2, 150, COLORS["accent"])
 
         # draw exit button top right
         exit_btn = self.game.exit_btn_rect
@@ -316,6 +318,32 @@ class GameRenderer:
             self.draw_button(f"{self.game.get_agent_name()} Agent", switch_ai.x, switch_ai.y,
                              switch_ai.width, switch_ai.height, font_size)
 
+    def spawn_confetti(self, center, count=60):
+        """Spawn multicolored confetti using the project's ParticleEffect.
+        ParticleEffect signature: ParticleEffect(x, y, color, count=10)
+        We create multiple ParticleEffect instances (one per color) and add them to game.particles.
+        """
+
+        colors = [
+            COLORS.get("accent", (255, 200, 0)),
+            COLORS.get("white", (255, 255, 255)),
+            COLORS.get("win_goat", (60, 180, 75)),
+            COLORS.get("win_tiger", (220, 80, 60)),
+        ]
+
+        num_colors = len(colors)
+        base = count // num_colors
+        remainder = count % num_colors
+
+        cx, cy = center
+        for i, color in enumerate(colors):
+            ccount = base + (1 if i < remainder else 0)
+            if ccount <= 0:
+                continue
+            pe = ParticleEffect(cx, cy, color, count=ccount,
+                                life=30, gravity=0.1)
+            self.game.particles.append(pe)
+
     def draw_pulsating_overlay(self, text):
         x_width = self.game.screen_size[0]
         center_x = x_width // 2
@@ -359,6 +387,32 @@ class GameRenderer:
         self.draw_button("Play Again", play.x, play.y,
                          play.width+50, play.height, font_size)
 
+        # Spawn confetti once when the game over screen first appears
+        try:
+            if not getattr(self.game, "confetti_spawned", False):
+                cx = random.randint(0, self.game.screen_size[0])
+                cy = random.randint(0, self.game.screen_size[1])
+                self.spawn_confetti((cx, cy), count=30)
+        except Exception:
+            pass
+
+        # Update and draw particles (confetti) on the Game Over screen
+        for particle in self.game.particles[:]:
+            try:
+                particle.update()
+                particle.draw(self.screen)
+                if not getattr(particle, 'particles', None):
+                    try:
+                        self.game.particles.remove(particle)
+                    except ValueError:
+                        pass
+            except Exception:
+                # Be resilient to any particle implementation issues
+                try:
+                    self.game.particles.remove(particle)
+                except Exception:
+                    pass
+
     def render_analysis_mode(self):
         """Render the Analysis Mode screen showing last 5 games."""
 
@@ -366,10 +420,10 @@ class GameRenderer:
         # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
         # Title
-        font_size = int(self.game.cell_size * 0.4)
+        font_size = int(self.game.cell_size * 0.3)
         self.draw_text(
             "Analysis Mode", font_size,
-            self.game.screen_size[0] // 2, 120, COLORS["accent"])
+            self.game.screen_size[0] // 2, 150, COLORS["accent"])
 
         # Get games
         games = get_last_games(5)
@@ -520,12 +574,12 @@ class GameRenderer:
         # Exit replay button (top right)
         exit_btn = self.game.exit_btn_rect
         self.draw_button("Exit", exit_btn.x, exit_btn.y,
-                         exit_btn.width, exit_btn.height, font_size - 2)
+                         exit_btn.width, exit_btn.height, 20)
 
         # Move counter
         total_moves = len(self.game.replay_moves)
         current_move = self.game.replay_index
-        move_counter_text = f"Move {current_move} of {total_moves}"
+        move_counter_text = f"Move: {current_move}/{total_moves}"
         self.draw_text(move_counter_text, 24, center_x,
                        self.game.screen_size[1] - 150, COLORS["white"])
 
@@ -564,7 +618,7 @@ class GameRenderer:
                 suggestion_text = "Calculating..."
                 agent_text = ""
 
-            self.draw_text(suggestion_text, 16,
+            self.draw_text(suggestion_text, 18,
                            suggestion_panel_x + suggestion_panel_width // 2,
                            suggestion_panel_y + 60, COLORS["white"])
             if agent_text:
@@ -572,7 +626,7 @@ class GameRenderer:
                                suggestion_panel_x + suggestion_panel_width // 2,
                                suggestion_panel_y + 90, COLORS["white"])
         else:
-            self.draw_text("Game Over", 16,
+            self.draw_text("Game Over!", 18,
                            suggestion_panel_x + suggestion_panel_width // 2,
                            suggestion_panel_y + 60, COLORS["white"])
 

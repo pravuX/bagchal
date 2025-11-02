@@ -126,10 +126,12 @@ class EventHandler:
                     self.game.click_sound.play()
                     self.game.cleanup_ai_thread()
                     self.game.current_state = UIState.MAIN_MENU
+                    self.game.confetti_spawned = True
                 if self.game.play_again_btn.collidepoint(event.pos):
                     self.game.cleanup_ai_thread()
                     self.game.click_sound.play()
                     self.game.current_state = UIState.MODE_SELECT
+                    self.game.confetti_spawned = True
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:
