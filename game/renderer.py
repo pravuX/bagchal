@@ -137,6 +137,7 @@ class GameRenderer:
         spacing = 10  # between buttons
         height = panel_height // 2
         width = panel_width // 4 + padding
+        width = min(275, width)
         center = panel_width // 2 - width // 2
         y = status_y + panel_height // 4
 
@@ -145,16 +146,14 @@ class GameRenderer:
         self.draw_button(turn_text, center,
                          status_y - height//1.5, width, height, font_size)
 
-        self.draw_button(goat_text, 0 + spacing,
+        self.draw_button(goat_text, center - width - spacing,
                          y, width, height, font_size)
 
         self.draw_button(eaten_text, center,
                          y, width, height, font_size)
 
-        panel_width = self.game.screen_size[0] if hasattr(
-            self.game, 'screen_size') else self.game.grid_width
-        self.draw_button(trapped_text, panel_width -
-                         width - spacing, y, width, height, font_size)
+        self.draw_button(trapped_text, center + width + spacing,
+                         y, width, height, font_size)
 
     def draw_text(self, text, size, x, y, color=None):
         if color is None:

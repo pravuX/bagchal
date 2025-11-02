@@ -83,13 +83,17 @@ class Game:
         self.replay_auto_play_delay = 1500  # 1.5 seconds per move
         self.ai_suggestions = {}  # Cache AI suggestions for replay positions
 
-        pygame.mixer.init()
-        self.click_sound = pygame.mixer.Sound("assets/button_click.mp3")
+        self.initialize_sounds()
 
         # Initialize database
         initialize_database()
 
         self.initialize_button_rects()
+
+    def initialize_sounds(self):
+        pygame.mixer.init()
+        self.click_sound = pygame.mixer.Sound("assets/button_click.mp3")
+        self.goat_sound = pygame.mixer.Sound("assets/goat-baa.mp3")
 
     def initialize_button_rects(self):
         x_width = self.screen_size[0]
@@ -583,7 +587,8 @@ class Game:
                     screen_y = self.board_position[1] + y + self.offset
                     self.particles.append(ParticleEffect(
                         screen_x, screen_y, COLORS['accent']))
-                    self.click_sound.play()
+                    # self.click_sound.play()
+                    self.goat_sound.play()
                     return
             # Select piece
             elif piece == self.game_state.turn:
