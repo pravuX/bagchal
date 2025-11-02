@@ -1,0 +1,1013 @@
+{
+  "games": [
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.47475004196167,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.79925298690796,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.61672806739807,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.84500193595886,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.42280030250549,
+      "repetition_draw": true
+    },
+    {
+      "result": -1,
+      "total_moves": 69,
+      "placement_moves": 39,
+      "movement_moves": 30,
+      "captures": 2,
+      "trapped_tigers": 4,
+      "game_duration": 38.70628595352173,
+      "repetition_draw": false
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.29775094985962,
+      "repetition_draw": true
+    },
+    {
+      "result": -1,
+      "total_moves": 69,
+      "placement_moves": 39,
+      "movement_moves": 30,
+      "captures": 2,
+      "trapped_tigers": 4,
+      "game_duration": 38.68371629714966,
+      "repetition_draw": false
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.390681982040405,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.36634302139282,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.310341119766235,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.25225019454956,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.39183807373047,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.212873220443726,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.36442494392395,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.35859704017639,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.36103081703186,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.796653747558594,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.58470392227173,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.27599620819092,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.43973684310913,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.82762122154236,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.716872215270996,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.619860887527466,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.966439962387085,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.89175724983215,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.410935163497925,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.65753698348999,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.83845090866089,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.90495419502258,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.267122983932495,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.1654748916626,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.39675188064575,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.52092909812927,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.94276475906372,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.39106202125549,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.49449825286865,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.632553815841675,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.851284980773926,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.34195303916931,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.363718032836914,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.6584792137146,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.238646030426025,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.978492975234985,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.32173800468445,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.340396881103516,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.57377791404724,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.37665104866028,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.48922419548035,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.42923069000244,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.656946182250977,
+      "repetition_draw": true
+    },
+    {
+      "result": -1,
+      "total_moves": 69,
+      "placement_moves": 39,
+      "movement_moves": 30,
+      "captures": 2,
+      "trapped_tigers": 4,
+      "game_duration": 38.799593925476074,
+      "repetition_draw": false
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.32452607154846,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 40.88353610038757,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.618863105773926,
+      "repetition_draw": true
+    },
+    {
+      "result": -1,
+      "total_moves": 69,
+      "placement_moves": 39,
+      "movement_moves": 30,
+      "captures": 2,
+      "trapped_tigers": 4,
+      "game_duration": 38.8964478969574,
+      "repetition_draw": false
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.43676805496216,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.495518922805786,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.25480675697327,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.28957796096802,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.279122829437256,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.35149002075195,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 41.02796506881714,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.490599393844604,
+      "repetition_draw": true
+    },
+    {
+      "result": -1,
+      "total_moves": 69,
+      "placement_moves": 39,
+      "movement_moves": 30,
+      "captures": 2,
+      "trapped_tigers": 4,
+      "game_duration": 38.77502989768982,
+      "repetition_draw": false
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.25621771812439,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.679216146469116,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.36027908325195,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.27279996871948,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.369205951690674,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.35705018043518,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.579225063323975,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.39440202713013,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.45233678817749,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.36256003379822,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 68,
+      "placement_moves": 39,
+      "movement_moves": 29,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 38.09512805938721,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.37605404853821,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.39420509338379,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.634281158447266,
+      "repetition_draw": true
+    },
+    {
+      "result": -1,
+      "total_moves": 69,
+      "placement_moves": 39,
+      "movement_moves": 30,
+      "captures": 2,
+      "trapped_tigers": 4,
+      "game_duration": 39.131062030792236,
+      "repetition_draw": false
+    },
+    {
+      "result": 0,
+      "total_moves": 72,
+      "placement_moves": 39,
+      "movement_moves": 33,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 41.18913698196411,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.41273784637451,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.471829652786255,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.37867712974548,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.34203600883484,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.25898814201355,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 68,
+      "placement_moves": 39,
+      "movement_moves": 29,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 38.11897301673889,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.40506625175476,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.38043999671936,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.31624507904053,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.798583030700684,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.38581085205078,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.52757477760315,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 52,
+      "placement_moves": 39,
+      "movement_moves": 13,
+      "captures": 1,
+      "trapped_tigers": 0,
+      "game_duration": 26.62056303024292,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 68,
+      "placement_moves": 39,
+      "movement_moves": 29,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 38.11537194252014,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 60,
+      "placement_moves": 39,
+      "movement_moves": 21,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 32.440268993377686,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 42.08139109611511,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 41.89968013763428,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 41.86215591430664,
+      "repetition_draw": true
+    },
+    {
+      "result": 0,
+      "total_moves": 74,
+      "placement_moves": 39,
+      "movement_moves": 35,
+      "captures": 2,
+      "trapped_tigers": 1,
+      "game_duration": 41.85538411140442,
+      "repetition_draw": true
+    }
+  ],
+  "summary": {
+    "total_games": 100,
+    "tiger_wins": 0,
+    "goat_wins": 6,
+    "draws": 94,
+    "avg_moves": 63.64,
+    "avg_captures": 1.87,
+    "avg_duration": 34.94716666698456
+  }
+}
