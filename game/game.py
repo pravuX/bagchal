@@ -104,8 +104,6 @@ class Game:
         menu_button_width = 250
         menu_button_height = 120
         y_spacing = 150
-        btn_width = x_width * 0.18
-        btn_height = y_height * 0.360
         # menu buttons
         self.play_btn_rect_main = pygame.Rect(
             x_width//2 - 100,
@@ -128,6 +126,8 @@ class Game:
             menu_button_height
         )
 
+        btn_width = x_width * 0.18
+        btn_height = y_height * 0.360
         if x_width >= 1000:
             btn_width = 180
             btn_height = 360
@@ -168,10 +168,10 @@ class Game:
             60
         )
 
-        # Replay control buttons at bottom
+        # Replay control buttons at the side
         button_height = 50
         button_width = 150
-        button_spacing = 170
+        button_spacing = 120
         button_x = x_width - 150
         button_y = 300 - button_height // 2
 
@@ -220,6 +220,13 @@ class Game:
             20,
             button_width + 100,
             button_height
+        )
+
+        self.play_again_btn = pygame.Rect(
+            x_width // 2 - menu_button_width//2,
+            y_height // 2,
+            menu_button_width,
+            menu_button_height
         )
 
     def check_for_resize(self):
@@ -389,6 +396,7 @@ class Game:
         self.initial_render_done = False
         self.particles = []
         self.last_move_highlight = None
+        self.confetti_spawned = False
 
         # Reset replay state
         self.replay_mode = False

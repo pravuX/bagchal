@@ -104,7 +104,8 @@ class EventHandler:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
                     self.game.click_sound.play()
-                    self.game.current_state = UIState.MAIN_MENU
+                    self.game.cleanup_ai_thread()
+                    self.game.current_state = UIState.MODE_SELECT
                 if self.game.current_state == UIState.PLAYING_PVP or \
                    (self.game.current_state == UIState.PLAYING_PVC_GOAT and self.game.game_state.turn == 1) or \
                    (self.game.current_state == UIState.PLAYING_PVC_TIGER and self.game.game_state.turn == -1):
@@ -120,11 +121,22 @@ class EventHandler:
 
     def handle_game_over_events(self, events):
         for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    self.game.current_state = UIState.MODE_SELECT
-                elif event.key == pygame.K_ESCAPE:
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                if self.game.exit_btn_rect.collidepoint(event.pos):
+                    self.game.click_sound.play()
+                    self.game.cleanup_ai_thread()
                     self.game.current_state = UIState.MAIN_MENU
+                    self.game.confetti_spawned = True
+                if self.game.play_again_btn.collidepoint(event.pos):
+                    self.game.cleanup_ai_thread()
+                    self.game.click_sound.play()
+                    self.game.current_state = UIState.MODE_SELECT
+                    self.game.confetti_spawned = True
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.game.cleanup_ai_thread()
+            self.game.current_state = UIState.MAIN_MENU
 
     def handle_analysis_mode_events(self, events):
         """Handle events in Analysis Mode."""
