@@ -290,6 +290,14 @@ class Game:
             ASSETS['playervsgoat']).convert_alpha()
         self.AvA_original = pygame.image.load(
             ASSETS['AivsAi']).convert_alpha()
+        self.pvphover_original = pygame.image.load(
+            ASSETS['playervsplayerhover']).convert_alpha()
+        self.pvbhover_original = pygame.image.load(
+            ASSETS['playervsbaghhover']).convert_alpha()
+        self.pvghover_original = pygame.image.load(
+            ASSETS['playervsgoathover']).convert_alpha()
+        self.AvAhover_original = pygame.image.load(
+            ASSETS['AivsAihover']).convert_alpha()
 
     def cache_scaled_assets(self):
         x_width = self.screen_size[0]
@@ -318,6 +326,14 @@ class Game:
             self.pvg_original, (btn_width, btn_height))
         self.AivsAi = pygame.transform.smoothscale(
             self.AvA_original, (btn_width, btn_height))
+        self.playervsplayerhover_img = pygame.transform.smoothscale(
+            self.pvphover_original, (btn_width, btn_height))
+        self.playervsbaghhover_img = pygame.transform.smoothscale(
+            self.pvbhover_original, (btn_width, btn_height))
+        self.playervsgoathover_img = pygame.transform.smoothscale(
+            self.pvghover_original, (btn_width, btn_height))
+        self.AivsAihover_img = pygame.transform.smoothscale(
+            self.AvAhover_original, (btn_width, btn_height))
 
     def handle_resize(self, new_size):
         width, height = new_size

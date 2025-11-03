@@ -30,7 +30,11 @@ ASSETS = {
     "playervsbagh" : "assets/playervsbagh.png",
     "playervsgoat" : "assets/playervsgoat.png",
     "playervsplayer" : "assets/playervsplayer.png",
-    "AivsAi" : "assets/AivsAi.png", 
+    "AivsAi" : "assets/AivsAi.png",
+    "playervsbaghhover" : "assets/playervsbaghhover.png",
+    "playervsgoathover" : "assets/playervsgoathover.png",
+    "playervsplayerhover" : "assets/playervsplayerhover.png",
+    "AivsAihover" : "assets/AivsAihover.png", 
 }
 
 
