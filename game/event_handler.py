@@ -56,23 +56,23 @@ class EventHandler:
                     self.game.screen.blit(self.game.playervsplayerhover_img,
                     (self.game.pvp_rect.x, self.game.pvp_rect.y))
                     pygame.display.update()
-                    clock.tick(30)
+                    clock.tick(15)
         if self.game.cvc_rect.collidepoint(pygame.mouse.get_pos()):
                     self.game.screen.blit(self.game.AivsAihover_img,
                     (self.game.cvc_rect.x, self.game.cvc_rect.y))
                     pygame.display.update()
-                    clock.tick(30)
+                    clock.tick(15)
         if self.game.pvc_tiger_rect.collidepoint(pygame.mouse.get_pos()):
                     self.game.screen.blit(self.game.playervsbaghhover_img,
                     (self.game.pvc_tiger_rect.x, self.game.pvc_tiger_rect.y))
                     pygame.display.update()
-                    clock.tick(30)
+                    clock.tick(15)
         if self.game.pvc_goat_rect.collidepoint(pygame.mouse.get_pos()):
                     self.game.screen.blit(self.game.playervsgoathover_img,
                     (self.game.pvc_goat_rect.x, self.game.pvc_goat_rect.y))
                     pygame.display.update()
-                    clock.tick(30)
-                
+                    clock.tick(15)
+          
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
