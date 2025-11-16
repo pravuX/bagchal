@@ -50,29 +50,29 @@ class EventHandler:
 
     def handle_mode_select_events(self, events):
         x_width = self.game.screen_size[0]
-        speed = int(0.008 * x_width)        
-        #hover
+        speed = int(0.008 * x_width)
+        # hover
         if self.game.pvp_rect.collidepoint(pygame.mouse.get_pos()):
-                    self.game.screen.blit(self.game.playervsplayerhover_img,
-                    (self.game.pvp_rect.x, self.game.pvp_rect.y))
-                    pygame.display.update()
-                    clock.tick(15)
+            self.game.screen.blit(self.game.playervsplayerhover_img,
+                                  (self.game.pvp_rect.x, self.game.pvp_rect.y))
+            pygame.display.update()
+            clock.tick(15)
         if self.game.cvc_rect.collidepoint(pygame.mouse.get_pos()):
-                    self.game.screen.blit(self.game.AivsAihover_img,
-                    (self.game.cvc_rect.x, self.game.cvc_rect.y))
-                    pygame.display.update()
-                    clock.tick(15)
+            self.game.screen.blit(self.game.AivsAihover_img,
+                                  (self.game.cvc_rect.x, self.game.cvc_rect.y))
+            pygame.display.update()
+            clock.tick(15)
         if self.game.pvc_tiger_rect.collidepoint(pygame.mouse.get_pos()):
-                    self.game.screen.blit(self.game.playervsbaghhover_img,
-                    (self.game.pvc_tiger_rect.x, self.game.pvc_tiger_rect.y))
-                    pygame.display.update()
-                    clock.tick(15)
+            self.game.screen.blit(self.game.playervsbaghhover_img,
+                                  (self.game.pvc_tiger_rect.x, self.game.pvc_tiger_rect.y))
+            pygame.display.update()
+            clock.tick(15)
         if self.game.pvc_goat_rect.collidepoint(pygame.mouse.get_pos()):
-                    self.game.screen.blit(self.game.playervsgoathover_img,
-                    (self.game.pvc_goat_rect.x, self.game.pvc_goat_rect.y))
-                    pygame.display.update()
-                    clock.tick(15)
-          
+            self.game.screen.blit(self.game.playervsgoathover_img,
+                                  (self.game.pvc_goat_rect.x, self.game.pvc_goat_rect.y))
+            pygame.display.update()
+            clock.tick(15)
+
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
@@ -136,6 +136,12 @@ class EventHandler:
                 if self.game.switch_ai_btn_rect.collidepoint(event.pos):
                     self.game.click_sound.play()
                     self.game.toggle_agent()
+                if self.game.prev_btn_rect.collidepoint(event.pos):
+                    self.game.click_sound.play()
+                    count = 1
+                    if self.game.current_state == UIState.PLAYING_PVC_GOAT or self.game.current_state == UIState.PLAYING_PVC_TIGER:
+                        count = 2
+                    self.game.undo_last_move(count=count)
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_ESCAPE]:

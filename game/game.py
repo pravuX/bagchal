@@ -459,14 +459,17 @@ class Game:
     def get_agent_name(self) -> str:
         return "MCTS" if self.using_agent == mcts_flag else "Minimax"
 
+    def get_game_history(self):
+        return [state for state, count in self.state_hash.items() if count > 0]
+
     def _ai_worker(self, agent, game_state):
         try:
             if hasattr(agent, "search"):
                 move = agent.search(
-                    game_state, time_limit=self.time_limit, game_history=self.state_hash.keys())
+                    game_state, time_limit=self.time_limit, game_history=self.get_game_history())
             else:
                 move = agent.get_best_move(
-                    game_state, time_limit=self.time_limit, game_history=self.state_hash.keys())
+                    game_state, time_limit=self.time_limit, game_history=self.get_game_history())
             self.ai_result_move = move
         except Exception as e:
             print(f"AI Error: {e}")
@@ -779,6 +782,15 @@ class Game:
         # Clear cached suggestion for this position
         if self.replay_index in self.ai_suggestions:
             del self.ai_suggestions[self.replay_index]
+
+    # TODO: remove code redundancy
+    def undo_last_move(self, count=1):
+        """Undo last move."""
+        # TODO: if we want redo, we need to store the sequences of move just like in replay mode
+        for _ in range(count):
+            state_key = self.game_state.key
+            self.state_hash[state_key] -= 1
+            self.game_state.unmake_move()
 
     def toggle_replay_auto_play(self):
         """Toggle auto-play mode for replay."""

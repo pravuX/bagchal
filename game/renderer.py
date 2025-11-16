@@ -11,7 +11,7 @@ class GameRenderer:
         self.game = game
         self.screen = game.screen
         self.board_surface = game.board_surface
-        self.is_debug = False
+        self.is_debug = True
 
     def draw_board(self):
         target_surface = self.game.board_surface if self.game.board_surface else self.screen
@@ -275,6 +275,15 @@ class GameRenderer:
         exit_btn = self.game.exit_btn_rect
         self.draw_button("Exit", exit_btn.x, exit_btn.y,
                          exit_btn.width, exit_btn.height, 20)
+
+        # Undo Button
+        undo_text = "Undo"
+        undo_btn = self.game.prev_btn_rect
+
+        font_size = int(undo_btn.width * 0.1)
+
+        self.draw_button(undo_text, undo_btn.x, undo_btn.y,
+                         undo_btn.width, undo_btn.height, font_size)
 
         if self.game.last_move_highlight:
             from_idx, _ = self.game.last_move_highlight
