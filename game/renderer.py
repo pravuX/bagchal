@@ -168,6 +168,15 @@ class GameRenderer:
         text_rect = text_surface.get_rect(center=(x, y))
         self.screen.blit(text_surface, text_rect)
 
+    def draw_image_btn(self, normal_image, hover_image, rect):
+        mouse_pos = pygame.mouse.get_pos()
+        is_hovered = rect.collidepoint(mouse_pos)
+        btn_image = normal_image
+        if is_hovered:
+            btn_image = hover_image
+        self.screen.blit(btn_image,
+                         (rect.x, rect.y))
+
     def draw_button(self, text, x, y, w, h, font_size=None):
         rect = pygame.Rect(x, y, w, h)
         mouse_pos = pygame.mouse.get_pos()
@@ -237,22 +246,37 @@ class GameRenderer:
         pvc_t = self.game.pvc_tiger_rect
         cvc = self.game.cvc_rect
 
-        self.screen.blit(self.game.playervsplayer_img,
-                         (pvp.x, pvp.y))
-        self.screen.blit(self.game.playervsgoat_img,
-                         (pvc_g.x, pvc_g.y))
-        self.screen.blit(self.game.playervsbagh_img,
-                         (pvc_t.x, pvc_t.y))
-        self.screen.blit(self.game.AivsAi, (cvc.x, cvc.y))
+        # self.screen.blit(self.game.playervsplayer_img,
+        #                  (pvp.x, pvp.y))
+        # self.screen.blit(self.game.playervsgoat_img,
+        #                  (pvc_g.x, pvc_g.y))
+        # self.screen.blit(self.game.playervsbagh_img,
+        #                  (pvc_t.x, pvc_t.y))
+        # self.screen.blit(self.game.AivsAi, (cvc.x, cvc.y))
 
-        # self.draw_button("PvP",  # player v player to fit inside the square
-        #                  x_width * .056, y_height * 0.45, x_width * 0.18, y_height * 0.360)
-        # self.draw_button("PvG",  # player v goat ai to fit inside the square
-        #                  x_width * .292, y_height * 0.45, x_width * 0.18, y_height * 0.360)
-        # self.draw_button("PvT",  # player v tiger ai to fit inside the square
-        #                  x_width * .528, y_height * 0.45, x_width * 0.18, y_height * 0.360)
-        # self.draw_button("CvC",  # computer v computer to fit inside the square
-        #                  x_width * .764, y_height * 0.45, x_width * 0.18, y_height * 0.360)
+        self.draw_image_btn(
+            self.game.playervsplayer_img,
+            self.game.playervsplayerhover_img,
+            pvp
+        )
+
+        self.draw_image_btn(
+            self.game.playervsgoat_img,
+            self.game.playervsgoathover_img,
+            pvc_g
+        )
+
+        self.draw_image_btn(
+            self.game.playervsbagh_img,
+            self.game.playervsbaghhover_img,
+            pvc_t
+        )
+
+        self.draw_image_btn(
+            self.game.AivsAi,
+            self.game.AivsAihover_img,
+            cvc
+        )
 
         font_size = int(self.game.cell_size * 0.17)
         self.draw_text("Press ESC to go back", font_size,  # this is font size
