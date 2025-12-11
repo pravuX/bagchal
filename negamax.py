@@ -1,6 +1,7 @@
 import time
 from collections import defaultdict
 from bagchal import *
+from symmetries import generate_d4_transforms, symmetry_prune_moves, score_triple_lock, TRIPLE_LOCK_MASKS_NP
 
 EXACT_FLAG, ALPHA_FLAG, BETA_FLAG = 0, 1, 2
 MAX_PLY = 64
@@ -62,7 +63,7 @@ class TT:
 
 
 class AlphaBetaAgent():
-    def __init__(self):
+    def __init__(self, use_symmetry=True, logging=False, weights=None):
         # half move counter
         self.ply = 0
         self.game_state: BitboardGameState
@@ -78,7 +79,25 @@ class AlphaBetaAgent():
         # current line of play
         self.tree_history = list()
 
-    def get_best_move(self, gs, game_history=None, time_limit=1.5):
+        self.logging = logging
+
+        self.use_symmetry = use_symmetry
+        self.transforms = generate_d4_transforms() if use_symmetry else []
+
+        self.weights = {
+            'w_eat': 100.0,
+            'w_potcap': 50.0,
+            'w_mobility': 10.0,
+            'w_trap': 10.0,
+            'w_presence': 10.0,
+            'w_inacc': 50.0,
+            'triple_partial': 40.0,
+            'triple_full': 200.0
+        }
+        if weights:
+            self.weights.update(weights)
+
+    def get_best_move(self, gs, game_history=[], time_limit=1.5):
         self.game_state = gs.copy()
         self.game_history = game_history
 
@@ -111,21 +130,25 @@ class AlphaBetaAgent():
                 best_move = root_pv[0]
 
                 elapsed_time = time.time() - self.start_time
-                print(
-                    f" > Depth: {current_depth}. Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Time: {elapsed_time:.2f}s.")
+                if self.logging:
+                    print(
+                        f" > Depth: {current_depth}. Best Move: {best_move}. No of Nodes: {self.no_of_nodes}. Score: {score:.2f}. Time: {elapsed_time:.2f}s.")
 
-                print(" > PV:", end=" ")
-                for move in root_pv:
-                    print(f"{move}", end=" ")
-                print()
+                    print(" > PV:", end=" ")
+                    for move in root_pv:
+                        print(f"{move}", end=" ")
+                    print()
+                self.best_depth = current_depth
 
             except TimeoutError:
 
-                print(
-                    f" > Timeout occurred at depth {current_depth}. No of Nodes: {self.no_of_nodes}.")
+                if self.logging:
+                    print(
+                        f" > Timeout occurred at depth {current_depth}. No of Nodes: {self.no_of_nodes}.")
                 break
 
-        print(f" > Final Best Move: {best_move}.\n")
+        if self.logging:
+            print(f" > Final Best Move: {best_move}.\n")
         return best_move
 
     def negamax(self, alpha, beta, depth, parent_pv: PV_Line):
@@ -151,6 +174,16 @@ class AlphaBetaAgent():
             return val
 
         moves = self.game_state.get_legal_moves()
+
+        if self.use_symmetry:  # and depth > 1:
+            # Usually only worth pruning at higher depths
+            # because the overhead of calculating symmetries is non-zero.
+            moves = symmetry_prune_moves(
+                self.game_state.tigers_bb,
+                self.game_state.goats_bb,
+                moves,
+                self.transforms
+            )
 
         hash_flag = ALPHA_FLAG
         best_move = None
@@ -250,6 +283,7 @@ class AlphaBetaAgent():
         killer1, killer2 = self.killers.get(killer_key, [None, None])
         for j, move in enumerate(moves[current_idx:len(moves)]):
             score = self._score_move(move)
+            # score = 0
 
             if move == tt_move:
                 score += 5000
@@ -291,7 +325,7 @@ class AlphaBetaAgent():
         goat_presence_max = 20
         tiger_mobility_max = 25
 
-        p_mobility = 0 if is_placement else w_mobility
+        # p_mobility = 0 if is_placement else w_mobility
 
         if state.is_game_over:
             result = state.get_result
@@ -317,21 +351,48 @@ class AlphaBetaAgent():
         tiger_mobility_score = accessible / tiger_mobility_max
         inaccessibility_score = min(1, inaccessibility_score)
 
-        tiger_score = (eaten_score * w_eat +
-                       potential_capture_score * w_potcap +
-                       tiger_mobility_score * p_mobility)
+        triple_score = 0
+        match_count = score_triple_lock(
+            state.tigers_bb, TRIPLE_LOCK_MASKS_NP)
 
-        goat_score = (trap_score * w_trap +
-                      goat_presence_score * w_presence +
-                      inaccessibility_score * w_inacc)
+        # This value needs tuning!
+        if match_count == 3:
+            triple_score += self.weights["triple_full"]
+        elif match_count == 2:
+            triple_score += self.weights["triple_partial"]
+
+        tiger_score = (eaten_score * self.weights["w_eat"] +
+                       potential_capture_score * self.weights["w_potcap"] +
+                       tiger_mobility_score * self.weights["w_mobility"] +
+                       triple_score)
+
+        goat_score = (trap_score * self.weights["w_trap"] +
+                      goat_presence_score * self.weights["w_presence"] +
+                      inaccessibility_score * self.weights["w_inacc"])
 
         if inaccessible >= 1 and eaten == 0 and is_placement:
             # this is a sure win for goat if the goat can keep placing pieces without losing any
             # we must encourage this line of play for goat
-            goat_score += 300
+            goat_score += 1000
 
         final_evaluation = tiger_score - goat_score
         return final_evaluation * state.turn
+
+    def new_evaluate(self):
+        """
+        Positive -> TIGER advantage, Negative -> GOAT advantage.
+        """
+        # Parameters for static board evaluation
+        # Tiger advantage:
+        #   more goats captured,
+        #   more than two potential captures (sure capture)
+        #   triple lock (but usable)
+        #   center control
+        # Goat advantage:
+        #   less goat captured
+        #   more goats on board (but this typically will continue increasing through the placement phase)
+        #   cantonments or inaccessible positions (for tigers) -> gives chance to move pieces safely and is the only way the goat can win
+        #   central control (of course lone goat at the center is useless, so central control must be achieved with proper backup)
 
     def _count_potential_captures(self):
 
