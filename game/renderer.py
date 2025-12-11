@@ -7,13 +7,19 @@ from .effects import ParticleEffect
 
 
 class GameRenderer:
-    def __init__(self, game):
+    """
+    Handles all rendering logic for the game.
+    
+    Draws the board, pieces, menus, and UI effects (particles, animations).
+    """
+    def __init__(self, game, is_debug=False):
         self.game = game
         self.screen = game.screen
         self.board_surface = game.board_surface
-        self.is_debug = True
+        self.is_debug = is_debug
 
     def draw_board(self):
+        """Draws the main game board, including grid lines and background."""
         target_surface = self.game.board_surface if self.game.board_surface else self.screen
         board_rect = pygame.Rect(
             self.game.offset, self.game.offset, self.game.board_width, self.game.board_height)
@@ -61,6 +67,7 @@ class GameRenderer:
                         self.draw_pulsating_circle(x, y, target_surface)
 
     def draw_valid_moves(self):
+        """Highlights valid moves for the selected piece."""
         if not self.game.valid_moves:
             return
         target_surface = self.game.board_surface if self.game.board_surface else self.screen
@@ -83,6 +90,7 @@ class GameRenderer:
         target_surface.blit(s, (x - radius, y - radius))
 
     def draw_pieces(self):
+        """Draws all pieces (Tigers and Goats) on the board."""
         target_surface = self.game.board_surface if self.game.board_surface else self.screen
         tiger_positions = extract_indices_fast(self.game.game_state.tigers_bb)
         goat_positions = extract_indices_fast(self.game.game_state.goats_bb)
@@ -206,6 +214,7 @@ class GameRenderer:
                              (self.game.screen_size[0], i))
 
     def render_main_menu(self):
+        """Renders the Main Menu screen."""
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
@@ -228,6 +237,7 @@ class GameRenderer:
                          exits.width, exits.height, font_size)
 
     def render_mode_select(self):
+        """Renders the Mode Selection screen."""
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
         x_width = self.game.screen_size[0]
@@ -283,6 +293,7 @@ class GameRenderer:
                        self.game.screen_size[0] // 2, y_height - 50, COLORS["white"])
 
     def render_game(self):
+        """Renders the main gameplay screen."""
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
 
@@ -335,12 +346,12 @@ class GameRenderer:
         if self.is_debug:
             self.draw_circular_hitboxes()
 
-        for particle in self.game.particles[:]:
-            particle.update()
-            # Particles are already created in screen coordinates, so draw directly on screen
-            particle.draw(self.screen)
-            if not particle.particles:
-                self.game.particles.remove(particle)
+        # for particle in self.game.particles[:]:
+        #     particle.update()
+        #     # Particles are already created in screen coordinates, so draw directly on screen
+        #     particle.draw(self.screen)
+        #     if not particle.particles:
+        #         self.game.particles.remove(particle)
 
         if self.game.ai_is_thinking:
             self.draw_pulsating_overlay("Thinking")
@@ -398,6 +409,7 @@ class GameRenderer:
                        40, COLORS["ai_thinking"])
 
     def render_game_over(self):
+        """Renders the Game Over screen."""
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         pieces = {-1: "Goat", 1: "Tiger"}
 
@@ -447,7 +459,7 @@ class GameRenderer:
                     pass
 
     def render_analysis_mode(self):
-        """Render the Analysis Mode screen showing last 5 games."""
+        """Renders the Analysis Mode (Replay selection) screen sowing last 5 games."""
 
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
@@ -527,7 +539,7 @@ class GameRenderer:
                          mm_btn.width, mm_btn.height)
 
     def render_replay_mode(self):
-        """Render replay mode with board, controls, and AI suggestions."""
+        """Renders the Replay interface."""
         # Render background
         self.screen.blit(self.game.backgroundgradiant_img, (0, 0))
         # self.draw_gradient(COLORS["menu_bg"], COLORS["mode_bg"])
@@ -572,9 +584,25 @@ class GameRenderer:
             target_surface.blit(
                 s, (x - self.game.cell_size // 6, y - self.game.cell_size // 6))
 
-        # Blit board surface to screen after all board rendering is done
-        if self.game.board_surface:
+        # Move animation
+        if self.game.last_move_highlight:
+            move = self.game.last_move_highlight
+            if move:
+                start_pos = move[0]
+                end_pos = move[1]
+                start_pixel_pos = self.game.cell_to_pixel(
+                    start_pos % 5, start_pos // 5)
+                end_pixel_pos = self.game.cell_to_pixel(
+                    end_pos % 5, end_pos // 5)
+
+                pygame.draw.line(self.game.board_surface, (255, 255, 0), (start_pixel_pos[0] + self.game.offset, start_pixel_pos[1] + self.game.offset),
+                                 (end_pixel_pos[0] + self.game.offset, end_pixel_pos[1] + self.game.offset), 5)
+
+        # Blit the board surface onto the main screen
+        if hasattr(self.game, 'board_position'):
             self.screen.blit(self.game.board_surface, self.game.board_position)
+        else:
+            self.screen.blit(self.game.board_surface, (0, 0))
 
         # Draw status bar on screen (below board)
         self.draw_status()

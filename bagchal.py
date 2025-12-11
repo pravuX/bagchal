@@ -117,6 +117,19 @@ ZOBRIST_EATEN = np.array([random_u64() for _ in range(6)], dtype=np.int64)
 
 @njit
 def compute_zobrist(tigers_bb: int, goats_bb: int, side: int, goats_eaten: int, goats_to_place: int) -> int:
+    """
+    Computes the Zobrist hash for the given game state components.
+    
+    Args:
+        tigers_bb: Bitboard of tiger positions.
+        goats_bb: Bitboard of goat positions.
+        side: The player to move (Piece_TIGER or Piece_GOAT).
+        goats_eaten: Number of goats eaten so far.
+        goats_to_place: Number of goats remaining to be placed.
+
+    Returns:
+        A 64-bit integer representing the unique hash for the state.
+    """
     h = np.int64(0)
     while tigers_bb:
         lsb = tigers_bb & -tigers_bb
@@ -139,6 +152,21 @@ def compute_zobrist(tigers_bb: int, goats_bb: int, side: int, goats_eaten: int, 
 
 @njit
 def extract_indices_fast(bitboard: int):
+    """
+    Extracts the indices of set bits in a bitboard.
+    
+    Args:
+        bitboard: A 64-bit integer.
+
+    Returns:
+        A list of integers representing the indices (0-24) of set bits.
+    """
+    # We're basically doing the following but numbda doesn't like the bit_length method
+    # so this is a workaround
+    # while b:
+    #     idx = b.bit_length()-1
+    #     b &= ~(1 << idx) # clear the bit at that index
+
     indices = []
     while bitboard:
         lsb = bitboard & -bitboard
@@ -150,6 +178,15 @@ def extract_indices_fast(bitboard: int):
 
 @njit
 def popcount(x: int) -> int:
+    """
+    Counts the number of set bits (population count) in an integer.
+    
+    Args:
+        x: The integer to count bits in.
+
+    Returns:
+        The number of set bits.
+    """
     c = 0
     while x:
         x &= x - 1
@@ -158,6 +195,18 @@ def popcount(x: int) -> int:
 
 
 class BitboardGameState:
+    """
+    Represents the state of a Bagh Chal game using bitboards.
+    
+    Attributes:
+        tigers_bb (int): Bitboard for tiger positions.
+        goats_bb (int): Bitboard for goat positions.
+        turn (int): Current player (Piece_GOAT or Piece_TIGER).
+        goats_to_place (int): Number of goats left to place.
+        goats_eaten (int): Number of goats eaten.
+        history (list): Stack of moves for undo functionality.
+        zob_hash (int): Zobrist hash of the current state.
+    """
     __slots__ = ['tigers_bb', 'goats_bb', 'turn',
                  'goats_to_place', 'goats_eaten', 'history', 'zob_hash']
     piece = {
@@ -186,10 +235,20 @@ class BitboardGameState:
 
     @property
     def key(self):
+        """Returns the Zobrist hash key of the current state."""
         return self.zob_hash
 
     @property
     def get_result(self):
+        """
+        Determines the game result.
+        
+        Returns:
+            Piece_TIGER if Tigers win (5 eaten).
+            Piece_GOAT if Goats win (4 tigers trapped).
+            Piece_TIGER/Piece_GOAT if opponent has no moves.
+            None if game is ongoing.
+        """
         if self.goats_eaten >= 5:
             return Piece_TIGER
         if self.trapped_tiger_count == 4:
@@ -200,6 +259,7 @@ class BitboardGameState:
 
     @property
     def is_game_over(self):
+        """Checks if the game has ended."""
         return self.get_result is not None
 
     def _is_trapped(self, tiger, empty_bb):
@@ -221,6 +281,7 @@ class BitboardGameState:
 
     @property
     def trapped_tiger_count(self):
+        """Calculates the number of tigers currently trapped (cannot move)."""
         occupied_bb = self.tigers_bb | self.goats_bb
         empty_bb = ~occupied_bb & BOARD_MASK
         count = 0
@@ -231,6 +292,15 @@ class BitboardGameState:
         return count
 
     def get_legal_moves(self, only_captures=False):
+        """
+        Generates a list of legal moves for the current player.
+        
+        Args:
+            only_captures (bool): If True, only returns capture moves (for Tigers).
+
+        Returns:
+            A list of tuples (src, dst) representing legal moves.
+        """
         moves = []
         occupied_bb = self.tigers_bb | self.goats_bb
         empty_bb = ~occupied_bb & BOARD_MASK
@@ -282,6 +352,12 @@ class BitboardGameState:
         return moves
 
     def make_move(self, move):
+        """
+        Executes a move and updates the game state.
+        
+        Args:
+            move: A tuple (src, dst) representing the move.
+        """
         src, dst = move
         captured_piece_position = -1
 
@@ -353,6 +429,7 @@ class BitboardGameState:
         self.turn *= -1
 
     def unmake_move(self):
+        """Undoes the last move played, restoring the previous state."""
         if not self.history:
             return
 
@@ -407,6 +484,7 @@ class BitboardGameState:
                 self.goats_bb ^= move_mask
 
     def copy(self):
+        """Creates a deep copy of the current game state."""
         tigers_bb = self.tigers_bb
         goats_bb = self.goats_bb
         turn = self.turn
@@ -420,6 +498,15 @@ class BitboardGameState:
         return copy_state
 
     def is_quiet(self, move):
+        """
+        Determines if a move is 'quiet' (non-capture and non-threatening).
+        
+        Args:
+            move: The move to check.
+            
+        Returns:
+            True if the move is quiet, False otherwise (e.g., capture or walks into capture).
+        """
         # for tiger an unquiet move is a capture move
         # for goat an unquiet move is one that walks into a guaranteed capture
         src, dst = move
@@ -455,6 +542,19 @@ class BitboardGameState:
 
 @njit
 def tiger_board_accessibility(tigers_bb: int, goats_bb: int, MOVE_MASKS, CAPTURE_COUNTS, CAPTURE_MASKS):
+    """
+    Calculates the number of accessible and inaccessible positions for tigers using BFS.
+    
+    Args:
+        tigers_bb: Tiger bitboard.
+        goats_bb: Goat bitboard.
+        MOVE_MASKS: Precomputed move masks.
+        CAPTURE_COUNTS: Precomputed capture counts.
+        CAPTURE_MASKS: Precomputed capture masks.
+
+    Returns:
+        (accessible_count, inaccessible_count)
+    """
 
     occupied_bb = tigers_bb | goats_bb
     empty_bb = ~(occupied_bb) & BOARD_MASK
@@ -499,6 +599,11 @@ def tiger_board_accessibility(tigers_bb: int, goats_bb: int, MOVE_MASKS, CAPTURE
 
 @njit
 def tiger_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNTS, CAPTURE_MASKS):
+    """
+    Heuristically scores a Tiger move to prioritize better moves.
+    
+    Rewards captures and potential captures.
+    """
     priority_score = 0
     src, dst = move
 
@@ -540,6 +645,11 @@ def tiger_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUN
 
 @njit
 def goat_priority(tigers_bb: int, goats_bb: int, move, MOVE_MASKS, CAPTURE_COUNTS, CAPTURE_MASKS, OUTER_EDGE_MASK, STRATEGIC_MASK):
+    """
+    Heuristically scores a Goat move.
+    
+    Penalizes sacrifice. Rewards blocking captures, clustering, and controlling strategic edges/corners.
+    """
     src, dst = move
     is_placement_phase = src == dst
     priority_score: int = 0

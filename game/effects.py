@@ -3,7 +3,11 @@ import random
 
 
 class ParticleEffect:
-    """Simple particle effect for visual feedback"""
+    """
+    Simple particle effect for visual feedback.
+    
+    Manages a collection of particles that move and fade over time.
+    """
 
     def __init__(self, x, y, color, count=10, life=30, gravity=0.3):
         self.particles = []
@@ -22,6 +26,7 @@ class ParticleEffect:
             })
 
     def update(self):
+        """Updates particle positions and lifetimes."""
         for p in self.particles:
             p['x'] += p['vx']
             p['y'] += p['vy']
@@ -30,6 +35,12 @@ class ParticleEffect:
         self.particles = [p for p in self.particles if p['life'] > 0]
 
     def draw(self, screen):
+        """
+        Draws the particles to the screen.
+        
+        Args:
+            screen: Pygame surface to draw on.
+        """
         # Draw particles onto a temporary SRCALPHA surface so their alpha channel is preserved
         for p in self.particles:
             alpha = int(255 * (p['life'] / self.life))

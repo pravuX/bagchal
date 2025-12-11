@@ -4,6 +4,18 @@ from bagchal import *
 
 
 class Node:
+    """
+    Represents a node in the Monte Carlo Search Tree.
+    
+    Attributes:
+        parent (Node): Parent node.
+        move: The move that led to this node.
+        children (list): List of child nodes.
+        visit_count (int): Number of times this node has been visited.
+        total_value (float): Cumulative value/score of this node.
+        player_to_move (int): The player whose turn it is at this node.
+        unexpanded_moves (list): List of moves available from this state but not yet expanded.
+    """
 
     __slots__ = ['parent', 'move', 'children',
                  'visit_count', 'total_value',
@@ -26,6 +38,12 @@ class Node:
 
 
 class MCTS:
+    """
+    Monte Carlo Tree Search (MCTS) agent.
+    
+    Uses UCT (Upper Confidence Bound for Trees) for selection and 
+    random/heuristic rollouts for simulation.
+    """
     previous_evaluations = {}
     legal_moves_cache = {}
 
@@ -38,6 +56,18 @@ class MCTS:
         self.rollout_depth = 5
 
     def search(self, initial_state: BitboardGameState, max_simulations=1000, time_limit=None, game_history=None):
+        """
+        Performs MCTS search to find the best move.
+        
+        Args:
+            initial_state: The current game state.
+            max_simulations: Maximum number of simulations to run (if time_limit is None).
+            time_limit: Maximum time allowed for search in seconds.
+            game_history: List of past game states (referenced by hash) to check for repetitions.
+
+        Returns:
+            The best move found.
+        """
         print("Searching move...")
         self.game_history = game_history
 
@@ -94,12 +124,18 @@ class MCTS:
         return best_move
 
     def get_best_move(self):
+        """Returns the most visited child's move (robust child)."""
         # max_child: Node = self.root.best_child(c_param=0)
         most_visited_child = max(
             self.root.children, key=lambda c: c.visit_count)
         return most_visited_child.move
 
     def tree_policy(self):
+        """
+        Traverses the tree to find a leaf node to expand.
+        
+        Applies Selection (UCT) until a leaf is reached, then Expansion.
+        """
         # Selection + Expansion
         current_node = self.root
         path_nodes = []
@@ -159,6 +195,16 @@ class MCTS:
             current_node = best_child
 
     def select_best_child(self, node: Node, c_param=0.7):
+        """
+        Selects the best child node using the UCT formula.
+        
+        Args:
+            node: The parent node.
+            c_param: Exploration parameter (sqrt(2) is theoretical, usually tuned).
+            
+        Returns:
+            The selected child Node.
+        """
 
         def uct(child: Node):
             if child.visit_count == 0:
@@ -200,6 +246,11 @@ class MCTS:
         return moves
 
     def rollout_policy(self):
+        """
+        Selects the next move during simulation (rollout).
+        
+        Uses an epsilon-greedy strategy with a bias towards specialized heuristic moves.
+        """
         # random rollouts
         # moves = self.game_state.get_legal_moves_np()
         # return moves[np.random.randint(len(moves))]
@@ -211,6 +262,14 @@ class MCTS:
         return best_move
 
     def rollout(self):
+        """
+        Performs a simulation from the current state (rollout).
+        
+        Plays game until terminal state or depth limit is reached.
+        
+        Returns:
+            The result of the simulation (Tiger win, Goat win, or heuristic value).
+        """
         # at this point we have the state of the newly added node to the tree
         # we perform a rollout here
         # we can add depth limited rollouts if we want later
@@ -233,6 +292,13 @@ class MCTS:
         return result
 
     def backpropagate(self, result, path_nodes):
+        """
+        Propagates the simulation result back up the tree.
+        
+        Args:
+            result: The result of the rollout.
+            path_nodes: List of nodes traversed during selection.
+        """
 
         for node in path_nodes:
             # MCTS Update
@@ -265,6 +331,7 @@ class MCTS:
 
     def evaluate_state(self, state: BitboardGameState, state_key):
         """
+        Statically evaluates the game state.
         Positive -> TIGER advantage, Negative -> GOAT advantage.
         """
         occupied_bb = state.tigers_bb | state.goats_bb

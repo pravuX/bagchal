@@ -15,6 +15,19 @@ mcts_flag, minimax_flag = 0, 1
 
 
 class Game:
+    """
+    Main Game Controller class.
+    
+    Manages the game loop, state transitions, AI integration, and UI rendering.
+    
+    Attributes:
+        game_state (BitboardGameState): The current state of the game board.
+        renderer (GameRenderer): Handles all visual rendering.
+        event_handler (EventHandler): Manages input events.
+        current_state (UIState): Current UI state (Menu, Playing, etc.).
+        using_agent: Current AI agent flag (minimax_flag or mcts_flag).
+        ai_thread: Background thread for AI computation.
+    """
     def __init__(self, game_state,
                  caption="Bagchal - The Tiger and Goats Game",
                  cell_size=180,
@@ -230,6 +243,7 @@ class Game:
         )
 
     def check_for_resize(self):
+        """Checks if the window size has changed and updates the layout if needed."""
         if self.pending_resize is None:
             return
 
@@ -336,6 +350,12 @@ class Game:
             self.AvAhover_original, (btn_width, btn_height))
 
     def handle_resize(self, new_size):
+        """
+        Recalculates board dimensions and re-initializes assets for the new window size.
+        
+        Args:
+            new_size: Tuple (width, height) of the new window dimensions.
+        """
         width, height = new_size
         self.screen_size = (width, height)
 
@@ -431,7 +451,7 @@ class Game:
     def _initialize_ai_async(self):
         try:
             if self.using_agent == minimax_flag:
-                self.minimax_agent = AlphaBetaAgent()
+                self.minimax_agent = AlphaBetaAgent(use_symmetry=True)
             elif self.using_agent == mcts_flag:
                 self.mcts_agent = MCTS()
         finally:
@@ -463,6 +483,13 @@ class Game:
         return [state for state, count in self.state_hash.items() if count > 0]
 
     def _ai_worker(self, agent, game_state):
+        """
+        Background worker function to run AI search without blocking the UI.
+        
+        Args:
+            agent: The AI agent (Minimax or MCTS).
+            game_state: A copy of the game state to search from.
+        """
         try:
             if hasattr(agent, "search"):
                 move = agent.search(
@@ -646,6 +673,14 @@ class Game:
             self.valid_moves = []
 
     def update_game_logic(self):
+        """
+        Updates the game state for the current frame.
+        
+        Handles:
+        - Player move application
+        - AI move application and particle effects
+        - Playing move sounds
+        """
         current_frame = pygame.time.get_ticks()
         move = None
         if self.pending_player_move and not self.move_processed_this_frame:
@@ -685,6 +720,11 @@ class Game:
                 self.capture_sound.play()
 
     def update(self):
+        """
+        Main game loop.
+        
+        Handles events, checking for resize, and rendering the appropriate state.
+        """
         self.move_processed_this_frame = False
         self.event_handler.handle_events()
         self.check_for_resize()

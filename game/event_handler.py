@@ -6,10 +6,14 @@ clock = pygame.time.Clock()
 
 
 class EventHandler:
+    """
+    Handles Pygame events and dispatches them to appropriate handlers based on game state.
+    """
     def __init__(self, game):
         self.game = game
 
     def handle_events(self):
+        """Main event processing loop."""
 
         events = pygame.event.get()
 
@@ -36,6 +40,7 @@ class EventHandler:
             self.handle_game_over_events(events)
 
     def handle_main_menu_events(self, events):
+        """Handles events for the Main Menu state."""
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.play_btn_rect_main.collidepoint(event.pos):
@@ -49,6 +54,7 @@ class EventHandler:
                     self.game.current_state = UIState.EXITING
 
     def handle_mode_select_events(self, events):
+        """Handles events for the Mode Selection state."""
         x_width = self.game.screen_size[0]
         speed = int(0.008 * x_width)
 
@@ -102,6 +108,7 @@ class EventHandler:
             self.game.current_state = UIState.MAIN_MENU
 
     def handle_game_events(self, events):
+        """Handles events during active gameplay (move input, etc.)."""
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
@@ -128,6 +135,7 @@ class EventHandler:
             self.game.current_state = UIState.MAIN_MENU
 
     def handle_game_over_events(self, events):
+        """Handles events for the Game Over state."""
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
                 if self.game.exit_btn_rect.collidepoint(event.pos):
@@ -147,7 +155,7 @@ class EventHandler:
             self.game.current_state = UIState.MAIN_MENU
 
     def handle_analysis_mode_events(self, events):
-        """Handle events in Analysis Mode."""
+        """Handles events in Analysis Mode (replay selection)."""
 
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
@@ -185,7 +193,7 @@ class EventHandler:
             self.game.current_state = UIState.MAIN_MENU
 
     def handle_replay_events(self, events):
-        """Handle events during replay."""
+        """Handle events during replay playback."""
         for event in events:
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
 

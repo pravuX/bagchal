@@ -49,3 +49,5 @@ class UIState(Enum):
     ANALYSIS_MODE = "analysis_mode"
     REPLAYING = "replaying"
     EXITING = "exiting"
+
+mcts_flag, minimax_flag, heuristic_flag = 0, 1, 2

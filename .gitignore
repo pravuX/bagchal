@@ -8,3 +8,4 @@ log/
 ga_checkpoint.pkl
 genetic_algorithm.log
 negamax_pvsorting.py
+scratch/
